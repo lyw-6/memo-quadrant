@@ -1,0 +1,15 @@
+# ===== 系统 / 编辑器 =====
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
+
+# ===== 日志 =====
+*.log
+
+# ===== 依赖（本项目为纯单文件，无构建步骤） =====
+node_modules/
