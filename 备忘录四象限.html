@@ -241,8 +241,13 @@ body.kb-edit .hist-actions{display:inline-flex;}
 .hm-item.active{background:var(--color-primary,#6366f1);color:#fff;}
 .hm-item.active svg{color:#fff;}
 /* ★R115 行尾信息：回收站=待清理数、统计=现役条数；空则不显示（0 不占位）
-   margin-left:auto 把数字推到行尾，正好填掉「回收站/统计文字短、右侧空 100px」的空白 */
-.hm-tail{margin-left:auto;flex:none;font-size:12px;color:var(--text-tertiary);white-space:nowrap;}
+   margin-left:auto 把数字推到行尾，正好填掉「回收站/统计文字短、右侧空 100px」的空白
+   ★R116 可读性：原来取的是最暗档 --text-tertiary 又配最小的 12px，两重叠加就「看不清」；
+   升一档到 --text-secondary + 500 字重。更要紧的是尾数必须跟着行的状态走：
+   行悬停/高亮成实色底时行内文字转白，尾数却还是灰的 → 直接糊在紫底上（截图实测最糊的一处） */
+.hm-tail{margin-left:auto;flex:none;font-size:12px;font-weight:500;color:var(--text-secondary);white-space:nowrap;transition:color .15s;}
+.hm-item:hover .hm-tail{color:var(--text);}
+.hm-item.active .hm-tail{color:rgba(255,255,255,.92);}
 /* ★R114 主题行：与 .hm-item 完全同构（同 padding / 同 15px 图标 / 同 13px 字），
    整行不可点，右侧四个「无边框圆形图标」才是开关。
    原来那套「分隔线 + 11px 小标题 + 32px 带边框方块」是第二套排版语言：
