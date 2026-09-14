@@ -221,21 +221,50 @@ button, .filter-chip, .bottom-btn, .nav-tab, .btn-icon, .batch-btn, .memo-item, 
    原来 26×26 纯方块在 filter-bar 一排胶囊(select-trigger/filter-chip/search-toggle)里明显"大小不一致" */
 .filter-bar .btn-icon.compact-toggle{width:auto;min-width:34px;height:26px;padding:0 12px;border-radius:var(--radius-xs);}
 .filter-bar .btn-icon.compact-toggle svg{width:14px;height:14px;}
-/* ===== 撤销/重做 分组控件（左侧，编辑控制成对出现） ===== */
-.hist-actions{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;margin:0;background:transparent;border:0;padding:0;border-radius:0;}
+/* ===== 撤销/重做 分组控件（★R113 只在编辑态出现：浏览时 99% 时间是灰的，白占两个顶栏位） =====
+   内联编辑 / 全屏编辑 / 快速添加都会挂 body.kb-edit（见 kbEditStart/kbEditEnd），直接复用它 */
+.hist-actions{display:none;align-items:center;gap:4px;flex-shrink:0;margin:0;background:transparent;border:0;padding:0;border-radius:0;}
+body.kb-edit .hist-actions{display:inline-flex;}
 .hist-actions .hist-btn{width:34px;height:34px;border:none;background:transparent;border-radius:8px;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,color .15s;}
 .hist-actions .hist-btn:hover{background:var(--hover-bg);color:var(--text);}
 .hist-actions .hist-btn:disabled{opacity:.5;cursor:default;color:var(--text-tertiary);background:transparent;}
 .hist-actions .hist-btn:disabled:hover{background:transparent;}
 .hist-actions .hist-btn svg{width:18px;height:18px;pointer-events:none;}
+/* ★R113 顶栏「更多」菜单：回收站 / 统计 / 主题 收口于此，顶栏常驻按钮 8 → 4（搜索·省略视图·更多·设置） */
+.more-wrap-h{position:relative;display:inline-flex;flex:none;}
+.header-more{position:absolute;top:calc(100% + 6px);right:0;z-index:120;display:none;flex-direction:column;gap:1px;padding:5px;min-width:150px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.18);}
+.header-more.open{display:flex;}
+/* ★R114 三行同构：同高(29,R115 收紧) / 同 padding(0 9px) / 同 15px 图标 / 同 13px 字 —— 改一处必须三处一起改 */
+.hm-item{display:flex;align-items:center;gap:8px;width:100%;min-height:29px;padding:0 9px;border:none;background:transparent;border-radius:7px;color:var(--text);font-size:13px;font-family:inherit;text-align:left;cursor:pointer;transition:background .15s,color .15s;}
+.hm-item:hover{background:var(--hover-bg);}
+.hm-item svg{width:15px;height:15px;flex:none;pointer-events:none;color:var(--text-secondary);}
+.hm-item.active{background:var(--color-primary,#6366f1);color:#fff;}
+.hm-item.active svg{color:#fff;}
+/* ★R115 行尾信息：回收站=待清理数、统计=现役条数；空则不显示（0 不占位）
+   margin-left:auto 把数字推到行尾，正好填掉「回收站/统计文字短、右侧空 100px」的空白 */
+.hm-tail{margin-left:auto;flex:none;font-size:12px;color:var(--text-tertiary);white-space:nowrap;}
+/* ★R114 主题行：与 .hm-item 完全同构（同 padding / 同 15px 图标 / 同 13px 字），
+   整行不可点，右侧四个「无边框圆形图标」才是开关。
+   原来那套「分隔线 + 11px 小标题 + 32px 带边框方块」是第二套排版语言：
+   方块比左侧 15px 图标重一圈还多一层边框，并排就显突兀。 */
+.hm-row{display:flex;align-items:center;gap:8px;min-height:29px;padding:0 9px;color:var(--text);font-size:13px;}
+.hm-row>svg{width:15px;height:15px;flex:none;pointer-events:none;color:var(--text-secondary);}
+/* flex:none ×2 是必需的：菜单是 shrink-to-fit，行内只要有可收缩项，多出 1px 就会把
+   「主题」压成两行（实测菜单 180 / 需要 181 → span 从 26px 缩到 13px → 换行）。 */
+.hm-row>span{flex:none;white-space:nowrap;}
+.hm-themes{margin-left:auto;flex:none;display:flex;align-items:center;gap:5px;}
+.hm-themes .theme-opt{width:20px;height:20px;border-radius:50%;color:var(--text-secondary);}
+/* :not(.active) 是必需的 —— 否则 (0,3,0) 的 hover 规则会压过全局 .theme-opt.active(0,2,0)，
+   鼠标移到当前主题上会把实色高亮冲成灰底 */
+.hm-themes .theme-opt:not(.active):hover{background:var(--hover-bg);color:var(--text);}
+.hm-themes .theme-opt.active{background:var(--color-primary,#6366f1);color:#fff;}
+.hm-themes .theme-opt svg{width:12px;height:12px;}
 .btn-icon:disabled{opacity:.5;cursor:default;color:var(--text-tertiary);}
 /* 设置：开关行 */
 .setting-row.toggle-row{justify-content:space-between;}
 .setting-row .row-label{font-size:13px;color:var(--text);}
-/* 主题下拉菜单（仅图标） */
-.theme-wrap{position:relative;}
-.theme-menu{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);z-index:120;display:none;flex-direction:column;gap:2px;padding:4px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.16);}
-.theme-menu.open{display:flex;}
+/* 主题色点（如今只出现在「更多」菜单的 .hm-themes 里，尺寸/形状由 .hm-themes .theme-opt 覆盖成 22px 圆形；
+   ★R114 删掉了旧的 .theme-wrap / .theme-menu 独立浮层规则 —— 那层浮层 R113 已并入「更多」菜单，留着只会误导） */
 .theme-opt{width:34px;height:34px;border:none;background:transparent;border-radius:7px;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;}
 .theme-opt:hover{background:var(--hover-bg);color:var(--text);}
 .theme-opt svg{width:18px;height:18px;pointer-events:none;}
@@ -275,8 +304,7 @@ button, .filter-chip, .bottom-btn, .nav-tab, .btn-icon, .batch-btn, .memo-item, 
 .opt-txt{font-size:13px;}
 .select-option.selected .opt-ico{color:var(--primary);}
 /* 排序箭头：仅当前激活状态页签内联显示，方向用 ↑/↓ 表示（自定义顺序时不显示） */
-.filter-chip .sort-arrow{display:none;margin-left:3px;color:inherit;font-size:.82em;font-weight:700;line-height:1;pointer-events:none;flex-shrink:0;}
-.filter-chip.active .sort-arrow.show{display:inline;}
+/* ★R110 「升序/降序」箭头已从状态页签(全部/待办/已完成)移到排序按钮自身(见文末 .sort-dir) */
 .option-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 /* ★R41:编辑态 textarea 恢复文字选择(卡片层 user-select:none 的反制)——保留长按粘贴/选择句柄 */
 .memo-item textarea{-webkit-user-select:text;user-select:text;}
@@ -298,7 +326,11 @@ button, .filter-chip, .bottom-btn, .nav-tab, .btn-icon, .batch-btn, .memo-item, 
 html:not([data-theme="glass"]) .memo-item{content-visibility:auto;contain-intrinsic-size:auto 120px;}
 .memo-item:active{background:var(--hover-bg);}
 .memo-item.dragging{opacity:.22;box-shadow:none;transform:none;z-index:1;cursor:grabbing;outline:2px dashed var(--border);outline-offset:-2px;background:var(--hover-bg);}
-.memo-list.dragging-active .memo-item{transition:none!important;}
+.memo-list.dragging-active .memo-item{transition:none!important;touch-action:none;}
+/* ★R110 拖动期间关掉原生纵向 pan：.memo-item 平时是 touch-action:pan-y（让整页正常竖滑），
+   但拖动中合成器若接管了纵向手势，rAF 里 window.scrollBy 的自动滚动会被手势滚动覆盖 →
+   表现为"拖到边缘不会自动滚"。拖动期把 pan 交给应用自己管，屏幕滚动全部由 _asTick 驱动。 */
+.memo-list.dragging-active{touch-action:none;}
 /* 微交互：视图切换淡入 + 列表项进出场 */
 .view-fade{animation:viewFade .25s ease;}
 @keyframes viewFade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
@@ -700,7 +732,7 @@ body.fs-editing{overflow:hidden;}
    ★ 2026-09-01 修复：编辑期间弹出的 属性下拉(.fs-dropdown)/时间选择器(#picker-overlay)/
    加锁密码框(.lock-modal-mask)/确认框(.confirm-backdrop)/toast 全挂在 body 下，
    被这条规则一并隐形成"点了没反应"——全部排除，保持可见。 */
-[data-theme="glass"] body.fs-editing > *:not(.fs-edit-mask):not(.fs-dropdown):not(#picker-overlay):not(.lock-modal-mask):not(.confirm-backdrop):not(#toast):not(#undo-toast){visibility:hidden;}
+[data-theme="glass"] body.fs-editing > *:not(.fs-edit-mask):not(.fs-dropdown):not(#picker-overlay):not(.lock-modal-mask):not(.confirm-backdrop):not(#toast):not(#undo-toast):not(#caretBackBtn){visibility:hidden;}
 /* ★ 2026-09-01 补充：#picker-overlay 实际嵌在 .container 内（非 body 直接子元素），上面 > * 规则
    会把 .container 整体 visibility:hidden，picker 作为后代继承 hidden → 设时间弹窗隐身（关闭编辑器才现身）。
    visibility 特性：后代显式 visible 可穿透祖先 hidden。给编辑期全部弹层显式 visible（浅深两背景通用）。 */
@@ -894,6 +926,25 @@ body.kb-edit .memo-list{padding-bottom:var(--kb-spacer,0px);}
   background:linear-gradient(180deg,var(--glass-tint-2) 0%,rgba(255,255,255,calc(var(--glass-alpha)*1.05)) 100%);
   color:var(--color-primary,#6366f1);
   border:1px solid rgba(255,255,255,0.5);
+  backdrop-filter:blur(calc(var(--glass-blur)*1.05)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter:blur(calc(var(--glass-blur)*1.05)) saturate(var(--glass-sat));
+  box-shadow:0 8px 26px rgba(31,38,135,0.16),inset 0 1px 0 var(--glass-edge),inset 0 -1px 0 var(--glass-edge-bot);
+}
+/* ★R108 编辑中「回到编辑位置」浮动按钮：仅当光标行滚出可视区时出现（JS 加 .show）。
+   与 #calTodayBtn 同族（圆形/主色淡染/主色描边），位置由 JS 按底栏实测高度贴在其正上方。 */
+#caretBackBtn{position:fixed;right:14px;bottom:110px;z-index:10030;width:44px;height:44px;padding:0;border-radius:50%;margin:0;
+  border:1px solid color-mix(in srgb,var(--color-primary,#6366f1) 32%,transparent);
+  background:color-mix(in srgb,var(--color-primary,#6366f1) 12%,var(--card-bg));color:var(--color-primary,#6366f1);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;
+  box-shadow:0 4px 14px color-mix(in srgb,var(--color-primary,#6366f1) 24%,transparent),inset 0 1px 0 rgba(255,255,255,.25);
+  -webkit-tap-highlight-color:transparent;opacity:0;visibility:hidden;transform:translateY(8px);pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease,visibility .18s ease;}
+#caretBackBtn.show{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto;}
+#caretBackBtn:active{transform:scale(.94);filter:brightness(.95);}
+#caretBackBtn svg{width:20px;height:20px;display:block;pointer-events:none;}
+[data-theme="glass"] #caretBackBtn{
+  background:linear-gradient(180deg,var(--glass-tint-2) 0%,rgba(255,255,255,calc(var(--glass-alpha)*1.05)) 100%);
+  color:var(--color-primary,#6366f1);border:1px solid rgba(255,255,255,0.5);
   backdrop-filter:blur(calc(var(--glass-blur)*1.05)) saturate(var(--glass-sat));
   -webkit-backdrop-filter:blur(calc(var(--glass-blur)*1.05)) saturate(var(--glass-sat));
   box-shadow:0 8px 26px rgba(31,38,135,0.16),inset 0 1px 0 var(--glass-edge),inset 0 -1px 0 var(--glass-edge-bot);
@@ -1303,16 +1354,8 @@ body.view-quadrant #add-btn,body.view-quadrant #bottomBar{display:none!important
   border-color:var(--color-primary);
   box-shadow:inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 var(--glass-edge-bot);
 }
-[data-theme="glass"] .theme-menu{
-  background:linear-gradient(180deg, var(--glass-tint) 0%, rgba(255,255,255,calc(var(--glass-alpha) * 0.72)) 100%), var(--glass-grain);
-  backdrop-filter:blur(calc(var(--glass-blur) * 0.8)) saturate(var(--glass-sat));
-  -webkit-backdrop-filter:blur(calc(var(--glass-blur) * 0.8)) saturate(var(--glass-sat));
-  border:1px solid var(--glass-edge);
-  box-shadow:0 8px 30px rgba(31,38,135,0.18), inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 var(--glass-edge-bot);
-}
 /* 深色背景(自动 glass-text-dark)下:面板渐变收尾改用深色玻璃色,避免浅色图标落在变亮的底部而糊掉 */
 html.glass-text-dark [data-theme="glass"] .search-bar .search-input,
-html.glass-text-dark [data-theme="glass"] .theme-menu,
 html.glass-text-dark [data-theme="glass"] .mgh-head{
   background:linear-gradient(180deg, var(--glass-tint) 0%, var(--glass-tint-3) 100%), var(--glass-grain);
 }
@@ -1462,6 +1505,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell .d-sub.jq{color:#34d399;font
 }
 /* Tier 3 — Popover 弹层 / 下拉 / 设置 / 抽屉（最不透明 + 最多模糊 + 大阴影） */
 [data-theme="glass"] .select-dropdown,
+[data-theme="glass"] .header-more,
 [data-theme="glass"] .settings-panel,
 [data-theme="glass"] .quick-add-box,
 [data-theme="glass"] .picker-box,
@@ -1551,13 +1595,14 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
 /* ★ 2026-09-01 修复：玻璃主题下省略视图切换按钮(compact-toggle)激活态必须与未激活态有明显区分——
    通用 .btn-icon.active(白磨砂+深字)与未激活(白磨砂)几乎无差,用户无法辨别"省略视图是否已开启"。
    改为与 search-toggle.active 一致的 实色蓝底+白图标(视觉"按下/开启"一眼可辨) */
-[data-theme="glass"] .filter-bar .btn-icon.compact-toggle.active{
+[data-theme="glass"] .filter-bar .btn-icon.compact-toggle.active,
+[data-theme="glass"] .header-actions .btn-icon.compact-toggle.active{
   background:linear-gradient(180deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 78%, #1d4ed8));
   color:#fff;
   border-color:var(--color-primary);
   box-shadow:0 2px 10px color-mix(in srgb, var(--color-primary) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.35);
 }
-[data-theme="glass"] .filter-bar .btn-icon.compact-toggle.active svg{filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
+[data-theme="glass"] .filter-bar .btn-icon.compact-toggle.active svg,[data-theme="glass"] .header-actions .btn-icon.compact-toggle.active svg{filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
 /* ★ 2026-09-01 修复：玻璃主题 .btn-icon 点击反馈：默认态背景半透明(scale/filter 不明显),
    加 inset shadow + brightness + scale 综合反馈,让按下有可见"按下"效果。
    关键加强:active 时背景换成深蓝玻璃(从浅磨砂 → 深蓝凹陷),肉眼能"看出按下"区别 */
@@ -1605,8 +1650,9 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
   color:var(--text);
   border:1px solid rgba(255,255,255,0.82);
 }
-/* 搜索按钮（filter-bar 内）在玻璃主题下与设置那排 .btn-icon 同款玻璃背景(var(--glass-tint-2))，随主题色调变化 */
-[data-theme="glass"] .filter-bar .btn-icon.search-toggle{
+/* 搜索按钮（原 filter-bar 内，R112 移入 header-actions）在玻璃主题下与设置那排 .btn-icon 同款玻璃背景(var(--glass-tint-2))，随主题色调变化 */
+[data-theme="glass"] .filter-bar .btn-icon.search-toggle,
+[data-theme="glass"] .header-actions .btn-icon.search-toggle{
   background:linear-gradient(180deg, var(--glass-tint-2) 0%, rgba(255,255,255,calc(var(--glass-alpha) * 1.05)) 100%), var(--glass-grain);
   background-size:auto,180px 180px;
   backdrop-filter:blur(calc(var(--glass-blur) * 1.08)) saturate(var(--glass-sat));
@@ -1614,7 +1660,8 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
   border:1px solid rgba(255,255,255,0.62);
   box-shadow:0 8px 26px rgba(31,38,135,0.16),inset 0 1px 0 var(--glass-edge),inset 0 -1px 0 var(--glass-edge-bot);
 }
-[data-theme="glass"] .filter-bar .btn-icon.search-toggle.active{
+[data-theme="glass"] .filter-bar .btn-icon.search-toggle.active,
+[data-theme="glass"] .header-actions .btn-icon.search-toggle.active{
   background:var(--color-primary);border-color:var(--color-primary);color:#fff;box-shadow:none;
 }
 /* —— 底部导航 tab：仅图标 + 文字，无背景无边框 —— */
@@ -2608,6 +2655,27 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
 .kb-help kbd{font-family:inherit;font-size:12px;background:var(--hover-bg);border:1px solid var(--border);border-radius:6px;padding:1px 7px;color:var(--text);white-space:nowrap;flex-shrink:0;}
 .kb-help .kb-note{margin:10px 0 0;font-size:12px;line-height:1.55;color:var(--text-tertiary);}
 [data-theme="glass"] .kb-help{background:linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.16)), var(--glass-grain);background-size:auto,180px 180px;backdrop-filter:blur(calc(var(--glass-blur) * 0.9)) saturate(var(--glass-sat));-webkit-backdrop-filter:blur(calc(var(--glass-blur) * 0.9)) saturate(var(--glass-sat));}
+/* ===== ★R110 排序方向箭头：挂在「创建时间/截止时间」排序按钮自身 =====
+   背景：原来升/降序箭头画在状态页签(全部/待办/已完成)上 —— 既挤在页签右缘被裁切(手机端 .filter-chip
+   是 overflow:hidden，3 位数量+箭头必被切掉一截，看着像"被挡住了")，也和「按什么排序」的归属对不上。
+   现在：选中 创建时间/截止时间 后，排序按钮 label 右侧出现 ↑/↓，点它即切换升/降序(不会打开下拉)。
+   用 inline SVG 而非 ↑↓ 字符：字体度量差异会让它跟相邻文字对不齐垂直基线。
+   ★位置：必须【紧邻手机覆盖块之前】—— 它要压过 .select-trigger svg(10px/灰) 与
+   [data-theme=glass] .select-trigger svg(1.8 描边)，靠"同特异性+更靠后"取胜；同时手机媒体块
+   (末尾那条不变量)仍保持全表最后。 */
+.select-trigger .sort-dir{display:none;align-items:center;justify-content:center;flex:none;position:relative;
+  width:14px;height:16px;margin-left:7px;border-radius:5px;cursor:pointer;color:var(--color-primary,#6366f1);
+  -webkit-tap-highlight-color:transparent;transition:background .16s ease,transform .12s ease;}
+.select-trigger .sort-dir.show{display:inline-flex;}
+/* ★R110 不再用 ::before 扩命中区，改为与标签拉开 7px（+trigger 自身 gap=2 → 视觉 9px 间隙）：
+   手机端触摸 hit-test 有"吸附"（touch adjustment，把落点吸附到更可点的邻近元素），实测紧贴标签时
+   x=275~307 全被吸到箭头上 —— 用户点「创建时间」按钮中心反而切了排序方向。留出间隙后，
+   标签区（含中心）稳定命中 trigger 打开下拉，箭头自身靠吸附仍有 ~30px 宽度，够点。 */
+.select-trigger .sort-dir:hover{background:color-mix(in srgb,var(--color-primary,#6366f1) 16%,transparent);}
+.select-trigger .sort-dir:active{transform:scale(.86);}
+.filter-bar .select-trigger .sort-dir svg{width:14px;height:14px;color:inherit;stroke-width:2.8;transform:none;pointer-events:none;}
+.select-trigger.open .sort-dir svg{transform:none;}
+
 /* ===== ★ 2026-09-01 手机端终极修复（本块必须放在全部基础规则之后）=====
    根因：.nav-tab/.nav-tab svg/.nav-tab span/.bottom-nav 的基础规则(~1691-1714行)
    写在 560/480 两个 @media 块之后，同优先级"后者胜"，把媒体查询里的手机端
@@ -2629,19 +2697,33 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
   .header-actions .btn-icon{width:28px;height:28px;}
   .header-actions .btn-icon svg{width:13px;height:13px;}
   /* 筛选栏：与宽屏一致——chips 显示数量、下拉显示"全部/自定义"文字，一行显示完禁左右滑 */
-  .filter-bar{flex-wrap:nowrap;overflow:hidden;padding:4px 6px;gap:3px;}
-  /* chips 改为按内容自适应宽度(flex-basis auto)：等分三分会让"已完成(1)"这类长标签被截断；
-     放不下时按比例收缩，配合 nowrap+overflow:hidden 兜底 */
-  .filter-chip{flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap;padding:3px 7px;font-size:12px;height:26px;box-sizing:border-box;}
+  .filter-bar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:4px 6px;gap:3px;}
+  /* ★R112 根因修复：手机端「全部/待办/已完成 显示不全」——
+     旧规则 .filter-chip{flex:0 1 auto} 允许页签被压扁，配合 overflow:hidden 把文字裁掉
+     (393px 下「全部 (120)」被压到 60px、末字切一半)。现改为 flex:0 0 auto：页签永远保持
+     自然宽度、绝不裁字；整栏放不下时由 overflow-x:auto 兜底横滚(4 位计数等极端情况)。
+     真正腾出空间的做法=把「省略视图 / 搜索」两个全局操作移出筛选栏、放进 header-actions：
+     筛选栏只留「状态筛选 + 分类筛选 + 排序」，职责清晰，一行排得下。 */
+  .filter-chip{flex:0 0 auto;min-width:0;white-space:nowrap;padding:3px 7px;font-size:12px;height:26px;box-sizing:border-box;}
+  /* 排序控件贴在筛选栏最右缘，它的下拉(min-width:100px)即使 opacity:0 也占布局宽度、
+     会把整栏 scrollWidth 撑大 → 窄屏下 overflow-x:auto 变成"可左右晃 20px"。改为贴右缘对齐
+     (菜单向左展开)：既消除多余滚动，窄屏上菜单也不会被推到屏幕外。 */
+  .filter-bar #sort-filter-dropdown{left:auto;right:0;}
   .filter-chip .count{display:inline!important;font-size:10px;margin-left:1px;}
-  .filter-chip .sort-arrow{display:none;}
   #cat-filter-label,#sort-filter-label{display:inline!important;}
   .filter-bar .select-trigger{min-width:0;height:26px;padding:0 5px;font-size:11px;gap:2px;white-space:nowrap;}
   .filter-bar .select-trigger .trigger-ico{display:none;}
   .filter-bar .select-trigger svg{width:11px;height:11px;}
-  .filter-bar .btn-icon{width:26px;height:26px;padding:0;flex:none;}
-  .filter-bar .btn-icon.search-toggle{width:auto;min-width:26px;padding:0 7px;}
-  .filter-bar .btn-icon svg{width:13px;height:13px;}
+  /* R112:「省略视图 / 搜索」已移出筛选栏 → 本块原来的 .filter-bar .btn-icon* 三条规则作废，删除；
+     两个按钮现在跟 header 那排 .btn-icon 同款(28px/图标 13px) */
+}
+/* ★R112 搜索 + 省略视图移入 header-actions 后，header 图标增至 8 个（回收站/统计/主题/设置/
+   搜索/省略视图/撤销/重做）。393px 下 8×28+7×3=245px 仍有富余；≤380px 的窄机再收一档，
+   避免与左侧「备忘录」标题互相挤压。放在样式表最末尾，级联必胜。 */
+@media (max-width:380px){
+  .header-actions{gap:2px;}
+  .header-actions .btn-icon{width:26px;height:26px;}
+  .header-actions .btn-icon svg{width:12px;height:12px;}
 }
 </style>
 </head>
@@ -2653,17 +2735,26 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
     <span class="app-brand-text" data-page-node-id="lBd7bFYJ2VxlOjieryEnmK"><span class="app-title" data-page-node-id="YYjALVaymCTKhGymONkK9Y">备忘录</span><span class="app-sub" id="app-sub" data-page-node-id="fk3xHyVpH7YZYOu69HSR2R"></span></span>
   </h1>
   <div class="header-actions" data-page-node-id="EVMc5bRSh0kFNpAY7si6lF">
-    <button class="btn-icon" id="trash-btn-top" title="回收站" aria-label="回收站" data-page-node-id="rOwfNFqBtPpCRs3EQwXDfa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="ZO8yx1atg7qciw8Tn6r1rc"><polyline points="3 6 5 6 21 6" data-page-node-id="okgvPDwQuF0sgnoyNFHNCI"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" data-page-node-id="EvxAzGtf7Y4V50gucAqgFm"/><line x1="10" y1="11" x2="10" y2="17" data-page-node-id="BNvHhMyE5JZ3l1C0N2jIIC"/><line x1="14" y1="11" x2="14" y2="17" data-page-node-id="Dmr2Fj5I47Wun3pCteDqcl"/></svg></button>
-      <button class="btn-icon" id="stats-btn-top" title="统计" aria-label="统计" data-page-node-id="Tk0HaBEBb292Tb3S5N6dmH"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="RvdXiCiYh6ftUSd1FDrZe3"><line x1="4" y1="20" x2="20" y2="20" data-page-node-id="jBIvDjBHHcXf1RfydbZkxw"/><rect x="6" y="11" width="3" height="9" data-page-node-id="Zg2gO4oZMvq10zrivCufsp"/><rect x="11" y="6" width="3" height="14" data-page-node-id="zDUVyIileFdwqlBTHYG5IJ"/><rect x="16" y="14" width="3" height="6" data-page-node-id="zTL6ziJ11av20b8oL8oBlp"/></svg></button>
-        <div class="theme-wrap" data-page-node-id="XdmJdtkmDjwGdjiBRd62Qz"><button class="btn-icon" id="theme-btn" data-page-node-id="9VxO4mGAdUgIDJqmw9PnNf"><svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="naUYUeQyRAkxo2rP2fINXx"><circle cx="12" cy="12" r="5" data-page-node-id="Z3xAoG690f3t3k9SJh06Hg"/><line x1="12" y1="1" x2="12" y2="3" data-page-node-id="ZSgRahXPC5fH1Cs2zsE1MO"/><line x1="12" y1="21" x2="12" y2="23" data-page-node-id="0jFHTO4v9Hd3k20Rxtq4r6"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" data-page-node-id="ypsFIxpLV0s1vxd0r6qmqI"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" data-page-node-id="xzgaJghE9rUJBYLorNbsVu"/><line x1="1" y1="12" x2="3" y2="12" data-page-node-id="2BQPHmlXbCSfWImTDdZlvn"/><line x1="21" y1="12" x2="23" y2="12" data-page-node-id="cvBAnHBTt3bGQXVZ9h4Bpz"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" data-page-node-id="FYhD4nukC5viUDndfErAGR"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" data-page-node-id="6rsr6E5sifULIzri5oEFma"/></svg><svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none" data-page-node-id="aPyLhee0HWBgYO4nyTkVFZ"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" data-page-node-id="oZwYM5IDPZX1jWiClrqOLy"/></svg><svg id="theme-icon-glass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none" data-page-node-id="r1cjrVissYkhHvnuLMxMIo"><path d="M12 3l1.9 4.3L18 9l-4.1 1.7L12 15l-1.9-4.3L6 9l4.1-1.7z" data-page-node-id="J2askSQA1uPd1oR1WeV0K9"/><path d="M18.5 14.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z" data-page-node-id="yYL4vm6uFch6aLXI3ahiEu"/></svg><svg id="theme-icon-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none" data-page-node-id="R3aGrqcrjnc35ESOpyG1lA"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" data-page-node-id="1BN8oJfo4garhN8dRZuEkm"/><path d="M2 21c0-3 1.85-5.36 5.08-6" data-page-node-id="k7uEVqmb6ZvbKpAHJQaW3s"/></svg></button>
-      <div class="theme-menu" id="themeMenu" data-page-node-id="fiaXW0uEvrGc4gidbFGKVv">
-        <button class="theme-opt" data-theme="light" title="浅色" data-page-node-id="UVFDSKFQrQFH4xdQbyAtl3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="iVUk8cXrcDisFsMI8uYlul"><circle cx="12" cy="12" r="5" data-page-node-id="9nVUyZ7gY1W0EOsuAP7ssW"/><line x1="12" y1="1" x2="12" y2="3" data-page-node-id="kr2dJH1hce8AF1GbEgruBW"/><line x1="12" y1="21" x2="12" y2="23" data-page-node-id="WkVLFBtEJXdJO9TH3d1YyA"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" data-page-node-id="ZoFzdAWGUqTECNm1vN12Zn"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" data-page-node-id="beJ7zCuHI8Lkl7ziSFQX5M"/><line x1="1" y1="12" x2="3" y2="12" data-page-node-id="h40pL1UlhCETUMkJqfM0BI"/><line x1="21" y1="12" x2="23" y2="12" data-page-node-id="mRmAb2WMEVtp9n7TasvMGs"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" data-page-node-id="AfDSCm7pqAfLcxeSQsLE3N"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" data-page-node-id="vzorP4m1S9Wgo5LFLrChJd"/></svg></button>
-        <button class="theme-opt" data-theme="dark" title="深色" data-page-node-id="TPJgGy1X1G5LbxLEDXbzL9"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="3LGNDWOXat6iY7O7GyPAxP"><path fill="currentColor" stroke="none" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" data-page-node-id="pD51wnEhTp3SnmWtqlBYpi"/></svg></button>
-        <button class="theme-opt" data-theme="glass" title="玻璃" data-page-node-id="bLYAzW9NFWYQ8DgYqzlwuZ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="00HQrzMAySE7y1EWakAX56"><path d="M12 3l1.9 4.3L18 9l-4.1 1.7L12 15l-1.9-4.3L6 9l4.1-1.7z" data-page-node-id="Iq5941mViTKFeKCPBvodnm"/><path d="M18.5 14.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z" data-page-node-id="0DtTu76d9A3fMUjHOg0gDk"/></svg></button>
-        <button class="theme-opt" data-theme="green" title="护眼" data-page-node-id="AoAHJXEB14ewTgPPkSODis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="3y8xBTnqbyTWI0uzmI7F0L"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" data-page-node-id="soGHhPwUOfMlAOB6wP0Kza"/><path d="M2 21c0-3 1.85-5.36 5.08-6" data-page-node-id="ngLUXGkNH1aeDEk4rn9Bfd"/></svg></button>
+    <button class="btn-icon search-toggle" id="search-toggle" title="搜索" aria-label="搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+    <button class="btn-icon compact-toggle" id="compact-toggle" title="省略视图（一行两个）" aria-label="省略视图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
+    <div class="more-wrap-h">
+      <button class="btn-icon" id="more-btn" title="更多" aria-label="更多" aria-haspopup="menu"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      <div class="header-more" id="headerMore" role="menu">
+        <button class="hm-item" type="button" id="trash-btn-top" title="回收站" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg><span>回收站</span><span class="hm-tail" id="hmTrashTail"></span></button>
+        <button class="hm-item" type="button" id="stats-btn-top" title="统计" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="11" width="3" height="9"/><rect x="11" y="6" width="3" height="14"/><rect x="16" y="14" width="3" height="6"/></svg><span>统计</span><span class="hm-tail" id="hmStatsTail"></span></button>
+        <div class="hm-row" role="group" aria-label="主题">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="17.6" cy="10.6" r="1.2" fill="currentColor" stroke="none"/><circle cx="8.6" cy="7.6" r="1.2" fill="currentColor" stroke="none"/><circle cx="6.6" cy="12.6" r="1.2" fill="currentColor" stroke="none"/><path d="M12 2.5a9.5 9.5 0 0 0 0 19c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1 0-.9.7-1.6 1.6-1.6h1.8a5.8 5.8 0 0 0 5.8-5.8c0-4.9-4.4-7.9-10-7.9z"/></svg>
+          <span>主题</span>
+          <div class="hm-themes" id="themeMenu">
+            <button class="theme-opt" type="button" data-theme="light" title="浅色"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+            <button class="theme-opt" type="button" data-theme="dark" title="深色"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" stroke="none" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+            <button class="theme-opt" type="button" data-theme="glass" title="玻璃"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.3L18 9l-4.1 1.7L12 15l-1.9-4.3L6 9l4.1-1.7z"/><path d="M18.5 14.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg></button>
+            <button class="theme-opt" type="button" data-theme="green" title="护眼"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg></button>
+          </div>
+        </div>
       </div>
     </div>
-      <button class="btn-icon" id="settings-btn" data-page-node-id="BGHfsLrmGdaHJnb5eLmq55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="bL5O6IXxlFWBstoeLCUuOW"><circle cx="12" cy="12" r="3" data-page-node-id="v84vR97C5ACViDHkc69dzB"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" data-page-node-id="resMOx4EXJdyXfEg6Jbys7"/></svg></button>
+    <button class="btn-icon" id="settings-btn" title="设置" aria-label="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     <div class="hist-actions" id="histActions" data-page-node-id="c7tdEhBecJOOvrCfs58NNa">
         <button class="btn-icon" id="undo-btn" title="撤销 (Ctrl+Z)" aria-label="撤销" data-page-node-id="p00f4IQjKY0vhNHHrx8lHS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="AWtQaAUuc3AdsiJpnSszRl"><path d="M9 14 4 9l5-5" data-page-node-id="RDcojS7SXZZLp1HuMuqD1J"/><path d="M4 9h11a5 5 0 0 1 0 10h-1" data-page-node-id="NGCAMHlW2Ub4MUAcBKNRLi"/></svg></button>
         <button class="btn-icon" id="redo-btn" title="重做 (Ctrl+Y)" aria-label="重做" data-page-node-id="RJd3dqEQ3njthQjNIRctC2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="7BxB6B2X3N1v6con2AsFRY"><path d="m15 14 5-5-5-5" data-page-node-id="pEZYTBTGwvvlFL7H3G6Z0D"/><path d="M20 9H9a5 5 0 0 0 0 10h1" data-page-node-id="TaCFssXoUi0qqq7HXiD38C"/></svg></button>
@@ -2763,24 +2854,22 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
     </div>
   </div>
 <div class="filter-bar" id="filterBar" data-page-node-id="BamQeRHT74XgFE27BIe6Zb">
-  <div class="filter-chip active" data-filter="all" data-page-node-id="vkTIDyhz6jdQneSJTODVOt">全部<span class="count" id="count-all" data-page-node-id="HqgaVkACkAlq0KS8kSfOXE"></span><span class="sort-arrow" aria-hidden="true" data-page-node-id="GHecDBij6k7174GspnYbBV"></span></div>
-  <div class="filter-chip" data-filter="todo" data-page-node-id="dXvk3FWswrGsHl3bXd5FYG">待办<span class="count" id="count-todo" data-page-node-id="ARxXaOXCo4OnRTvrCCEivI"></span><span class="sort-arrow" aria-hidden="true" data-page-node-id="0mKBa1BcR20xN0in3wlr9R"></span></div>
-  <div class="filter-chip" data-filter="done" data-page-node-id="VbPJn5XWelPd1ARYscXBgQ">已完成<span class="count" id="count-done" data-page-node-id="pkmn6tczbXPp0q41PbYVna"></span><span class="sort-arrow" aria-hidden="true" data-page-node-id="cvZgEPhVOht0B9CDPsnAUk"></span></div>
+  <div class="filter-chip active" data-filter="all" data-page-node-id="vkTIDyhz6jdQneSJTODVOt">全部<span class="count" id="count-all" data-page-node-id="HqgaVkACkAlq0KS8kSfOXE"></span></div>
+  <div class="filter-chip" data-filter="todo" data-page-node-id="dXvk3FWswrGsHl3bXd5FYG">待办<span class="count" id="count-todo" data-page-node-id="ARxXaOXCo4OnRTvrCCEivI"></span></div>
+  <div class="filter-chip" data-filter="done" data-page-node-id="VbPJn5XWelPd1ARYscXBgQ">已完成<span class="count" id="count-done" data-page-node-id="pkmn6tczbXPp0q41PbYVna"></span></div>
   <div class="filter-divider" data-page-node-id="yUAIB9C21auqhWrXHJPTgN"></div>
   <div class="custom-select" id="cat-filter-select" data-page-node-id="YbNWpO0YKxS58oZc074dPt">
     <div class="select-trigger" data-value="all" tabindex="0" data-page-node-id="HbdYd9NNYw3TZ6DA5zgH76"><svg class="trigger-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="H8hKFS2CWCRebB7c7wdvuB"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" data-page-node-id="vwBP39kQwc6AcQJukJc3oN"/></svg><span id="cat-filter-label" data-page-node-id="uiBYaLuGoWU0t0xQcplaw3">全部</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="FyvSEDDSrHpGrQNFw1yFTD"><path d="M6 9l6 6 6-6" data-page-node-id="ObbLbjKMR2VcDEl2l1ulZN"/></svg></div>
     <div class="select-dropdown" id="cat-filter-dropdown" data-page-node-id="QqDWAO8EpAW7gt4c4RBW9k"></div>
   </div>
   <div class="custom-select" id="sort-filter-select" data-page-node-id="11DwrbDS3CkeBvh1FBW30P">
-    <div class="select-trigger" data-value="custom" tabindex="0" data-page-node-id="2oqBZL68i8c0KKmC2CGgZy"><svg class="trigger-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="5v7NUmfjmhD6WHZtHTao1K"><path d="M7 4v16M7 20l-3-3M7 4l3 3M17 20V4M17 4l-3 3M17 20l3-3" data-page-node-id="rJawyRKBZkoHimkGIpFw7D"/></svg><span id="sort-filter-label" data-page-node-id="BzYT6Qgu5APO9ZOofeo3M6">自定义</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="PYjuwZdUvq9uRnnmZoql0y"><path d="M6 9l6 6 6-6" data-page-node-id="TAImsK1cDcvk4ziGnPoXUX"/></svg></div>
+    <div class="select-trigger" data-value="custom" tabindex="0" data-page-node-id="2oqBZL68i8c0KKmC2CGgZy"><svg class="trigger-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="5v7NUmfjmhD6WHZtHTao1K"><path d="M7 4v16M7 20l-3-3M7 4l3 3M17 20V4M17 4l-3 3M17 20l3-3" data-page-node-id="rJawyRKBZkoHimkGIpFw7D"/></svg><span id="sort-filter-label" data-page-node-id="BzYT6Qgu5APO9ZOofeo3M6">自定义</span><span class="sort-dir" id="sort-dir-btn" role="button" tabindex="-1" title="切换升序/降序" aria-label="切换升序/降序"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="PYjuwZdUvq9uRnnmZoql0y"><path d="M6 9l6 6 6-6" data-page-node-id="TAImsK1cDcvk4ziGnPoXUX"/></svg></div>
     <div class="select-dropdown" id="sort-filter-dropdown" data-page-node-id="laG036kHsJXKxzaBF03gMk">
       <div class="select-option selected" data-value="custom" data-page-node-id="Sv1fK6xHKaDEGuqQue38AE"><span data-page-node-id="e98sYEeI3QuDXpBqnQbWrv">自定义</span></div>
       <div class="select-option" data-value="created" data-page-node-id="bufqW0GLM3AstT8QCWCJaU"><span data-page-node-id="nybxTRE8VzapCtD4zFtpep">创建时间</span></div>
       <div class="select-option" data-value="deadline" data-page-node-id="rNkDwl6SzzpzfhsEI7zAIE"><span data-page-node-id="NF705bT7iayyEr8Vj6Fznm">截止时间</span></div>
     </div>
   </div>
-    <button class="btn-icon compact-toggle" id="compact-toggle" title="省略视图（一行两个）" aria-label="省略视图" data-page-node-id="DtRh9qrYtppmyjpg1Ryg7k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="oSRPDijcFbcEIUNFsiPRa7"><rect x="3" y="3" width="7" height="7" rx="1.5" data-page-node-id="CyQAB2s85HKGs9BbAdxCx2"/><rect x="14" y="3" width="7" height="7" rx="1.5" data-page-node-id="ua1zZ074R9vIvVxY6DWo0m"/><rect x="3" y="14" width="7" height="7" rx="1.5" data-page-node-id="s2gER0ko8lL4q55CHlvnCW"/><rect x="14" y="14" width="7" height="7" rx="1.5" data-page-node-id="aqFQ86VR5tIf8iBTn2E8FF"/></svg></button>
-    <button class="btn-icon search-toggle" id="search-toggle" title="搜索" aria-label="搜索" data-page-node-id="TIXotBgbUgfVvZM58lDQ8K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="WGhoExtbggzTP3tFv0vknW"><circle cx="11" cy="11" r="8" data-page-node-id="3ZRRTm377yruAWKJZBlOWh"/><line x1="21" y1="21" x2="16.65" y2="16.65" data-page-node-id="p635E2mUcEGdeeqSkXcNHv"/></svg></button>
 </div>
 
 <div id="listView" class="memo-list" data-page-node-id="V5abp5WYDCsquStxX2ck0H"></div>
@@ -11416,6 +11505,7 @@ var STORAGE_KEY='memo_pro_v5';
 var THEME_KEY='memo_theme';
 var LAST_VIEW_KEY='memo_last_view'; // 上次打开的视图：启动时自动恢复
 var LAST_FILTER_KEY='memo_last_filter'; // 上次选择的状态筛选(全部/待办/已完成)：启动时自动恢复
+var SORT_KEY='memo_sort_v1'; // ★R112 上次的排序字段+方向：启动时自动恢复(独立小键，不进备份数据)
 var COMPACT_KEY='memo_compact'; // 省略视图(一行两个)开关
 var FULLEDIT_KEY='memo_full_edit_default'; // 设置：默认进入全屏编辑
 var QUADRANTS=[
@@ -12034,6 +12124,30 @@ function syncBottomNav(){
 // ===== 记住上次打开的视图 / 状态筛选，下次启动自动恢复 =====
 // 用独立小键存储：这些是高频动作，没必要每次都序列化整个备忘录数组
 function saveLastFilter(v){ try{ localStorage.setItem(LAST_FILTER_KEY,v); }catch(e){} }
+/* ★R112 排序记忆：sortField(自定义/创建时间/截止时间) + sortDir(升/降) 持久化。
+   此前两者只是全局变量，刷新即回默认(自定义·升序) → 用户报「排序后怎么没有记忆」。
+   与状态筛选同样走独立小键（高频动作，不必序列化整个备忘录数组）。
+   非法值一律忽略（脏数据不该把 UI 卡在空状态）。 */
+function saveSortState(){ try{ localStorage.setItem(SORT_KEY,JSON.stringify({f:sortField,d:sortDir})); }catch(e){} }
+function restoreSortState(){
+  try{
+    var o=JSON.parse(localStorage.getItem(SORT_KEY)||'null');
+    if(!o)return;
+    if(o.f==='custom'||o.f==='created'||o.f==='deadline')sortField=o.f;
+    if(o.d==='asc'||o.d==='desc')sortDir=o.d;
+  }catch(e){}
+}
+/* 把 sortField/sortDir 回填到排序按钮三处：触发器文字 / 下拉选中项 / 方向箭头。
+   启动恢复与运行期切换共用，避免"记住的值"与"看到的 UI"漂移。 */
+function syncSortUI(){
+  var lab=document.getElementById('sort-filter-label');
+  if(lab)lab.textContent=(sortField==='custom')?'自定义':sortFieldLabel();
+  var trig=document.querySelector('#sort-filter-select .select-trigger');
+  if(trig)trig.setAttribute('data-value',sortField);
+  var sopts=document.querySelectorAll('#sort-filter-dropdown .select-option');
+  for(var i=0;i<sopts.length;i++)sopts[i].classList.toggle('selected',sopts[i].getAttribute('data-value')===sortField);
+  syncSortDirUI();
+}
 // ===== 省略视图 / 默认全屏编辑（小键记忆）=====
 var compactMode=false;
 function loadCompactMode(){ try{ return localStorage.getItem(COMPACT_KEY)==='1'; }catch(e){ return false; } }
@@ -12396,6 +12510,7 @@ function _kbSyncBar(){
   if(_kbUpPrev!==up){kbEditStart._watchUntil=Date.now()+1600;if(up)kbEditStart._deferred=false;} /* 跃迁后续期兜底窗口(键盘动画期间事件稀疏)；★R103 键盘展开=重新锚定,收起尊重用户滚动位置 */
   if(_kbUpPrev&&!up&&!kbEditStart._deferred)scrollEditToView(kbEditStart._ta,kbEditStart._item);
   _kbUpPrev=up;
+  _cbSync(); /* ★R108 按钮位置跟随底栏(键盘弹起时底栏贴着键盘顶,按钮要跟着上移) */
 }
 /* 写编辑期动态留白(CSS 变量),避免每帧触碰 DOM 样式表 */
 var _kbSpacerLast=-1;
@@ -12415,6 +12530,7 @@ function kbEditStart(ta){
   var _freshTa=(kbEditStart._ta!==ta); /* ★R105 kbEditStart 会被同一会话内每次 touchstart/mousedown 重入(见 13245 附近),挂起状态只在新会话复位——重入复位会让每次触摸都重新允许拉回 */
   kbEditStart._el=el; kbEditStart._item=item; kbEditStart._ta=ta;
   _caretCache.ta=null; // 切换备忘/重进编辑,强制下一帧重算光标行
+  _cbArm(ta,null); /* ★R108 编辑中滚远后一键回到编辑位置(四象限格内编辑自动忽略) */
   if(_freshTa){
     kbEditStart._userScroll=false; /* ★R86d 新的编辑意图(点编辑)= 允许校正,清掉上次手势的抑制残留 */
     kbEditStart._deferred=false; /* ★R103 粘性挂起复位:新编辑会话重新允许自动顶起 */
@@ -12526,6 +12642,7 @@ function kbEditStart(ta){
 function kbEditEnd(){
   document.body.classList.remove('kb-edit');
   document.body.classList.remove('kb-bar-up'); /* ★R69 */
+  _cbDisarm(); /* ★R108 退出编辑 → 收起「回到编辑位置」按钮 */
   _kbUpPrev=false; _clearScrollRetry(); _kbSpacer(0); /* ★R86d 清跃迁标记/兜底重试/编辑期留白 */
   var _bar=document.getElementById('inlineEditBar');if(_bar)_bar.style.transform=''; /* ★R83d 清贴边补偿 */
   var _ok=document.getElementById('inlineEditOk');if(_ok)_ok.style.transform='';
@@ -12578,6 +12695,132 @@ function hideInlineOkBtn(){
   var b=document.getElementById('inlineEditOk');
   if(b&&b.parentNode)b.parentNode.removeChild(b);
 }
+/* ===== ★R108 「回到编辑位置」浮动按钮 =====
+   背景：R106 起编辑中自己上滑不再被强行拉回光标(_deferred 粘性挂起)，滚远读完后需要一键回位。
+   只在「光标所在行滚出可视区」时出现；点按把光标行拉回可视区上 38% 处并恢复自动跟随。
+   覆盖：列表就地编辑(页面滚动) / 全屏编辑器(编辑区内滚动)。四象限格内编辑不显示(格子内滚动空间小)。 */
+var CB_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="6.4"/><path d="M12 2.4v2.4M12 19.2v2.4M2.4 12h2.4M19.2 12h2.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>';
+var _cbCtx=null,_cbEl=null,_cbRaf=0,_cbShown=false,_cbBound=false;
+function _cbNode(){
+  if(_cbEl&&_cbEl.parentNode)return _cbEl;
+  var b=document.createElement('button');
+  b.type='button';b.id='caretBackBtn';b.title='回到编辑位置';b.setAttribute('aria-label','回到编辑位置');
+  b.innerHTML=CB_SVG;
+  /* 不能抢走编辑框焦点：mousedown 的默认行为会让 contenteditable 失焦(失焦=退出编辑/收起键盘)。
+     ★只在 mousedown 上 preventDefault（与 .inline-edit-bar 同款）：touchstart 上 preventDefault
+     会连合成 click 一起吞掉 → 真机按钮点不动。 */
+  b.addEventListener('mousedown',function(e){e.preventDefault();});
+  b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();_cbGo();});
+  document.body.appendChild(b);_cbEl=b;
+  return b;
+}
+/* 光标(所在行)的屏幕矩形：折叠 range 的 getClientRects 优先；空文本节点返回零矩形时
+   退化到其所在行内元素的盒子(.todo-txt 等)，长备忘也只需一行的高度 */
+function _edCaretLineRect(ed){
+  try{
+    var sel=window.getSelection();
+    if(!sel||!sel.rangeCount)return null;
+    var r=sel.getRangeAt(0);
+    if(!(ed===r.startContainer||ed.contains(r.startContainer)))return null;
+    var rect=null,list=r.getClientRects(),i;
+    for(i=0;i<list.length;i++){if(list[i].height>2){rect=list[i];break;}}
+    if(!rect){var b=r.getBoundingClientRect();if(b&&(b.height>2||b.width>0))rect=b;}
+    if(!rect){
+      var n=r.startContainer,el=(n.nodeType===1)?n:n.parentNode;
+      while(el&&el!==ed){
+        var eb=el.getBoundingClientRect();
+        if(eb&&eb.height>2){rect=eb;break;}
+        el=el.parentNode;
+      }
+    }
+    return rect||null;
+  }catch(_){return null;}
+}
+/* 键盘上方可用区底边 + 底栏预留(与 _scrollEditApply 同口径) */
+function _cbBand(){
+  var vh=getKbVisibleBottom(),reserve=48,bar=document.getElementById('inlineEditBar');
+  if(bar){
+    var br=bar.getBoundingClientRect();
+    if(br&&br.height)reserve=Math.max(40,Math.round(vh-br.top))+8;
+  }
+  return {vh:vh,reserve:reserve,band:vh-reserve};
+}
+function _cbDisarm(){
+  _cbCtx=null;_cbShown=false;
+  if(_cbEl&&_cbEl.parentNode)_cbEl.parentNode.removeChild(_cbEl);
+  _cbEl=null;
+}
+function _cbArm(ed,box){
+  if(!ed||!(ed.isConnected||ed.parentNode))return;
+  var q=(typeof kbEditStart==='object'&&kbEditStart._qInline); /* 四象限格内编辑：格子自带滚动区，不显示 */
+  if(!box&&q){_cbDisarm();return;}
+  _cbCtx={ed:ed,box:box||null};
+  _cbNode();
+  if(!_cbBound){
+    _cbBound=true;
+    /* 捕获阶段：页面滚动与任意内部滚动容器(全屏编辑区/格子)的 scroll 都能收到 */
+    document.addEventListener('scroll',function(){_cbSync();},true);
+    document.addEventListener('selectionchange',function(){_cbSync();});
+    window.addEventListener('resize',function(){_cbSync();},{passive:true});
+    if(window.visualViewport){
+      window.visualViewport.addEventListener('resize',function(){_cbSync();});
+      window.visualViewport.addEventListener('scroll',function(){_cbSync();});
+    }
+  }
+  _cbSync(true);
+}
+function _cbSync(force){
+  if(!force&&_cbRaf)return;
+  if(force&&_cbRaf){cancelAnimationFrame(_cbRaf);_cbRaf=0;}
+  _cbRaf=requestAnimationFrame(function(){
+    _cbRaf=0;
+    var ctx=_cbCtx,el=_cbEl;
+    if(!ctx||!el||!ctx.ed||!(ctx.ed.isConnected||ctx.ed.parentNode)){if(el)el.classList.remove('show');_cbShown=false;return;}
+    var rect=_edCaretLineRect(ctx.ed),off=false,anchor=null;
+    if(ctx.box){ /* 全屏编辑器：编辑区自身滚动 */
+      var cr=ctx.box.getBoundingClientRect();
+      if(rect)off=(rect.bottom>cr.bottom-10)||(rect.top<cr.top+10);
+      var fsBox=ctx.box.parentNode;
+      var fsBottom=fsBox?fsBox.querySelector('.fs-action-bar'):null;
+      var fsMeta=fsBox?fsBox.querySelector('.fs-meta-bar'):null;
+      anchor=fsMeta?fsMeta.getBoundingClientRect():(fsBottom?fsBottom.getBoundingClientRect():null); /* 贴底栏(属性条)上沿 */
+      var boxR=fsBox?fsBox.getBoundingClientRect():null;
+      if(boxR)el.style.right=Math.max(14,Math.round((window.innerWidth||0)-boxR.right+12))+'px';
+    }else{
+      var band=_cbBand();
+      if(rect)off=(rect.bottom>band.band)||(rect.top<1);
+      var bar=document.getElementById('inlineEditBar');
+      if(bar){var br2=bar.getBoundingClientRect();if(br2&&br2.height)anchor=br2;}
+    }
+    if(off!==_cbShown){_cbShown=off;el.classList.toggle('show',off);}
+    if(off){
+      var ih=window.innerHeight||0;
+      var bottom=anchor?Math.max(60,Math.round(ih-anchor.top)+10):110;
+      el.style.bottom=Math.min(bottom,Math.round(ih*0.62))+'px';
+    }
+  });
+}
+function _cbGo(){
+  var ctx=_cbCtx;if(!ctx)return;
+  var rect=_edCaretLineRect(ctx.ed);
+  if(rect){
+    if(ctx.box){ /* 编辑区内部滚动：把光标行放到编辑区上 38% 处 */
+      var cr=ctx.box.getBoundingClientRect();
+      var want=cr.top+Math.max(24,(cr.height-rect.height)*0.38);
+      ctx.box.scrollTop+=(rect.top-want);
+    }else{
+      var band=_cbBand();
+      var need=rect.top-band.band*0.38;
+      if(Math.abs(need)>1){try{window.scrollBy(0,need);}catch(_){var se=document.scrollingElement||document.documentElement;if(se)se.scrollTop+=need;}}
+      /* 恢复自动跟随：清粘性挂起 + 续兜底窗口(与 kbEditStart 同口径) */
+      kbEditStart._deferred=false;kbEditStart._userScroll=false;
+      _clearScrollRetry();
+      kbEditStart._watchUntil=Date.now()+1200;
+    }
+  }
+  _cbSync(true);
+  setTimeout(function(){_cbSync(true);},280);
+}
 // (键盘适配由 visualViewport + 页面滚动完成,无需原生壳;失焦由 focusout 监听复位)
 function getPageScroll(){var se=document.scrollingElement||document.documentElement;var y=window.scrollY||window.pageYOffset||0;if(!y&&se)y=se.scrollTop||0;if(!y&&document.body)y=document.body.scrollTop||0;return y;}
 function setPageScroll(y){if(!(y>0))return;var se=document.scrollingElement||document.documentElement;try{window.scrollTo(0,y);}catch(e){}try{if(se)se.scrollTop=y;}catch(e){}try{if(document.body)document.body.scrollTop=y;}catch(e){}}
@@ -12597,6 +12840,7 @@ function onPageScroll(){
 }
 function render(){
   pruneTrashSelection(); /* ★R86 离开回收站时清掉回收站条目的选中,防残留污染列表批量态 */
+  closeHeaderMore(); /* ★R113 切视图/重绘时顶栏「更多」菜单不留残影 */
   // 清理上次打开后挂在 body 上的游离更多菜单 / 分类下拉节点,避免泄漏
   // (分类下拉已改为挂到 body,需在重建列表前回收;当前 memo 的下拉由 createMemoElement 重新挂上)
   var strayMenus=document.querySelectorAll('.more-menu');
@@ -12613,6 +12857,14 @@ function render(){
   var listViews=(currentView==='list'||currentView==='today'||currentView==='month');
   var list=listViews?(currentView==='today'?getDateMemos(new Date(),'day'):currentView==='month'?getDateMemos(new Date(),'month'):getFilteredMemos()):[];
   filterBar.style.display=listViews?'':'none';
+  syncHeaderMoreCounts(); /* ★R115 行尾计数跟数据走 */
+
+  /* ★R112：搜索 / 省略视图 已从筛选栏搬进 header-actions，显隐必须跟着视图走
+     （原来它俩随 filterBar 一起被隐藏）。口径与下面 _searchable 一致：
+     省略视图只作用于列表视图；搜索在 列表/今日/本月/四象限 可用（renderQuadrant 走 matchSearch）。
+     全屏(q-fs)下整个 .header 被隐藏，两者同样不可见 —— 与 R110 之前的行为一致。 */
+  var _ctBtn=document.getElementById('compact-toggle'); if(_ctBtn)_ctBtn.style.display=listViews?'':'none';
+  var _stBtn=document.getElementById('search-toggle'); if(_stBtn)_stBtn.style.display=(listViews||currentView==='quadrant')?'':'none';
   var searchBar=document.getElementById('searchBar');
   if(searchBar){
     var _searchable=(listViews||currentView==='quadrant');
@@ -12859,6 +13111,18 @@ function createMemoElement(memo,index,groupId){
     e.preventDefault();
     // ★R57: 批量/合并模式下点分类标签=仅选中该条(防止误触打开下拉)
     if(typeof tapSelectEnabled==='function'&&tapSelectEnabled()){toggleSelect(memo.id);return;}
+    /* ★R113 列表是窗口化渲染的：滚动只重建部分卡片，而 render() 开头会把 body 上所有
+       .cat-dropdown 节点统一删掉 —— 被复用卡片手里的引用就成了**游离节点**，且还残留着
+       上一次的 .open 类。不先归位，点击会被下面的 isOpen 判断当成"已打开"直接 return，
+       表现为「滑一下列表后，这条的分类标签怎么点都没反应」。
+       注意必须放在 isOpen 判断**之前**：游离节点的类状态是脏的，不能拿来判断。 */
+    if(catDropdown.parentNode!==document.body){
+      document.body.appendChild(catDropdown);
+      catDropdown.classList.remove('open');
+      catDropdown.style.transformOrigin='';
+      catTrigger.classList.remove('open');
+      div.style.zIndex='';
+    }
     var isOpen=catDropdown.classList.contains('open');
     // 关闭其他分类下拉并还原其卡片 z-index
     var allCats=document.querySelectorAll('.cat-dropdown.open');
@@ -12893,6 +13157,7 @@ function createMemoElement(memo,index,groupId){
     e.preventDefault();
     e.stopPropagation();
     var val=opt.getAttribute('data-value');
+    _ddEatClick(); /* ★R110 同 bindCustomSelect：关下拉后尾随 click 会落到卡片上(误触进编辑) */
     catDropdown.classList.remove('open');
     catDropdown.style.transformOrigin='';
     catTrigger.classList.remove('open');
@@ -12905,6 +13170,7 @@ function createMemoElement(memo,index,groupId){
     var opt=e.target.closest('.select-option');
     if(!opt) return;
     var val=opt.getAttribute('data-value');
+    _ddEatClick(); /* ★R110 */
     catDropdown.classList.remove('open');
     catDropdown.style.transformOrigin='';
     catTrigger.classList.remove('open');
@@ -13240,6 +13506,7 @@ function memoContentClick(e,mc,memo,item){
   enterMemoEdit(mc,memo,item);
 }
 function enterMemoEdit(mc,memo,item,isNew){
+  closeAllCatDropdowns(); /* ★R113 进编辑态前先收掉卡片分类下拉，否则它会悬在编辑器上方不收 */
   // div → contenteditable（★R82：勾选框为真实 DOM，随内容原生滚动），textarea 同接口垫片
   var ta=createTodoEditable(memo.text,'memo-content');
   ta.setAttribute('data-id',memo.id);
@@ -13886,6 +14153,14 @@ function activateDrag(){
   }
   // 虚拟滚动:拖拽激活时回退全量 DOM(拖拽依赖完整列表顺序与候选),结束后恢复窗口化
   if(vList.active){vList._wasActive=true;vDisable();}
+  /* ★R109 修复：vDisable 内部 memoListEl.innerHTML='' 重建全部卡片 → mousedown 时抓到的 dragTarget
+     成了游离节点，而重排逻辑会把它 insertBefore 插回列表 → 同一 data-id 出现两份：
+     ① 原位留一张样式完全正常的"幽灵卡片"（visible/opacity:1）；
+     ② endDrag 用 querySelectorAll('.memo-item') 收顺序会多出元素 → newOrder.length(41) !== memos.length(40)
+        → 直接跳过 saveData，**长列表下拖拽排序静默丢失**（松手/刷新即回滚）。
+     重建后按 data-id 把 dragTarget 指回真实节点即可；重建保留滚动位置，dragOffset 依旧成立。 */
+  var _reId=dragTarget&&dragTarget.getAttribute('data-id');
+  if(_reId){var _reEl=memoListEl.querySelector('.memo-item[data-id="'+_reId+'"]');if(_reEl)dragTarget=_reEl;}
   isDragging=true;
   dragOverGroup=null;
   var item=dragTarget;
@@ -13938,6 +14213,8 @@ function activateDrag(){
   showToast('拖动调整顺序 · 拖到分组头上可加入分组');
   /* ★R86e 投放区不在长按激活时出现,等手指真正移动 ≥30px 再浮现(见 moveDrag) */
   _dragZonesShown=false;
+  /* ★R109 边缘自动滚动状态复位：坐标从长按点起算，rAF 循环等移动满 30px 才启动(见 moveDrag) */
+  _asStop();_asPt.x=dragSX;_asPt.y=dragSY;
 }
 function moveDrag(e){
   if(!dragPending&&!isDragging)return;
@@ -13962,23 +14239,37 @@ function moveDrag(e){
     var _ddx=t.clientX-dragSX,_ddy=t.clientY-dragSY;
     if(_ddx*_ddx+_ddy*_ddy>=DROP_SHOW_DIST*DROP_SHOW_DIST){
       _dragZonesShown=true;
+      _asStart(); /* ★R109 手指真正移动 30px 后才算"要排序"意图 → 此刻才开始边缘自动滚动，长按不动不会滚 */
       if(dragKind==='memo'||dragKind==='groupMember')showDragTrash(t.clientX,t.clientY);
       if(dragKind==='groupMember')showDragUngroup(t.clientX,t.clientY);
     }
   }
-  var clientY=t.clientY;
+  _asPt.x=t.clientX;_asPt.y=t.clientY;
+  _dragApplyAt(t.clientX,t.clientY);
+}
+/* ★R109 抽出的「按坐标应用拖拽落点」：moveDrag 与边缘自动滚动的 rAF 循环(_asTick)共用。
+   滚动本身不产生 touchmove/mousemove —— 不在滚动后重跑这里，滚过一屏后插入位与投放区高亮
+   仍停在上一次手指坐标的判定上（落点错位）。 */
+function _dragApplyAt(clientX,clientY){
+  var _isCompactList=!!(memoListEl&&memoListEl.classList.contains('compact'));
   var clone=document.getElementById('drag-clone');
   // R39:克隆同时跟随 X —— 省略视图是两列网格,只跟 Y 的话克隆永远停在原列,既看不到拖拽落点也命中不到另一列(合并失效)
-  if(clone){clone.style.top=(clientY-dragOffset)+'px';clone.style.left=(t.clientX-dragOffsetX)+'px';}
-  updateDragTrash(t.clientX,t.clientY);
-  if(dragKind==='groupMember')updateDragUngroup(t.clientX,t.clientY);
+  if(clone){clone.style.top=(clientY-dragOffset)+'px';clone.style.left=(clientX-dragOffsetX)+'px';}
+  // ★R109 滚动模式与投放区互斥：手指压在上下边缘热区时暂停武装，避免"停住继续滚"被停留计时判成要删除
+  if(_asOn){
+    _dropPause(_dropTrash,'drag-trash');
+    _dropPause(_dropUngroup,'drag-ungroup');
+  }else{
+    updateDragTrash(clientX,clientY);
+    if(dragKind==='groupMember')updateDragUngroup(clientX,clientY);
+  }
   /* ★R92 拖拽入组复活：R69 下线合并模式时只删掉了 dragOverGroup 的赋值、没收尾，导致 endDrag 里
      「落在组头上 → 加入分组」的分支恒不触发 —— "把卡片拖到组头上"这个最自然的手势一直是死的。
      本次按「悬停组头行 GROUP_DROP_DWELL 毫秒才武装」复活：只是路过不会误入组，中途移出立即取消。
      让子弹飞一会儿的代价换来了不会误触。 */
   dragOverMergeMemo=null;
   clearMergeHighlight();
-  _grpDwellSync(t.clientX,t.clientY);
+  _grpDwellSync(clientX,clientY);
   // 顶层重排候选:整组拖动与独立备忘都可在顶层与分组/独立备忘混排换位
   var items;
   if(dragKind==='groupMember')items=memoListEl.querySelectorAll('.memo-item[data-group="'+dragGroupId+'"]');
@@ -14049,6 +14340,7 @@ function moveDrag(e){
   }
 }
 function endDrag(e){
+  _asStop(); /* ★R109 先停边缘自动滚动，再走下方落点判定（否则松手后还在滚） */
   // 拖拽结束:恢复虚拟滚动窗口化(setTimeout 确保在下方所有 return 分支之后执行)
   if(vList._wasActive){vList._wasActive=false;setTimeout(function(){vEnable();},0);}
   clearTimeout(dragTimer);dragTimer=null;
@@ -14109,8 +14401,12 @@ function endDrag(e){
     if(clone)clone.parentNode.removeChild(clone);
     if(dragKind==='groupMember'){
       var gnodes=memoListEl.querySelectorAll('.memo-item[data-group="'+dragGroupId+'"]');
-      var gorder=[];
-      for(var gi=0;gi<gnodes.length;gi++)gorder.push(gnodes[gi].getAttribute('data-id'));
+      var gorder=[],_gSeen={};
+      for(var gi=0;gi<gnodes.length;gi++){
+        var _gv=gnodes[gi].getAttribute('data-id');
+        if(!_gv||_gSeen[_gv])continue; /* ★R109 同名节点去重，避免 members 出现重复 id */
+        _gSeen[_gv]=1;gorder.push(_gv);
+      }
       for(var gx=0;gx<memo_groups.length;gx++){if(memo_groups[gx].id===dragGroupId){memo_groups[gx].members=gorder;break;}}
       saveData();
     }else if(dragKind==='groupHeader'){
@@ -14121,8 +14417,14 @@ function endDrag(e){
       if(ng.length===memo_groups.length)memo_groups=ng;
       saveData();
     }else{
-      var newOrder=[];var items=memoListEl.querySelectorAll('.memo-item');
-      for(var i=0;i<items.length;i++){var id=items[i].getAttribute('data-id');for(var j=0;j<memos.length;j++){if(memos[j].id===id){newOrder.push(memos[j]);break;}}}
+      /* ★R109 去重防线：即便列表里因故残留同名节点，也不能让长度校验误判而放弃保存(静默丢排序) */
+      var newOrder=[],_seenId={};var items=memoListEl.querySelectorAll('.memo-item');
+      for(var i=0;i<items.length;i++){
+        var id=items[i].getAttribute('data-id');
+        if(!id||_seenId[id])continue;
+        _seenId[id]=1;
+        for(var j=0;j<memos.length;j++){if(memos[j].id===id){newOrder.push(memos[j]);break;}}
+      }
       if(newOrder.length===memos.length){memos=newOrder;saveData();}
     }
     // 拖拽结束后短暂屏蔽点击,避免误触勾选/编辑/更多
@@ -14188,6 +14490,76 @@ var dragOverUngroup=false;
 var dragOverGroup=null;
 var dragOverMergeMemo=null;
 var _lastDragMode=null;
+/* ===== ★R109 拖拽边缘自动滚动 =====
+   痛点：列表比屏幕长时，要把最底下那条拖到顶部只能先滚动再长按，拖到视口边缘不会自动滚。
+   滚动容器 = 整页 window（#listView 非滚动容器，见 17221 行口径），所以用 window.scrollBy。
+   实现：拖拽已激活、且手指移动超过 DROP_SHOW_DIST(30px) 后开一个 rAF 循环，按【手指屏幕 y】
+   判定是否落在上下边缘热区；上界取列表可视顶 max(0,listRect.top)，下界取列表可视底
+   min(vh,listRect.bottom)，热区内按接近程度线性递增速度滚动；每次实际滚动后重跑 _dragApplyAt，
+   让重排落点/克隆遮挡/投放区高亮跟随（滚动后卡片 rect 变化，不重排就会插错位）。
+   ★滚动期必须 _dropPause 暂停投放区武装：底部热区紧挨着固定投放区（#drag-trash bottom:74px、
+   #drag-ungroup bottom:124px），手指"停住继续滚"会被停留计时武装成删除 → 松手误删。
+   暂停时 canArm=false（_dropUpdate 的 over 分支因此不武装），手指离开热区自动恢复可武装。 */
+var AUTO_SCROLL_MAX=15, AUTO_SCROLL_MIN=3.5;
+/* ★R110 热区宽度改为随视口自适应（手机端专项）：
+   固定 96px 在手机上只占一屏的 1/8 —— 用户"拖到顶部"时手指习惯停在顶栏下方 110~150px 处，
+   根本进不了热区，体感就是"靠近顶部不会自动往上滑"。改成 clamp(96, vh*0.18, 150)：
+   727px 的手机 → 130px，900px 的桌面 → 150px（上限），小窗口不会缩到不可用。 */
+function _asZone(vh){var z=Math.round(vh*0.18);if(z<96)z=96;if(z>150)z=150;return z;}
+/* ★R110 手机端 window.innerHeight 会随地址栏/键盘变化，visualViewport.height 才是真实可视高度 */
+function _asVH(){var vv=window.visualViewport;if(vv&&vv.height)return vv.height;return window.innerHeight||document.documentElement.clientHeight||600;}
+var _asPt={x:0,y:0}, _asRaf=0, _asOn=false;
+function _asStop(){if(_asRaf)cancelAnimationFrame(_asRaf);_asRaf=0;_asOn=false;}
+function _asStart(){if(_asRaf||!isDragging)return;_asRaf=requestAnimationFrame(_asTick);}
+function _asScrollBy(d){
+  var se=document.scrollingElement||document.documentElement;
+  var before=se?se.scrollTop:0;
+  try{window.scrollBy(0,d);}catch(_e){}
+  var after=se?se.scrollTop:before;
+  if(Math.abs(after-before)<0.5&&se){try{se.scrollTop=before+d;}catch(_e){}after=se.scrollTop;}
+  return after-before;
+}
+/* 暂停投放区武装（滚动模式专用）：清停留计时 + 取消已武装态 + 摘掉 hover/over 高亮 */
+function _dropPause(z,id){
+  if(z.armed||z.timer||z.inside){clearTimeout(z.timer);z.timer=0;z.inside=false;_dropSet(z,false);}
+  z.canArm=false;
+  var t=document.getElementById(id);
+  if(t)t.classList.remove('hover','over');
+}
+function _asTick(){
+  if(!isDragging){_asStop();return;}
+  var vh=_asVH(), _zone=_asZone(vh); /* ★R110 */
+  var top=0,bot=vh,ok=false;
+  if(memoListEl){
+    var lr=memoListEl.getBoundingClientRect();
+    if(lr.height>0){
+      var _t2=Math.max(0,Math.min(lr.top,vh)),_b2=Math.max(_t2,Math.min(lr.bottom,vh));
+      /* 列表本身不足一屏 = 没有滚动空间 → 不启用热区(否则短列表拖拽时会毫无意义地把整页滚走) */
+      if(lr.height>_b2-_t2+8){top=_t2;bot=_b2;ok=true;}
+    }
+  }
+  var y=_asPt.y,d=0;
+  if(ok&&bot-top>1){
+    if(y<top+_zone&&y>top-_zone){
+      /* 上边缘：越靠近上界越快；允许手指滑到列表上方(工具栏区)仍继续滚 */
+      var k=(top+_zone-y)/_zone;
+      if(k>1)k=1;else if(k<0)k=0;
+      d=-(AUTO_SCROLL_MIN+(AUTO_SCROLL_MAX-AUTO_SCROLL_MIN)*k);
+    }else if(y>bot-_zone&&y<bot+_zone){
+      var k2=(y-(bot-_zone))/_zone;
+      if(k2>1)k2=1;else if(k2<0)k2=0;
+      d=AUTO_SCROLL_MIN+(AUTO_SCROLL_MAX-AUTO_SCROLL_MIN)*k2;
+    }
+  }
+  var wasOn=_asOn;
+  _asOn=(d!==0);
+  if(_asOn){
+    if(Math.abs(_asScrollBy(d))>0.5)_dragApplyAt(_asPt.x,_asPt.y);
+  }else if(wasOn){
+    _dragApplyAt(_asPt.x,_asPt.y); /* 离开热区 → 用当前坐标恢复投放区判定 */
+  }
+  _asRaf=requestAnimationFrame(_asTick);
+}
 /* ★R92 拖拽入组状态机
    命中判定用几何量测而**不是** document.elementFromPoint：拖拽克隆跟着光标一起走，
    elementFromPoint 只会返回克隆自己。
@@ -15083,13 +15455,31 @@ function _edLineFrag(line){
   frag.appendChild(sp);
   var tx=document.createElement('span');
   tx.className='todo-txt'+(done?' done':'');
-  tx.textContent=m[3];
   /* ★R83c：textContent='' 不创建文本节点 → 空 todo 行(待办后回车/续行尾为空)的 span 无子节点，
      _edSetOffset 走到该行时 acc 直接越过前缀位，光标掉进下一行/文档末尾（用户报"待办后回车光标不换行"）。
-     显式补一个空文本节点当光标锚点，空 span 也存在 (text,0) 落点。 */
-  if(!m[3])tx.appendChild(document.createTextNode(''));
+     ★R108：改用零宽空格 "文本节点"而非空文本节点——Chrome 对**空文本节点**解析不出文本位置
+     (Range rect 全零)，光标退化成"勾选框右边缘"(用户截图实测:光标紧贴待办框,而正文起点在 0.4em 之外)。
+     有 ZWSP 即有文本 run → 光标/选区都落回文字起点(= margin-right 之后)，与有文字的待办行一致。
+     ★注意:文本只能写一次(textContent + appendChild 并用会让值翻倍)。 */
+  tx.appendChild(document.createTextNode(m[3]||'\u200B'));
   frag.appendChild(tx);
   return frag;
+}
+/* ★R111 列表行悬挂缩进的「同一判据」：预览(renderContentHtml)与编辑态(_edBuild)共用。
+   原先只有预览态把列表/待办行套 .li-line（padding-left:1.5em + text-indent:-1.5em 悬挂缩进），
+   编辑态是裸文本 → 同一条长列表项在预览里续行缩进 1.5em、点进来编辑却顶回行首
+   （实测窄屏：续行 x 预览 72.5 / 编辑 53，差 19.5px@13px = 1.5em），用户报「边距不一致」。
+   判据与预览原包裹条件逐字对齐：列表标记后需 1 个空白；待办 [ ] / [x] 允许无尾随空白。
+   行首前导空白计入包裹范围（与预览一致）。 */
+function _edIsListText(line){
+  return /^([ \t]*)(?:\d{1,3}[.)]|[\u2022\-\*])[ \t]/.test(line)||/^([ \t]*)\[[ xX]\]/.test(line);
+}
+/* 列表/待办行统一套 .li-line 壳：两态同构，保证换行续行缩进完全一致 */
+function _edWrapLine(frag){
+  var sp=document.createElement('span');
+  sp.className='li-line';
+  sp.appendChild(frag);
+  return sp;
 }
 function _edBuild(ed,text){
   while(ed.firstChild)ed.removeChild(ed.firstChild);
@@ -15097,7 +15487,11 @@ function _edBuild(ed,text){
   var lines=_t.split('\n');
   for(var i=0;i<lines.length;i++){
     if(i)ed.appendChild(document.createElement('br'));
-    ed.appendChild(_edLineFrag(lines[i]));
+    /* ★R111 列表/待办行与预览态同构：套 .li-line 悬挂缩进壳。
+       壳是纯 span：_edText/_edWalkLen/_edDistTo/_edLen/_edGetOffset/_edSetOffset 都递归穿透
+       非 chk 元素，序列化与光标偏移对值零影响（_edText 只把 DIV/P 当行分隔，SPAN 不是）。 */
+    if(_edIsListText(lines[i]))ed.appendChild(_edWrapLine(_edLineFrag(lines[i])));
+    else ed.appendChild(_edLineFrag(lines[i]));
   }
   /* ★R105：值以 \n 结尾时建出的块尾 br 不产生行框（Chrome 对块尾 br/\n 均不渲染,R104 探针结论）
      → 尾部空行入编辑不可见，首次回车「旧 \n 现形+新行渲染」=一次回车出两行（探针实测:
@@ -15105,6 +15499,88 @@ function _edBuild(ed,text){
      build 时补 ZWSP 强制尾行行框,入编辑即所见=所存;_edText/_edWalkLen/_edDistTo/_edGetOffset
      四处已剥离 ZWSP 值零污染;beforeinput 的 _zwClean 先剥再按需补,不变量相容。 */
   if(/\n$/.test(_t))ed.appendChild(document.createTextNode('\u200B'));
+}
+/* ★R108 空待办行(勾选框后无文字)补一个 ZWSP，并补回被浏览器删掉的 .todo-txt 结构。
+   ① 光标贴框：Chrome 对**空文本节点**解析不出文本位置(Range rect 全零) → 光标退化到勾选框右边缘；
+      有 ZWSP 即有文本 run，光标/选区落回正文起点(勾选框 margin-right 之后)，与有文字的待办行一致。
+   ② 结构丢失：把一行待办的文字全删掉时 Chrome 会把整个 .todo-txt 一起删掉(探针实测:只剩 .todo-chk + <br>，
+      光标锚在块级 DIV) → 又会贴回勾选框，故输入后按结构补齐。
+   只补结构不动值：ZWSP 在 _edText/_edWalkLen/_edGetOffset/_edSetOffset 四处统一剥离。 */
+function _edFixEmptyTodo(ed){
+  if(!ed||!ed.querySelectorAll)return false;
+  var chks=ed.querySelectorAll('.todo-chk'),changed=false;
+  for(var i=0;i<chks.length;i++){
+    var k=chks[i],tx=k.nextSibling;
+    while(tx&&tx.nodeType===3&&!tx.nodeValue.length)tx=tx.nextSibling; /* 跳过空白文本节点 */
+    if(!tx||tx.nodeType!==1||!tx.classList||!tx.classList.contains('todo-txt')){
+      tx=document.createElement('span');
+      tx.className='todo-txt'+(k.classList.contains('done')?' done':'');
+      if(k.nextSibling)k.parentNode.insertBefore(tx,k.nextSibling);else k.parentNode.appendChild(tx);
+      changed=true;
+    }
+    var has=false,tn=null;
+    for(var c=tx.firstChild;c;c=c.nextSibling){
+      if(c.nodeType!==3)continue;
+      if(!tn)tn=c;
+      if(c.nodeValue.replace(/\u200B/g,'').length){has=true;break;}
+    }
+    if(has)continue;
+    if(tn){ if(tn.nodeValue!=='\u200B'){tn.nodeValue='\u200B';changed=true;} }
+    else{ tx.insertBefore(document.createTextNode('\u200B'),tx.firstChild);changed=true; }
+  }
+  return changed;
+}
+/* 逻辑偏移落在"空待办行"的前缀边界时，返回该行文字节点(ZWSP)：Chrome 把空待办行的光标
+   解析到"chk 之前/块尾"这类零矩形位置(视觉上贴着勾选框，且后续输入会落到 [ ] 之前)。
+   只在结构刚被补齐(_edFixTodoInput)时调用，不影响用户正常点选行首。 */
+function _edEmptyTodoNodeAt(ed,pos){
+  var acc=0,hit=null;
+  (function walk(p){
+    for(var c=p.firstChild;c&&!hit;c=c.nextSibling){
+      if(c.nodeType===3){acc+=c.nodeValue.replace(/\u200B/g,'').length;continue;}
+      if(c.nodeName==='BR'&&p===ed){acc+=1;continue;}
+      if(c.nodeType!==1)continue;
+      if(_edIsChk(c)){
+        var pl=_edPfxLen(c),sib=c.nextSibling;
+        while(sib&&sib.nodeType===3&&!sib.nodeValue.length)sib=sib.nextSibling;
+        var empty=!!(sib&&sib.nodeType===1&&sib.classList&&sib.classList.contains('todo-txt'));
+        if(empty){
+          for(var t=sib.firstChild;t;t=t.nextSibling){
+            if(t.nodeType===3&&t.nodeValue.replace(/\u200B/g,'').length){empty=false;break;}
+          }
+        }
+        if(empty&&(pos===acc||pos===acc+pl)){
+          for(var t2=sib.firstChild;t2;t2=t2.nextSibling){
+            if(t2.nodeType===3){hit=t2;return;}
+          }
+        }
+        acc+=pl;continue;
+      }
+      walk(c);
+    }
+  })(ed);
+  return hit;
+}
+/* 输入/退格后的续补：结构变了就重落光标(ZWSP 零长度,逻辑偏移不变量不受影响) */
+function _edFixTodoInput(ed){
+  if(!ed||ed._edProg||ed._composing)return;
+  var pos=null,sel=null;
+  try{
+    sel=window.getSelection();
+    if(sel&&sel.rangeCount&&ed.contains(sel.getRangeAt(0).startContainer))pos=_edGetOffset(ed);
+  }catch(_){}
+  if(!_edFixEmptyTodo(ed))return;
+  if(pos==null)return;
+  try{
+    /* ① 空待办行前缀边界(删空该行文字后 Chrome 会把光标丢到"chk 之前"/块尾) → 落回文字起点 */
+    var tn=_edEmptyTodoNodeAt(ed,pos);
+    if(tn){
+      var r=document.createRange();r.setStart(tn,0);r.collapse(true);
+      sel.removeAllRanges();sel.addRange(r);
+      return;
+    }
+    _edSetOffset(ed,pos);
+  }catch(_){}
 }
 function _edIsChk(c){return c.nodeType===1&&c.getAttribute&&c.getAttribute('data-pfx')!=null;}
 function _edText(ed){
@@ -15159,17 +15635,29 @@ function _edDistTo(ed,node,off){
   })(ed);
   return n;
 }
+/* ★R108 与 _edWalkLen/_edText 同口径的"单节点长度"：文本按字符(剥 ZWSP)、块内直属 BR 计 1 个换行、
+   chk 计前缀长、其它元素递归(其内部 br 不算换行——只有块内直属 br 才是行分隔)。 */
+function _edLen(node,isBlock){
+  if(node.nodeType===3)return node.nodeValue.replace(/\u200B/g,'').length;
+  if(node.nodeName==='BR')return isBlock?1:0;
+  if(_edIsChk(node))return _edPfxLen(node);
+  if(node.nodeType!==1)return 0;
+  var n=0;
+  for(var c=node.firstChild;c;c=c.nextSibling)n+=_edLen(c,false);
+  return n;
+}
 function _edGetOffset(ed){
   var sel=window.getSelection();
   if(!sel||!sel.rangeCount)return ed._lastSel||0;
   var r=sel.getRangeAt(0);
   if(!ed.contains(r.startContainer))return ed._lastSel||0;
   if(r.startContainer===ed){
+    /* ★R108：原实现只认 直属文本/BR/chk，非 chk 的元素(todo-txt 等)整个跳过 → 块级光标位置
+       (Chrome 在删空行内元素后会把光标挂到块上)偏移少算整段文字(实测 19 算成 16)。
+       改用与 _edWalkLen 同口径的 _edLen 递归累加。 */
     var n=0,c=ed.firstChild,i=0;
     while(c&&i<r.startOffset){
-      if(c.nodeType===3)n+=c.nodeValue.replace(/\u200B/g,'').length; /* ★R104 剥离 ZWSP */
-      else if(c.nodeName==='BR')n+=1;
-      else if(_edIsChk(c))n+=_edPfxLen(c);
+      n+=_edLen(c,true);
       c=c.nextSibling;i++;
     }
     return n;
@@ -15330,13 +15818,23 @@ function createTodoEditable(text,cls){
   ed.addEventListener('click',_remember);
   ed.addEventListener('input',_remember);
   ed.addEventListener('focus',_remember);
+  /* ★R108 空待办行 ZWSP 续补（三入口共用）：输入/退格删空待办行文字后补齐结构与光标落点；
+     输入法组合中不介入(动 selection 会打断候选)，组合结束后补一次。 */
+  ed.addEventListener('compositionstart',function(){ed._composing=true;});
+  ed.addEventListener('compositionend',function(){
+    ed._composing=false;
+    setTimeout(function(){if(ed.isConnected)_edFixTodoInput(ed);},0);
+  });
+  ed.addEventListener('input',function(){if(!ed._composing)_edFixTodoInput(ed);});
   return ed;
 }
 function renderContentHtml(text){
-  var esc=escapeHtml(text||'');
+  var raw=String(text==null?'':text);
+  var esc=escapeHtml(raw);
   /* ★R68 列表/待办行需特殊渲染（勾选框、悬挂缩进），纯文本走快路径 */
   if(esc.indexOf('[')<0&&!/(^|\n)[ \t]*(\d{1,3}[.)]|[•\-\*])[ \t]/.test(esc))return esc;
   var lines=esc.split('\n');
+  var rawLines=raw.split('\n'); /* ★R111 与编辑态(_edBuild)共用同一「是列表/待办行吗」判据，两态包裹壳保持一致 */
   for(var i=0;i<lines.length;i++){
     lines[i]=lines[i].replace(/^([ \t]*)\[([ xX])\][ \t]*([\s\S]*)$/,function(_m,ind,c,rest){
       var done=(c==='x'||c==='X');
@@ -15344,7 +15842,7 @@ function renderContentHtml(text){
     });
     /* ★R68 悬挂缩进：列表项(圆点/短横/星号/数字点)与待办行换行后对齐到文字起点，不再顶回行首。
        inline-block+负 text-indent：首行从 0 起、续行挂在 1.5em；块内自带换行不产生空行 */
-    if(/^([ \t]*)(?:(\d{1,3})[.)]|([•\-\*]))[ \t]/.test(lines[i])||/^([ \t]*)<span class="todo-chk/.test(lines[i])){
+    if(_edIsListText(rawLines[i]||'')){
       lines[i]='<span class="li-line">'+lines[i]+'</span>';
     }
   }
@@ -16519,6 +17017,7 @@ function bindFsMetaBar(mBar,id,ta,opts){
   },sync:sync};
 }
 function openFullEdit(id){
+  closeAllCatDropdowns(); /* ★R113 全屏编辑盖住整页，卡片下拉必须先收（否则关掉全屏后它还在） */
   var memo=findMemoById(id);
   if(!memo)return;
   // 加密备忘未解锁:先验证密码,成功后再打开编辑器(防止未授权直接看到明文)
@@ -16553,6 +17052,7 @@ function openFullEdit(id){
   var ta=box.querySelector('.fs-edit-area');
   var _taEd=createTodoEditable(memo.text||'','fs-edit-area'); /* ★R82 contenteditable */
   ta.parentNode.replaceChild(_taEd,ta);ta=_taEd;
+  _cbArm(ta,ta); /* ★R108 全屏编辑：编辑区自身滚动(overflow-y:auto)→容器即编辑元素 */
   ta._origText=memo.text||'';        // 进入编辑时的原文(清空确认弹框取消时恢复)
   // ★R64 双指缩放字号（12–30px，单独记忆 memo_edit_font，与「正文字号」设置互不影响）
   try{var _pf=parseInt(localStorage.getItem('memo_edit_font'),10);if(_pf>=12&&_pf<=30)ta.style.fontSize=_pf+'px';}catch(_){ }
@@ -16608,6 +17108,7 @@ function openFullEdit(id){
     });
   }
   function closeFs(){
+    _cbDisarm(); /* ★R108 关闭全屏编辑 → 收起「回到编辑位置」按钮 */
     if(_vv){ _vv.removeEventListener('resize',_fitToVV); _vv.removeEventListener('scroll',_fitToVV); }
     // ★ 2026-09-02：「+」新增的备忘在全屏编辑器里内容为空就关闭 → 直接删除，不弹确认、不留空白条目。
     // 延后一拍：让 fs-cut/fs-del 等「先 closeFs 后 softDelete」的分支先跑完，避免重复处理已删除条目。
@@ -16982,17 +17483,23 @@ function updateStatusTabs(){
     var chip=chips[i];
     // 高亮始终与 currentFilter 对齐：启动时若从记忆恢复了筛选，靠这里把对应页签点亮
     chip.classList.toggle('active',chip.getAttribute('data-filter')===currentFilter);
-    var arrow=chip.querySelector('.sort-arrow');
-    if(!arrow)continue;
-    if(!chip.classList.contains('active')){ arrow.className='sort-arrow'; arrow.textContent=''; continue; }
-    if(sortField==='custom'){
-      arrow.className='sort-arrow'; arrow.textContent='';
-    }else{
-      arrow.className='sort-arrow show';
-      arrow.textContent = sortDir==='asc' ? ' ↑' : ' ↓';
-      arrow.title=(sortField==='created'?'按创建时间':'按截止时间')+(sortDir==='asc'?'升序（从早到晚）':'降序（从晚到早）');
-    }
   }
+  syncSortDirUI(); /* ★R110 升/降序箭头改挂在排序按钮上（不再画在状态页签） */
+}
+/* ★R110 排序按钮上的升/降序箭头 —— 只用 inline SVG：↑↓ 字符与相邻文字字体度量不同，垂直基线对不齐 */
+var SORT_ICO_UP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5.5 11.5L12 5l6.5 6.5"/></svg>';
+var SORT_ICO_DOWN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5.5 12.5L12 19l6.5-6.5"/></svg>';
+function sortFieldLabel(){return sortField==='created'?'创建时间':'截止时间';}
+function syncSortDirUI(){
+  var btn=document.getElementById('sort-dir-btn');if(!btn)return;
+  if(sortField==='custom'){ /* 自定义顺序没有方向可言 → 箭头收起 */
+    btn.classList.remove('show');btn.innerHTML='';btn.title='';btn.removeAttribute('aria-label');return;
+  }
+  var asc=sortDir==='asc';
+  btn.classList.add('show');
+  btn.innerHTML=asc?SORT_ICO_UP:SORT_ICO_DOWN;
+  var tip=sortFieldLabel()+'：'+(asc?'升序（从早到晚）':'降序（从晚到早）')+' · 点击切换为'+(asc?'降序':'升序');
+  btn.title=tip;btn.setAttribute('aria-label',tip);
 }
 
 function updateStats(){var total=memos.length;var todo=0,done=0;for(var i=0;i<memos.length;i++){if(memos[i].done)done++;else todo++;}document.getElementById('count-all').textContent=total?' ('+total+')':'';document.getElementById('count-todo').textContent=todo?' ('+todo+')':'';document.getElementById('count-done').textContent=done?' ('+done+')':'';}
@@ -17953,6 +18460,54 @@ function closeAllDropdowns(){
   for(var t=0;t<triggers.length;t++){triggers[t].classList.remove('open');}
 }
 
+/* ★R113 卡片内分类下拉(.cat-trigger/.cat-dropdown)的统一收起。
+   此前"点击外部关闭"只挂在 document 的**冒泡**阶段，而卡片正文点击(memoContentClick)、
+   编辑态进出等多个入口都会 stopPropagation → 冒泡监听收不到 → 下拉一直挂在屏幕上开着
+   （手机端实测：点分类标签开下拉 → 再点正文进编辑 → open 仍为 1，取消编辑也不收）。
+   现在：①统一收口到本函数；②外部点击改到**捕获**阶段监听（见 bindEvents 末尾）；
+   ③编辑态进出 / 列表重建 / 滚动 均主动调用。 */
+function closeAllCatDropdowns(){
+  var ds=document.querySelectorAll('.cat-dropdown.open');
+  if(!ds.length)return;
+  for(var i=0;i<ds.length;i++){
+    var d=ds[i];
+    d.classList.remove('open');
+    d.style.transformOrigin='';
+    var cf=d.getAttribute('data-cat-for');
+    if(cf){
+      var pe=memoListEl.querySelector('.memo-item[data-id="'+cf+'"]');
+      if(pe){pe.style.zIndex='';var pt=pe.querySelector('.cat-trigger');if(pt)pt.classList.remove('open');}
+    }
+  }
+}
+
+// ===== ★R113 顶栏「更多」菜单收起 =====
+function closeHeaderMore(){
+  var m=document.getElementById('headerMore'), b=document.getElementById('more-btn');
+  if(m)m.classList.remove('open');
+  if(b)b.classList.remove('active');
+}
+/* ★R115 菜单行尾计数：回收站=待清理条数(0 不显示)、统计=现役条数。
+   render() 与菜单每次展开时都刷新，保证数字永远和当前数据一致 */
+function syncHeaderMoreCounts(){
+  var t=document.getElementById('hmTrashTail');
+  if(t)t.textContent=deleted.length?String(deleted.length):'';
+  var s=document.getElementById('hmStatsTail');
+  if(s)s.textContent=memos.length?(memos.length+' 条'):'';
+}
+
+// ===== ★R110 下拉「尾随 click」抑制 =====
+// 根因：下拉选项是在 pointerdown/touchstart 里就处理并关闭的（触摸端响应快、不依赖合成 click），
+// 下拉随即被移走/隐藏，手指下方变回列表 —— 浏览器随后按同坐标合成的 click 落到**下层元素**上。
+// 实测（CDP 真实触摸、430px 手机视口）：点排序下拉里的「截止时间」→ click 命中后面的备忘录卡片 m0。
+// 鼠标路径不触发（click 仍落在选项上）→ 只跑桌面鼠标测试发现不了，必须真机/触摸手势测。
+// 修法：处理选项时开一个短时窗，在捕获阶段吞掉紧随其后的那一次 click，不让它到达列表/卡片。
+var _ddEatClickUntil=0;
+function _ddEatClick(){_ddEatClickUntil=Date.now()+350;}
+document.addEventListener('click',function(e){
+  if(_ddEatClickUntil&&Date.now()<_ddEatClickUntil){_ddEatClickUntil=0;e.stopPropagation();e.preventDefault();}
+},true);
+
 // ===== 统一的自定义下拉组件(修复版) =====
 function bindCustomSelect(selId,dropdownId,onSelect){
   var sel=document.getElementById(selId);
@@ -18038,6 +18593,7 @@ function bindCustomSelect(selId,dropdownId,onSelect){
     e.preventDefault();
     e.stopPropagation();
     var val=opt.getAttribute('data-value');
+    _ddEatClick(); /* ★R110 下拉已关、节点已移走 → 浏览器随后补的那次 click 会落到列表上(误触)，吞掉 */
     close();
     if(typeof onSelect==='function')onSelect(val,opt);
   }
@@ -18077,13 +18633,33 @@ function bindCustomSelect(selId,dropdownId,onSelect){
 
 // ===== 事件绑定 =====
 function bindEvents(){
-  var themeBtn=document.getElementById('theme-btn');
+  /* ★R113 顶栏「更多」菜单（回收站 / 统计 / 主题）：主题四个选项常显在菜单里，
+     点一下即切换并收起 —— 原来那套「主题按钮 → 独立浮层 theme-menu」已并入本菜单。 */
+  var moreBtn=document.getElementById('more-btn');
+  var moreMenu=document.getElementById('headerMore');
+  if(moreBtn&&moreMenu){
+    moreBtn.addEventListener('click',function(e){
+      e.stopPropagation();
+      syncHeaderMoreCounts();
+      var on=moreMenu.classList.toggle('open');
+      moreBtn.classList.toggle('active',on);
+    });
+    // 菜单内任意项点完就收（主题选项自己 stopPropagation 单独处理；
+    // ★R114 主题行的图标/文字不是动作，点到它们不该把菜单关掉）
+    moreMenu.addEventListener('click',function(e){
+      if(e.target.closest&&(e.target.closest('.theme-opt')||e.target.closest('.hm-row')))return;
+      closeHeaderMore();
+    });
+    document.addEventListener('click',function(e){
+      if(!moreMenu.classList.contains('open'))return;
+      if(moreMenu.contains(e.target)||e.target===moreBtn)return;
+      closeHeaderMore();
+    });
+  }
   var themeMenu=document.getElementById('themeMenu');
-  if(themeBtn&&themeMenu){
-    themeBtn.addEventListener('click',function(e){e.stopPropagation();themeMenu.classList.toggle('open');});
+  if(themeMenu){
     var _opts=themeMenu.querySelectorAll('.theme-opt');
-    for(var _ti=0;_ti<_opts.length;_ti++){(function(b){b.addEventListener('click',function(e){e.stopPropagation();setTheme(b.getAttribute('data-theme'));themeMenu.classList.remove('open');});})(_opts[_ti]);}
-    document.addEventListener('click',function(e){if(themeMenu.classList.contains('open')&&!themeMenu.contains(e.target)&&e.target!==themeBtn)themeMenu.classList.remove('open');});
+    for(var _ti=0;_ti<_opts.length;_ti++){(function(b){b.addEventListener('click',function(e){e.stopPropagation();setTheme(b.getAttribute('data-theme'));closeHeaderMore();});})(_opts[_ti]);}
     syncThemeMenuActive(document.documentElement.getAttribute('data-theme')||'light');
   }
   document.getElementById('settings-btn').addEventListener('click',function(e){
@@ -18385,12 +18961,22 @@ function bindEvents(){
       if(!body){sec.classList.toggle('collapsed');saveSecOpenState();return;}
       if(sec.classList.contains('collapsed')){
         sec.classList.remove('collapsed');
+        /* ★R107 修「手机端设置每块底下显示不全」：remove('collapsed') 会触发 padding 0→6/10 的过渡，
+           紧接读 offsetHeight 时 padding 仍是过渡起点 0 → 量到的高度比真实自然高少 16px(=6+10)，
+           max-height 被锁小 → overflow:hidden 把最后一行底部裁掉。故测量前临时关过渡，取含 padding 的真实高。 */
+        body.style.transition='none';
         body.style.maxHeight='none';
+        void body.offsetHeight;
         var h=body.offsetHeight;
+        body.style.transition='';
         body.style.maxHeight='0px';
         void body.offsetHeight;
         body.style.maxHeight=h+'px';
+        /* 过渡结束后解除 max-height 锁：内容随主题/字号/换行变化时不再被裁 */
+        clearTimeout(body._mhRelease);
+        body._mhRelease=setTimeout(function(){ if(!sec.classList.contains('collapsed')) body.style.maxHeight='none'; },340);
       }else{
+        clearTimeout(body._mhRelease);
         body.style.maxHeight=body.offsetHeight+'px';
         void body.offsetHeight;
         body.style.maxHeight='0px';
@@ -18426,23 +19012,18 @@ function bindEvents(){
     (function(b){b.addEventListener('click',function(){weekStart=b.getAttribute('data-ws');syncWeekStartUI();saveData();renderCalendar();});})(wsBtns[wi]);
   }
 
-  // 筛选页签：状态切换 + 排序方向切换
-  // 自定义排序时点击页签只切状态；选择 创建/截止时间 后，点击当前激活页签在升/降序间切换（▲▼ 同时显示）
+  // ★R110 状态页签(全部/待办/已完成)只切状态：升/降序改由排序按钮「创建时间 ↑」上的箭头切换，
+  //   页签不再兼职排序方向（点击当前页签翻方向既隐蔽又和「按什么排序」的归属对不上）。
   var chips=document.querySelectorAll('.filter-chip');
   for(var i=0;i<chips.length;i++){
     (function(chip){
       chip.addEventListener('click',function(){
         var f=chip.getAttribute('data-filter');
-        if(f===currentFilter){
-          if(sortField==='custom'){ return; } // 自定义：无排序，点击当前页签不做事
-          sortDir = sortDir==='asc' ? 'desc' : 'asc';
-          showToast((sortField==='created'?'创建时间':'截止时间')+'：'+(sortDir==='asc'?'升序':'降序'));
-        }else{
-          for(var j=0;j<chips.length;j++)chips[j].classList.remove('active');
-          chip.classList.add('active');
-          currentFilter=f;
-          saveLastFilter(f); // 记住本次状态筛选，下次打开自动恢复
-        }
+        if(f===currentFilter)return;
+        for(var j=0;j<chips.length;j++)chips[j].classList.remove('active');
+        chip.classList.add('active');
+        currentFilter=f;
+        saveLastFilter(f); // 记住本次状态筛选，下次打开自动恢复
         render();
       });
     })(chips[i]);
@@ -18458,13 +19039,30 @@ function bindEvents(){
   // 排序下拉：自定义 / 创建时间 / 截止时间
   bindCustomSelect('sort-filter-select','sort-filter-dropdown',function(val,opt){
     sortField=val;
-    document.getElementById('sort-filter-label').textContent=opt.querySelector('span').textContent;
-    var sopts=document.querySelectorAll('#sort-filter-dropdown .select-option');
-    for(var si=0;si<sopts.length;si++){sopts[si].classList.toggle('selected',sopts[si].getAttribute('data-value')===val);}
+    syncSortUI();  /* ★R112 文字/选中项/方向箭头一处回填 */
+    saveSortState(); /* ★R112 记住本次排序，下次打开自动恢复 */
     if(sortField==='custom')showToast('自定义顺序');
-    else showToast((sortField==='created'?'按创建时间排序':'按截止时间排序'));
+    else showToast('按'+sortFieldLabel()+'排序 · '+(sortDir==='asc'?'升序':'降序')+'（点按钮上的箭头可切换）');
     render();
   });
+  /* ★R110 排序按钮上的 ↑/↓ 箭头：点击即切换升/降序。
+     箭头是 trigger 的子元素，必须 stopPropagation —— 否则事件冒泡到 trigger 会顺手打开下拉。
+     不拦 touchstart 的 preventDefault（拦了合成 click 会被吞，真机点不动），只拦它的冒泡。 */
+  (function(){
+    var sb=document.getElementById('sort-dir-btn');if(!sb)return;
+    function flipDir(e){
+      if(e){e.stopPropagation();e.preventDefault();}
+      if(sortField==='custom')return;
+      sortDir=(sortDir==='asc')?'desc':'asc';
+      syncSortDirUI();
+      saveSortState(); /* ★R112 方向也要记：只记字段不记方向等于每次都要重设一遍 */
+      showToast(sortFieldLabel()+'：'+(sortDir==='asc'?'升序':'降序'));
+      render();
+    }
+    sb.addEventListener('click',flipDir);
+    sb.addEventListener('mousedown',function(e){e.stopPropagation();});
+    sb.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:true});
+  })();
 
   // 时间选择器
   document.getElementById('picker-close').addEventListener('click',closePicker);
@@ -18541,27 +19139,27 @@ function bindEvents(){
       if(dd)dd.classList.remove('open');
     }
     if(openSwipeEl)closeSwipe(openSwipeEl);
+    closeAllCatDropdowns(); /* ★R113 卡片分类下拉是 fixed 定位，滚动/改尺寸后会停在错位置，必须一并收 */
+    closeHeaderMore();      /* ★R113 顶栏「更多」菜单同理 */
   }
   window.addEventListener('resize',closeFloatingUI);
   // 滚动时关闭浮层：用 rAF 节流，避免每个滚动帧都跑 DOM 查询（移动端滚动卡顿来源之一）
   var _cfScheduled=false;
   window.addEventListener('scroll',function(){if(_cfScheduled)return;_cfScheduled=true;requestAnimationFrame(function(){_cfScheduled=false;closeFloatingUI();});},{passive:true});
 
+  /* ★R113 分类下拉的「点击外部关闭」改到**捕获阶段**。
+     原因：卡片正文点击(memoContentClick)、编辑态进出等入口都会 stopPropagation，
+     冒泡阶段的监听永远收不到那些 click → 下拉开着不收（手机端症状：点分类标签开下拉后，
+     再点正文进编辑/取消编辑，下拉一直悬在屏幕上）。
+     捕获阶段先于一切冒泡 handler 执行；下拉内部与 trigger 自身放行 —— 后者是关键：
+     trigger 的开关靠它自己 click handler 里读 .open，若这里抢先关掉会变成"点第二次关不掉"。 */
+  document.addEventListener('click',function(e){
+    if(!e.target||!e.target.closest)return;
+    if(e.target.closest('.cat-dropdown')||e.target.closest('.cat-trigger'))return;
+    closeAllCatDropdowns();
+  },true);
   // 点击外部关闭更多菜单 / 左滑操作条(顶栏下拉由各自的 focusout/mouseleave 处理)
   document.addEventListener('click',function(e){
-    // 点击分类下拉外部 → 关闭所有打开的分类下拉(trigger/选项内部均已 stopPropagation,此监听只收外部点击)
-    if(!e.target.closest('.cat-dropdown') && !e.target.closest('.cat-trigger')){
-      var catDDs=document.querySelectorAll('.cat-dropdown.open');
-      for(var cdd=0;cdd<catDDs.length;cdd++){
-        catDDs[cdd].classList.remove('open');
-        catDDs[cdd].style.transformOrigin='';
-        var cf=catDDs[cdd].getAttribute('data-cat-for');
-        if(cf){
-          var cpe=memoListEl.querySelector('.memo-item[data-id="'+cf+'"]');
-          if(cpe){cpe.style.zIndex='';var cpt=cpe.querySelector('.cat-trigger');if(cpt)cpt.classList.remove('open');}
-        }
-      }
-    }
     if(!e.target.closest('.more-menu') && !e.target.closest('.more-btn')){
       var menus=document.querySelectorAll('.more-menu.open');
       for(var i=0;i<menus.length;i++)menus[i].classList.remove('open');
@@ -18589,6 +19187,7 @@ function init(){
   purgeTrashExpired(); /* ★R86 启动即清掉超过 30 天的回收站条目 */
   restoreLastView();   // 恢复上次打开的视图(须在 loadData 之后：依赖 viewPrefs 的可见性判断)
   restoreLastFilter(); // 恢复上次的状态筛选(全部/待办/已完成)，首次 render 会据此点亮对应页签
+  restoreSortState();  // ★R112 恢复上次的排序字段+方向(首次 render 按此排序)
   compactMode=loadCompactMode(); // 恢复省略视图开关
   histStack=[snapshotState()];histIndex=0;updateHistButtons();
   initTheme();
@@ -18603,6 +19202,7 @@ function init(){
   }
   if(needSave)saveData();
   bindEvents();
+  syncSortUI(); /* ★R112 把恢复的排序回填到排序按钮(文字/选中项/方向箭头)，与记住的值保持一致 */
   renderCategoryFilter();
   renderBottomNav();
   render();
