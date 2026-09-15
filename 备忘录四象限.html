@@ -2702,21 +2702,34 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
   .header-actions .btn-icon{width:28px;height:28px;}
   .header-actions .btn-icon svg{width:13px;height:13px;}
   /* 筛选栏：与宽屏一致——chips 显示数量、下拉显示"全部/自定义"文字，一行显示完禁左右滑 */
-  .filter-bar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:4px 6px;gap:3px;}
+  /* ★R117 窄屏收口（用户选方案 B）：宽度只从「间距/内边距」里抠（页签 padding 5→4、计数 margin-left 1→0、
+     整栏 padding 5→4、下拉 padding 4→3、下拉 caret 11→10，合计省约 25px）。360px 机型从
+     「选中创建时间后溢出 12px、整行能左右滑」变成「一行装完、scrollWidth==clientWidth」，
+     计数涨到三位数（250/130/120）也装得下。overflow-x:auto 仍保留作极端兜底，但正常情况下已无内容可滚。
+     （顺带记一笔：更省字的「排序名缩成两字『创建』」方案已实测否决，原因见下面 select-trigger 段的注释） */
+  .filter-bar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:4px 4px;gap:2px;}
+  .filter-bar .filter-divider{margin:0;}
   /* ★R112 根因修复：手机端「全部/待办/已完成 显示不全」——
      旧规则 .filter-chip{flex:0 1 auto} 允许页签被压扁，配合 overflow:hidden 把文字裁掉
      (393px 下「全部 (120)」被压到 60px、末字切一半)。现改为 flex:0 0 auto：页签永远保持
      自然宽度、绝不裁字；整栏放不下时由 overflow-x:auto 兜底横滚(4 位计数等极端情况)。
      真正腾出空间的做法=把「省略视图 / 搜索」两个全局操作移出筛选栏、放进 header-actions：
      筛选栏只留「状态筛选 + 分类筛选 + 排序」，职责清晰，一行排得下。 */
-  .filter-chip{flex:0 0 auto;min-width:0;white-space:nowrap;padding:3px 7px;font-size:12px;height:26px;box-sizing:border-box;}
+  .filter-chip{flex:0 0 auto;min-width:0;white-space:nowrap;padding:3px 4px;font-size:12px;height:26px;box-sizing:border-box;}
   /* 排序控件贴在筛选栏最右缘，它的下拉(min-width:100px)即使 opacity:0 也占布局宽度、
      会把整栏 scrollWidth 撑大 → 窄屏下 overflow-x:auto 变成"可左右晃 20px"。改为贴右缘对齐
      (菜单向左展开)：既消除多余滚动，窄屏上菜单也不会被推到屏幕外。 */
   .filter-bar #sort-filter-dropdown{left:auto;right:0;}
-  .filter-chip .count{display:inline!important;font-size:10px;margin-left:1px;}
+  .filter-chip .count{display:inline!important;font-size:10px;margin-left:0;}
   #cat-filter-label,#sort-filter-label{display:inline!important;}
-  .filter-bar .select-trigger{min-width:0;height:26px;padding:0 5px;font-size:11px;gap:2px;white-space:nowrap;}
+  .filter-bar .select-trigger{min-width:0;height:26px;padding:0 3px;font-size:11px;gap:2px;white-space:nowrap;}
+  .filter-bar .select-trigger svg{width:10px;height:10px;}
+  /* ★R117 试过把排序名在窄屏缩成两字「创建」，实测踩雷：触发器中点会落到标签与方向箭头之间的空隙
+     (标签 22px + guard 7px + 箭头 14px，中点距箭头只剩 2px) → 触摸吸附把「点按钮中间」吸到箭头上，
+     变成切换升降序而不是打开下拉（R110 的老坑，R110⑫⑬ 立刻飘红）。所以文案保持全称「创建时间」不动，
+     宽度改从间距/内边距里抠：页签 padding 5→4、计数 margin-left 1→0（计数文本自带前导空格）、
+     整栏 padding 5→4、下拉 padding 4→3、下拉里的 caret 图标 11→10。
+     几何上与 R110 验证过的形态一致：触发器中点仍深在 44px 的标签区里，离方向箭头 12px 以上。 */
   .filter-bar .select-trigger .trigger-ico{display:none;}
   .filter-bar .select-trigger svg{width:11px;height:11px;}
   /* R112:「省略视图 / 搜索」已移出筛选栏 → 本块原来的 .filter-bar .btn-icon* 三条规则作废，删除；
@@ -2831,6 +2844,11 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
           <button type="button" class="font-reset-btn" id="font-reset" title="恢复默认字号">恢复默认</button>
         </div>
         <p class="sec-note">调节正常视图列表里正文的文字大小（12–22px）。「默认」跟随主题：手机 14 / 电脑 15。全屏编辑器可双指缩放，单独记忆。</p>
+        <div class="setting-row toggle-row">
+          <span class="row-label">新增备忘的位置</span>
+          <div class="seg" id="new-pos-seg"><button class="seg-btn" type="button" data-pos="top">顶部</button><button class="seg-btn" type="button" data-pos="bottom">底部</button></div>
+        </div>
+        <p class="sec-note">新加的一条放在列表最上面（最新最显眼，加完不用滚）还是最下面（像流水账一样往后追加）。排序选了「创建时间 / 截止时间」时，位置由排序方向决定，此项只在「自定义顺序」下生效。</p>
       </div>
     </div>
     
@@ -12164,6 +12182,20 @@ function toggleCompact(){
 }
 function getFullEditDefault(){ try{ return localStorage.getItem(FULLEDIT_KEY)==='1'; }catch(e){ return false; } }
 function setFullEditDefault(on){ try{ localStorage.setItem(FULLEDIT_KEY,on?'1':'0'); }catch(e){} }
+/* ★R117 新增备忘落位：顶部(默认，最新最显眼、加完不用滚) / 底部(流水账式往后追加)。
+   只决定 memos 数组的插入位置 → 只在「自定义顺序」下可见；排序选了创建/截止时间时由 getFilteredMemos 的排序决定。 */
+var NEWPOS_KEY='memo_new_pos';
+function getNewPos(){ try{ return localStorage.getItem(NEWPOS_KEY)==='bottom'?'bottom':'top'; }catch(e){ return 'top'; } }
+function setNewPos(p){ try{ localStorage.setItem(NEWPOS_KEY,p==='bottom'?'bottom':'top'); }catch(e){} syncNewPosUI(); }
+/* 新条目此刻是否真的排在列表第一条 —— 只有「设置=置顶」且「排序=自定义顺序」同时成立才是。
+   排序选了创建/截止时间时位置由排序方向决定，仍需走原来的"滚到该条"逻辑。 */
+function _newPosTopNow(){ return getNewPos()==='top' && sortField==='custom'; }
+/* 只扫本分段控件内的按钮 —— 不能像 syncWeekStartUI 那样扫全页 .seg-btn（日历的「每周开始于」也在用同一个类） */
+function syncNewPosUI(){
+  var seg=document.getElementById('new-pos-seg'); if(!seg)return;
+  var p=getNewPos(), bs=seg.querySelectorAll('.seg-btn');
+  for(var i=0;i<bs.length;i++)bs[i].classList.toggle('active',bs[i].getAttribute('data-pos')===p);
+}
 function restoreLastFilter(){
   try{
     var v=localStorage.getItem(LAST_FILTER_KEY);
@@ -17453,7 +17485,9 @@ function addMemo(){
   var firstCat=createCategory();
   var nid=generateId();
   var nm={id:nid,text:'',quadrant:0,category:firstCat,done:false,deadline:createDeadline(),deadlineEnd:null,timeType:'allday',repeat:'once',locked:false,createdAt:Date.now(),updatedAt:Date.now()};
-  memos.push(nm);
+  // ★R117 落位由设置决定（默认置顶）：置顶=unshift(数组首位，自定义顺序下就是列表第一条)，
+  //   置底=push(原来的行为)。排序为创建/截止时间时位置另由排序方向决定，这里只管数组次序。
+  if(getNewPos()==='bottom')memos.push(nm);else memos.unshift(nm);
   _freshAddId=nid;
   stats.totalCreated++;
   saveData();render();
@@ -17472,12 +17506,16 @@ function addMemo(){
       memoContentClick(null,mc,findMemoById(nid)||nm,item);
       // 整页 window 滚动模式下 listView 非滚动容器,scrollTop 无效;
       // 改用 scrollIntoView 把新 memo 滚入视口(底部对齐),聚焦后 kbEditStart 再顶到键盘上方
-      try{item.scrollIntoView({block:'end',behavior:'auto'});}catch(e){}
+      // ★R117 置顶模式下新条目就在列表第一条（用户可能停在列表深处点的「+」）→ 直接回顶部，
+      //   别用 block:'end' 把首条推到视口底部（那样头和筛选栏会被顶出屏幕，看着别扭）
+      if(_newPosTopNow()){try{window.scrollTo(0,0);}catch(e){}}
+      else{try{item.scrollIntoView({block:'end',behavior:'auto'});}catch(e){}}
     }
     if(document.querySelector('.memo-item[data-id="'+nid+'"]')){tryEdit();}
     else{
-      // 虚拟滚动窗口未包含新条目 → 先滚到底部让窗口重建,再进入编辑
-      try{window.scrollTo(0,document.body.scrollHeight);}catch(e){}
+      // 虚拟滚动窗口未包含新条目 → 先把页面滚到条目所在那一端让窗口重建,再进入编辑
+      // ★R117 置顶时新条目在顶部 → 滚到 0（原来恒定滚到底部，置顶模式下窗口建的是列表尾部，白跑一趟）
+      try{window.scrollTo(0,_newPosTopNow()?0:document.body.scrollHeight);}catch(e){}
       setTimeout(tryEdit,60);
     }
   },100);
@@ -18228,7 +18266,9 @@ function syncThemeMenuActive(theme){var opts=document.querySelectorAll('#themeMe
 function updateThemeIcon(theme){var isGlass=theme==='glass';var isGreen=theme==='green';if(themeIconSun)themeIconSun.style.display=(theme==='dark'||isGlass||isGreen)?'none':'block';if(themeIconMoon)themeIconMoon.style.display=theme==='dark'?'block':'none';if(themeIconGlass)themeIconGlass.style.display=isGlass?'block':'none';if(themeIconGreen)themeIconGreen.style.display=isGreen?'block':'none';}
 
 // ===== 设置面板 =====
-function syncWeekStartUI(){var bs=document.querySelectorAll('.seg-btn');for(var i=0;i<bs.length;i++){bs[i].classList.toggle('active',bs[i].getAttribute('data-ws')===weekStart);}}
+/* ★R117 必须限定 [data-ws]：设置面板里「新增备忘的位置」也用 .seg/.seg-btn，
+   原来扫全页会把它的选中态一起清掉（data-pos !== weekStart → 恒 false）。 */
+function syncWeekStartUI(){var bs=document.querySelectorAll('.seg-btn[data-ws]');for(var i=0;i<bs.length;i++){bs[i].classList.toggle('active',bs[i].getAttribute('data-ws')===weekStart);}}
 /* ★R85 标签调色弹层：挂 body 的全局单例，点行首色点弹出，选色即生效 */
 function closeCatPop(){var p=document.getElementById('cat-color-pop');if(p)p.classList.remove('open');}
 function openCatColor(btn,key){
@@ -18348,6 +18388,7 @@ function renderSettings(){
     })(moves[mb]);
   }
   syncWeekStartUI();
+  syncNewPosUI();
   renderViewPrefs();
   renderBgSwatches();
   renderAccentSwatches();
@@ -19011,10 +19052,15 @@ function bindEvents(){
     var cb=e.target.closest('[data-action="clear-archive"]');
     if(cb){clearArchive(cb);return;}
   });
-  // 日历：每周起始
-  var wsBtns=document.querySelectorAll('.seg-btn');
+  // 日历：每周起始（★R117 限定 [data-ws]，别把「新增备忘的位置」那组 seg 也绑上）
+  var wsBtns=document.querySelectorAll('.seg-btn[data-ws]');
   for(var wi=0;wi<wsBtns.length;wi++){
     (function(b){b.addEventListener('click',function(){weekStart=b.getAttribute('data-ws');syncWeekStartUI();saveData();renderCalendar();});})(wsBtns[wi]);
+  }
+  // ★R117 新增备忘的位置：顶部 / 底部
+  var npBtns=document.querySelectorAll('#new-pos-seg .seg-btn');
+  for(var ni=0;ni<npBtns.length;ni++){
+    (function(b){b.addEventListener('click',function(){setNewPos(b.getAttribute('data-pos'));});})(npBtns[ni]);
   }
 
   // ★R110 状态页签(全部/待办/已完成)只切状态：升/降序改由排序按钮「创建时间 ↑」上的箭头切换，
