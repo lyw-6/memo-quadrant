@@ -18696,11 +18696,24 @@ function bindEvents(){
       if(e.target.closest&&(e.target.closest('.theme-opt')||e.target.closest('.hm-row')))return;
       closeHeaderMore();
     });
+    /* ★R118 「点击外部关闭」必须挂**捕获阶段**（与分类下拉 R113 同一个根因）。
+       症状：点 ⋯ 开菜单，再点齿轮进设置，菜单一直悬着不收。
+       原因：#settings-btn 的 click handler 首行就是 e.stopPropagation()（为了不让
+       "点击设置面板外收起"那个 document 冒泡监听把自己的开面板动作当成外部点击），
+       于是事件到不了 document 的冒泡监听 → closeHeaderMore() 永远不被调用。
+       同类被吞的还有搜索 / 省略视图 / 撤销重做等自带 stopPropagation 的图标按钮。
+       捕获阶段先于一切冒泡 handler 执行，不受 stopPropagation 影响 →
+       一处修好，后续新增任何"自吞 click"的顶栏控件都不会再漏。
+       ★放行两处：菜单内部（交给菜单自己的 click handler 收）与 moreBtn 自身
+       （它的开关靠 toggle .open，若这里抢先关掉会变成"点第二次关不掉"）。
+       ★必须用 moreBtn.contains(e.target) 而不是 e.target===moreBtn：按钮里的 svg 虽然
+       有 pointer-events:none，但一旦哪层忘了设，点图标就会命中 svg → 判定成"外部点击"
+       先关一次，紧接着 moreBtn 的 toggle 又把它打开 = 看起来"怎么点都关不掉"。 */
     document.addEventListener('click',function(e){
       if(!moreMenu.classList.contains('open'))return;
-      if(moreMenu.contains(e.target)||e.target===moreBtn)return;
+      if(moreMenu.contains(e.target)||moreBtn.contains(e.target))return;
       closeHeaderMore();
-    });
+    },true);
   }
   var themeMenu=document.getElementById('themeMenu');
   if(themeMenu){
