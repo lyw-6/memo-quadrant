@@ -2711,11 +2711,16 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
   .filter-bar .filter-divider{margin:0;}
   /* ★R112 根因修复：手机端「全部/待办/已完成 显示不全」——
      旧规则 .filter-chip{flex:0 1 auto} 允许页签被压扁，配合 overflow:hidden 把文字裁掉
-     (393px 下「全部 (120)」被压到 60px、末字切一半)。现改为 flex:0 0 auto：页签永远保持
-     自然宽度、绝不裁字；整栏放不下时由 overflow-x:auto 兜底横滚(4 位计数等极端情况)。
+     (393px 下「全部 (120)」被压到 60px、末字切一半)。现 shrink 恒为 0：页签永远保持
+     内容宽度、绝不裁字；整栏放不下时由 overflow-x:auto 兜底横滚(4 位计数等极端情况)。
      真正腾出空间的做法=把「省略视图 / 搜索」两个全局操作移出筛选栏、放进 header-actions：
-     筛选栏只留「状态筛选 + 分类筛选 + 排序」，职责清晰，一行排得下。 */
-  .filter-chip{flex:0 0 auto;min-width:0;white-space:nowrap;padding:3px 4px;font-size:12px;height:26px;box-sizing:border-box;}
+     筛选栏只留「状态筛选 + 分类筛选 + 排序」，职责清晰，一行排得下。
+     ★R119：R117 收紧间距后这行右侧反而空出 28px(360)/61px(393)（用户反馈"又有位置了"）。
+     改 flex:1 0 auto —— grow:1 把余量均分给三个页签（360px 各 +9.5px、393px 各 +20px）
+     真正排满，右侧余量降到 1px，且触摸命中区同步变大。
+     ⚠️ 绝不能写成 flex:1（= 1 1 0%，shrink 1 会把 R112 的裁字 bug 整条复活）。
+     页签内部布局由基础规则的 inline-flex + justify-content:center 提供，自动居中，无需另加。 */
+  .filter-chip{flex:1 0 auto;min-width:0;white-space:nowrap;padding:3px 4px;font-size:12px;height:26px;box-sizing:border-box;}
   /* 排序控件贴在筛选栏最右缘，它的下拉(min-width:100px)即使 opacity:0 也占布局宽度、
      会把整栏 scrollWidth 撑大 → 窄屏下 overflow-x:auto 变成"可左右晃 20px"。改为贴右缘对齐
      (菜单向左展开)：既消除多余滚动，窄屏上菜单也不会被推到屏幕外。 */
