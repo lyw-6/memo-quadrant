@@ -14299,6 +14299,14 @@ function _lpRollbackBatch(){
 }
 // ===== 拖拽(整条按住拖动,交互对齐四象限:桌面移动即拖,触摸长按) =====
 function startDrag(e,item){
+  /* ★R127 已处于批量操作模式时**不进入拖拽**（用户规则：进入批量模式后长按不应能拖动）。
+     批量模式的意图是"选中若干条再统一操作"，此时按下/长按只该负责选中
+     —— 走 tapSelectEnabled() 的"点卡选中"即可；再允许拖拽就会和"长按=选中"打架：
+     实测旧实现里长按松手留下的 dragSuppress 还会让紧接的一次拖拽有约 300ms 拖不动（手感一顿）。
+     ⚠️ 只拦"手势起点"，**不能连 activateDrag 一起拦**：
+     「长按 350ms 到点即进批量、继续移动则转拖拽排序」是同一次手势内的分流（R125），
+     拦了 activateDrag 会让「长按拖拽=移动位置」整个失效 —— 那不是本规则要的。 */
+  if(batchEnabled)return;
   // 交互元素内部不触发拖拽,避免误触勾选/更多/分类/编辑
   if(e.button!==undefined&&e.button!==0)return; // 右键/中键不触发拖拽
   var _isTouchDrag=!!e.touches;
@@ -14441,7 +14449,13 @@ function moveDrag(e){
       }
     }else{
       // 鼠标:移动超阈值即进入拖拽
-      if(dx>5||dy>5){activateDrag();}
+      if(dx>5||dy>5){
+        activateDrag();
+        /* ★R127 与触摸分支同源防御：activateDrag 可能被守卫挡下（dragSuppress 等）。
+           没真的拾起时**必须 return** —— 否则会带着"未拾起"状态继续往下跑 _dragApplyAt，
+           在没有任何克隆/拖拽反馈的情况下静默重排 DOM（卡片自己跳位，实测过）。 */
+        if(!isDragging)return;
+      }
       else return;
     }
   }
