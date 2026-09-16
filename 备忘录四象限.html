@@ -2514,14 +2514,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 
 /* ===== 回到顶部 ===== */
 /* 回到顶部已移除:点击底部导航当前视图图标即回顶 */
-/* ===== 拖拽删除:底部垃圾桶投放区 ===== */
-#drag-trash{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:calc(74px + env(safe-area-inset-bottom));z-index:140;display:flex;align-items:center;gap:7px;padding:11px 18px;border-radius:14px;background:var(--card-bg);border:1.5px dashed var(--danger,#ef4444);color:var(--danger,#ef4444);font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s,background .15s,color .15s;}
-#drag-trash svg{width:18px;height:18px;flex-shrink:0;}
-#drag-trash.show{opacity:1;transform:translateX(-50%) translateY(0);}
-/* ★R86e 待命态:手指在区内但未满停留时长(淡染底 + 实线 + 轻微放大),满 0.4s 才转 .over 变红。
-   底色用「淡染层叠在卡片底色上」——直接写 rgba 会把卡片底色顶掉,卡片内容透出来显脏 */
-#drag-trash.hover{background:linear-gradient(rgba(239,68,68,.13),rgba(239,68,68,.13)),var(--card-bg);border-style:solid;transform:translateX(-50%) translateY(0) scale(1.04);}
-#drag-trash.over{background:var(--danger,#ef4444);color:#fff;border-style:solid;}
+/* ★R125 「拖到此处删除」投放区整块下线（含下面 #drag-trash 的 JS/CSS 状态机）。
+   原因：① 用户明确要求去掉这个按钮；② 它每次 touchmove 都要 getBoundingClientRect()（强制
+   同步布局）+ 回写克隆体 opacity，是拖拽期每帧的固定开销；③ 删除入口本来就有多处
+   （左滑菜单「删除」、全屏编辑器「更多→删除」、批量模式删除、回收站彻底删除），
+   不差拖拽这一条。
+   ⚠️ 必须「UI 与命中区一起删」：只藏 UI 不删热区 = 看不见的删除区，拖到底部会静默误删。 */
 /* 拖拽移出分组投放区(仅分组成员拖拽时显示) */
 #drag-ungroup{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:calc(124px + env(safe-area-inset-bottom));z-index:140;display:flex;align-items:center;gap:7px;padding:11px 18px;border-radius:14px;background:var(--card-bg);border:1.5px dashed var(--color-primary,#6366f1);color:var(--color-primary,#6366f1);font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s,background .15s,color .15s;}
 #drag-ungroup svg{width:18px;height:18px;flex-shrink:0;}
@@ -2645,10 +2643,9 @@ body.batch-on .memo-list .memo-index{display:none;}
 #settings-btn.active svg{transform:rotate(60deg);}
 /* ===== ★R91 键盘光标 / 组头 hover 重命名 / 计数完成度 / 快捷键面板 ===== */
 .memo-item.kb-cursor{outline:2px solid var(--color-primary,#6366f1);outline-offset:0;}
-/* ★R124 长按「待命」按压反馈：长按 350ms 已成立、手指还没移动时的静默提示——
-   告诉用户"现在松手 = 进入批量选择，移动 = 拖拽排序"。
-   只用 box-shadow inset（不碰布局、不改 rect），避免卡片跳动或影响拖拽克隆的几何。 */
-.memo-item.lp-armed{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--color-primary,#6366f1) 50%,transparent);}
+/* ★R125 长按到点即进批量操作模式（见 _lpPickup），卡片会立刻带上 .selected-merge 选中描边，
+   那就是即时反馈 —— 于是 R124 那个中间态「静默按压反馈」.lp-armed 已无必要，一并删掉。
+   顺带去掉一处每帧都可能被重新解析的绘制源（color-mix + inset box-shadow）。 */
 /* ★R93 重命名按钮：默认 width:0（不占位）——两侧 -8px 负外边距正好吃掉父级 gap，
    所以隐藏时它既不占宽度也不占间距，条数与「+」之间回到正常的 8px。
    展开靠 .mgh-count 的 margin-left:auto 吸收，右侧按钮与条数位置不动（无跳动）。 */
@@ -14264,13 +14261,41 @@ function setGroupColor(gid,col){
 }
 function closeGroupColorPicker(){var o=document.getElementById('groupColorOverlay');if(o)o.hidden=true;}
 
-/* ★R124 长按「待命」态：长按 350ms 成立后先不拾起，等看手指接下来是"动"还是"松手"——
-   动 ≥LONGPRESS_DRAG_SLOP → 拾起拖拽排序；始终没动就松手 → 进入批量选择。
-   这样「长按不动=批量操作」与「长按拖拽=移动位置」两个意图由同一个长按手势分流，互不干扰。 */
-var _lpArmed=false, LONGPRESS_DRAG_SLOP=10;
+/* ★R125 长按手势：**到点即生效**，不再要求"松手"才生效（R124 要松手才进批量，用户实测反馈
+   「跟我想象的不一样，我想要的是长按不动就进入批量操作」）。
+   350ms 到点 → 立刻进批量操作模式并选中该条；
+   此后手指若继续移动 ≥LONGPRESS_DRAG_SLOP → 照旧拾起拖拽排序（「长按拖拽=移动位置」保留）。
+   两个意图在同一手势里分流，规则一句话：**一动就不是想批量** —— 松手时把这次顺手开的批量收掉。 */
+var _lpArmed=false, _lpBatchOpened=false, _lpSuppressTimer=0, LONGPRESS_DRAG_SLOP=10;
 function _lpClear(){
   _lpArmed=false;
-  try{var els=document.querySelectorAll('.memo-item.lp-armed');for(var i=0;i<els.length;i++)els[i].classList.remove('lp-armed');}catch(_){}
+  /* 注意 ①：这里只清"武装"标志，不清 _lpBatchOpened —— 批量要不要收，由 endDrag 按意图决定。
+     注意 ②：**不要**在这里 clearTimeout(_lpSuppressTimer)。那个计时器负责把 dragSuppress 复位，
+     提前掐掉计时器却留着 dragSuppress=true，会让它永久为真（下一次长按拖拽就再也起不来）。 */
+}
+/* 长按到点即执行：开批量 + 选中该条。
+   silent 切换（不进历史栈、不写盘）：长按是"手势"，不该产生持久化副作用与撤销记录，
+   否则每次想拖拽排序都会被塞一条"批量开关"历史，撤销键按下去先把批量开关撤销掉。 */
+function _lpPickup(){
+  var id=dragTarget?dragTarget.getAttribute('data-id'):'';
+  if(!batchEnabled&&typeof window.toggleBatchMode==='function'){
+    try{window.toggleBatchMode(true);_lpBatchOpened=true;}catch(_){}
+  }
+  /* 已在批量模式 → 只补选中（必须 !has 才 toggle，否则会把已选中的反选掉） */
+  if(id&&batchEnabled){
+    if(!selectedIds.has(id))toggleSelect(id);
+    else try{refreshSelectionBoxes();}catch(_){}
+  }
+  /* ⚠️ 这里**不能**设 dragSuppress：activateDrag 的首行守卫就是 if(dragSuppress)return，
+     一设，长按后 400ms 内就开始拖动的手势会被挡在门外（实测：clone 不出现、拖不动）。
+     合成 click 在"松手"时才产生 → 抑制放到 endDrag 里做即可，时机刚好。 */
+}
+/* 收掉「本次长按顺手开的」批量。只在 _lpBatchOpened 为真时回滚，
+   绝不误关用户自己手动开的批量（松手时若人已在批量里，我们是"补选中"，没理由关）。 */
+function _lpRollbackBatch(){
+  if(!_lpBatchOpened)return;
+  _lpBatchOpened=false;
+  try{if(batchEnabled&&typeof window.toggleBatchMode==='function')window.toggleBatchMode(true);}catch(_){}
 }
 // ===== 拖拽(整条按住拖动,交互对齐四象限:桌面移动即拖,触摸长按) =====
 function startDrag(e,item){
@@ -14300,15 +14325,18 @@ function startDrag(e,item){
   dragIsTouch=isTouch;
   dragPending=true; isDragging=false; dragTimer=null; dragOverMergeMemo=null; _lastDragMode=null;
   _lpClear();
-  if(isTouch){
-    /* ★R124 长按 350ms 不再直接拾起：先进入「长按待命」，由后续"移动 or 松手"分流 */
-    dragTimer=setTimeout(function(){
-      dragTimer=null;
-      if(!dragPending||isDragging||!dragTarget)return;
-      _lpArmed=true;
-      try{dragTarget.classList.add('lp-armed');}catch(_){}
-    },350);
-  }
+  /* ★R125 长按 350ms 到点即生效：直接进批量操作模式（见 _lpPickup），**不等松手**。
+     之后若手指继续移动 ≥LONGPRESS_DRAG_SLOP 则转拖拽排序（moveDrag 负责）；
+     手指始终没动 → 就停在批量模式里，松手不做任何事。
+     ★R126 桌面端同样挂这个定时器（原来只有触摸端有，用户反馈"电脑端长按进不了批量模式"）：
+     鼠标按住不动 350ms = 同一次交互；移动 >5px 会先走 moveDrag 的鼠标分支 activateDrag，
+     那时的定时器回调被 `isDragging` 守卫挡回，不会二次触发。 */
+  dragTimer=setTimeout(function(){
+    dragTimer=null;
+    if(!dragPending||isDragging||!dragTarget)return;
+    _lpArmed=true;
+    _lpPickup();
+  },350);
   // 桌面:不立即 preventDefault,等 moveDrag 激活后再阻止选中
 }
 function activateDrag(){
@@ -14329,10 +14357,9 @@ function activateDrag(){
   var _reId=dragTarget&&dragTarget.getAttribute('data-id');
   if(_reId){var _reEl=memoListEl.querySelector('.memo-item[data-id="'+_reId+'"]');if(_reEl)dragTarget=_reEl;}
   isDragging=true;
-  _lpArmed=false; /* ★R124 已进入拖拽路径，长按待命态解除（卡片上的按压反馈同时撤掉） */
+  _lpArmed=false; /* ★R125 已进入拖拽路径（长按顺手开出的批量由 endDrag 在松手时收掉） */
   dragOverGroup=null;
   var item=dragTarget;
-  if(item)item.classList.remove('lp-armed');
   var rect=item.getBoundingClientRect();
   item.classList.add('dragging');
   var clone=item.cloneNode(true);
@@ -14394,10 +14421,19 @@ function moveDrag(e){
     var dx=Math.abs(t.clientX-dragSX), dy=Math.abs(t.clientY-dragSY);
     if(dragIsTouch){
       if(_lpArmed){
-        /* ★R124 长按已待命：手指真正移动了才算"要排序"，10px 容差防微抖误判；
-           没超过就继续等 —— 松手时 endDrag 会把它判成一次「长按不动」= 批量选择 */
-        if(dx>LONGPRESS_DRAG_SLOP||dy>LONGPRESS_DRAG_SLOP)activateDrag();
-        else return;
+        /* ★R125 长按已生效（批量已开出）。手指只要动了就立刻掐掉浏览器原生滚动通道：
+           R124 在待命期间不 preventDefault，这次触摸序列会被合成器判成"滚动"接走，
+           我们随后再 activateDrag 已错过手势起点（touch-action 中途修改无效），
+           表现为拖拽跟手发涩、忽快忽慢 —— 真机「有点卡顿」。
+           2px 容差：真机手指抖动不该被误判成滚动，但足以在滚动真正起步前掐住它。 */
+        if(dx>2||dy>2)e.preventDefault();
+        if(dx>LONGPRESS_DRAG_SLOP||dy>LONGPRESS_DRAG_SLOP){
+          activateDrag();
+          /* ★R125 防御：activateDrag 可能被守卫挡下（dragSuppress / dragSuppressed 分组头菜单等）。
+             它没真的拾起时**绝不能继续往下走** —— 下面会跑 _dragApplyAt 重排 DOM，
+             结果就是"克隆没出现、卡片却自己挪了位"（实测踩到：order 变成 h2,h1,h3 而 clone=false）。 */
+          if(!isDragging)return;
+        }else return;
       }else{
         // 触摸:长按前移动过多 -> 视为滚动,取消拖拽
         if(dx>8||dy>8){clearTimeout(dragTimer);dragTimer=null;dragPending=false;_lpClear();_grpDwellReset();return;}
@@ -14416,7 +14452,7 @@ function moveDrag(e){
     if(_ddx*_ddx+_ddy*_ddy>=DROP_SHOW_DIST*DROP_SHOW_DIST){
       _dragZonesShown=true;
       _asStart(); /* ★R109 手指真正移动 30px 后才算"要排序"意图 → 此刻才开始边缘自动滚动，长按不动不会滚 */
-      if(dragKind==='memo'||dragKind==='groupMember')showDragTrash(t.clientX,t.clientY);
+      /* ★R125 「拖到此处删除」整块下线（UI + 热区 + 判定一起删），这里只剩"移出分组"一个投放区 */
       if(dragKind==='groupMember')showDragUngroup(t.clientX,t.clientY);
     }
   }
@@ -14431,12 +14467,12 @@ function _dragApplyAt(clientX,clientY){
   var clone=document.getElementById('drag-clone');
   // R39:克隆同时跟随 X —— 省略视图是两列网格,只跟 Y 的话克隆永远停在原列,既看不到拖拽落点也命中不到另一列(合并失效)
   if(clone){clone.style.top=(clientY-dragOffset)+'px';clone.style.left=(clientX-dragOffsetX)+'px';}
-  // ★R109 滚动模式与投放区互斥：手指压在上下边缘热区时暂停武装，避免"停住继续滚"被停留计时判成要删除
+  // ★R109 滚动模式与投放区互斥：手指压在上下边缘热区时暂停武装，避免"停住继续滚"被停留计时判成要投放
   if(_asOn){
-    _dropPause(_dropTrash,'drag-trash');
     _dropPause(_dropUngroup,'drag-ungroup');
   }else{
-    updateDragTrash(clientX,clientY);
+    /* ★R125 删除区下线后，这里每次移动少一次 getBoundingClientRect（强制同步布局）
+       + 一次克隆体 opacity 回写 —— 拖拽期每帧省下的都是真金白银 */
     if(dragKind==='groupMember')updateDragUngroup(clientX,clientY);
   }
   /* ★R92 拖拽入组复活：R69 下线合并模式时只删掉了 dragOverGroup 的赋值、没收尾，导致 endDrag 里
@@ -14522,49 +14558,42 @@ function endDrag(e){
   clearTimeout(dragTimer);dragTimer=null;
   /* ★R92 清掉入组停留计时器，但**故意不动 dragOverGroup** —— 下方 13614 行还要靠它判定落点 */
   clearTimeout(_grpDwellTimer);_grpDwellTimer=null;_grpDwellArmed=false;_grpDwellGid=null;
-  var droppedTrash=dragOverTrash;var droppedUngroup=dragOverUngroup;removeDragTrash();removeDragUngroup();clearGroupDropHighlight();
-  /* ★R124 长按不动就松手 = 进入批量选择。走到这里说明：长按 350ms 已成立(_lpArmed)、
-     但手指全程没移动够 LONGPRESS_DRAG_SLOP → 拖拽路径从未激活(!isDragging)。
-     用户要求：「长按某一个备忘录不动进入批量操作模式；长按拖拽移动则仍然是移动位置」。
-     touchcancel（系统手势打断）不算主动松手，不进批量。 */
-  if(_lpArmed&&!isDragging&&dragPending&&dragTarget&&(!e||e.type!=='touchcancel')){
-    var _lpId=dragTarget.getAttribute('data-id');
-    _lpClear();
-    dragPending=false;
-    if(_lpId){
-      if(!batchEnabled&&typeof window.toggleBatchMode==='function'){try{window.toggleBatchMode();}catch(_){}}
-      if(batchEnabled){
-        if(!selectedIds.has(_lpId))toggleSelect(_lpId);
-        try{refreshSelectionBoxes();}catch(_){}
-      }else{
-        /* 兜底：批量模式没开起来也不能让这个手势白费，至少把这一条勾上 */
-        try{if(!selectedIds.has(_lpId))toggleSelect(_lpId);refreshSelectionBoxes();}catch(_){}
-      }
+  var droppedUngroup=dragOverUngroup;removeDragUngroup();clearGroupDropHighlight();
+  /* ★R125 长按手势收尾。长按 350ms 到点时**已经立即**进过批量并选中该条（见 _lpPickup），
+     所以「长按不动」这一支走到这里已无事可做：只需清理状态、把合成 click 吃掉。
+     反过来若手指动过（isDragging）→ 意图是"挪位置"，则把这次顺手开的批量收掉
+     （用户把两个意图当互斥：长按不动=批量操作 / 长按拖拽=移动位置）。 */
+  var _lpWasArmed=_lpArmed;
+  _lpArmed=false;
+  if(_lpWasArmed&&!isDragging){
+    /* touchcancel（系统手势把触摸流抢走）不是用户的松手 → 回滚这次长按开出来的批量，别留半截状态 */
+    if(e&&e.type==='touchcancel')_lpRollbackBatch();
+    /* 再补一次 click 抑制：长按可能被按住很久（_lpPickup 里那 400ms 早已过期），
+       松手时的合成 click 会落到卡片上把刚选中的又 toggle 掉 */
+    if(!(e&&e.type==='touchcancel')){
+      dragSuppress=true;clearTimeout(_lpSuppressTimer);
+      _lpSuppressTimer=setTimeout(function(){dragSuppress=false;},350);
     }
-    /* 吃掉紧随其后的合成 click，避免松手瞬间又落进卡片触发编辑/勾选 */
-    dragSuppress=true;setTimeout(function(){dragSuppress=false;},350);
+    dragPending=false;
     dragTarget=null;dragKind='memo';dragGroupId=null;dragOverGroup=null;dragOverMergeMemo=null;_lastDragMode=null;
     return;
   }
-  _lpArmed=false;
+  if(isDragging&&_lpBatchOpened){
+    /* ★R125 拖拽意图成立 → 收掉长按顺手开的批量。**必须等本次事件处理完再切**：
+       toggleBatchMode 会同步刷新底部批量栏/浮动条（可能触发渲染），若在下面"收集 DOM 顺序"
+       之前跑，列表会被重建回旧顺序 → endDrag 收来的顺序作废、拖拽排序静默丢失。 */
+    setTimeout(_lpRollbackBatch,0);
+  }
   if(isDragging&&dragTarget){
-    if(droppedTrash&&(dragKind==='memo'||dragKind==='groupMember')){
-      var _delId=dragTarget.getAttribute('data-id');
-      dragTarget.classList.remove('dragging');dragTarget.style.opacity='';
-      memoListEl.classList.remove('dragging-active');
-      var _c=document.getElementById('drag-clone');if(_c)_c.parentNode.removeChild(_c);
-      softDeleteMemo(_delId);
-      showUndoToast('已移至回收站',function(){restoreMemo(_delId);});
-      dragSuppress=true;setTimeout(function(){dragSuppress=false;},350);
-      isDragging=false;dragTarget=null;dragPending=false;dragKind='memo';dragGroupId=null;
-      return;
-    }
+    /* ★R125 「拖到此处删除」投放区已下线（UI + 热区 + 判定一起删），原来排在最前的
+       删除分支（droppedTrash）随之移除。删除请走：左滑菜单「删除」/ 全屏编辑器「更多→删除」/
+       批量模式删除 / 回收站彻底删除。 */
     // 合并/移入分组:拖到某个分组容器上(整组拖动不触发合并)
     if(dragOverGroup && dragKind!=='groupHeader'){
       dragTarget.classList.remove('dragging');dragTarget.style.opacity='';
       memoListEl.classList.remove('dragging-active');
       var _dc=document.getElementById('drag-clone');if(_dc)_dc.parentNode.removeChild(_dc);
-      clearGroupDropHighlight();removeDragTrash();removeDragUngroup();
+      clearGroupDropHighlight();removeDragUngroup();
       var _gid=dragTarget.getAttribute('data-id');
       addMemosToGroup([_gid], dragOverGroup);
       dragSuppress=true;setTimeout(function(){dragSuppress=false;},350);
@@ -14576,7 +14605,7 @@ function endDrag(e){
       dragTarget.classList.remove('dragging');dragTarget.style.opacity='';
       memoListEl.classList.remove('dragging-active');
       var _mc=document.getElementById('drag-clone');if(_mc)_mc.parentNode.removeChild(_mc);
-      clearMergeHighlight();removeDragTrash();removeDragUngroup();clearGroupDropHighlight();
+      clearMergeHighlight();removeDragUngroup();clearGroupDropHighlight();
       mergeMemosIntoGroup(dragTarget.getAttribute('data-id'), dragOverMergeMemo);
       dragSuppress=true;setTimeout(function(){dragSuppress=false;},350);
       isDragging=false;dragTarget=null;dragPending=false;dragKind='memo';dragGroupId=null;dragOverMergeMemo=null;_lastDragMode=null;
@@ -14587,7 +14616,7 @@ function endDrag(e){
       dragTarget.classList.remove('dragging');dragTarget.style.opacity='';
       memoListEl.classList.remove('dragging-active');
       var _uc=document.getElementById('drag-clone');if(_uc)_uc.parentNode.removeChild(_uc);
-      clearGroupDropHighlight();removeDragTrash();removeDragUngroup();
+      clearGroupDropHighlight();removeDragUngroup();
       var _ugid=dragTarget.getAttribute('data-id');
       removeFromGroup(_ugid);showToast('已移出分组');
       dragSuppress=true;setTimeout(function(){dragSuppress=false;},350);
@@ -14633,19 +14662,18 @@ function endDrag(e){
   }
   isDragging=false;dragTarget=null;dragPending=false;dragKind='memo';dragGroupId=null;dragOverGroup=null;dragOverMergeMemo=null;_lastDragMode=null;
 }
-var dragOverTrash=false;
 /* ===== ★R86e 拖放区防误触状态机 =====
-   真机痛点：长按「最底下那条备忘」时手指本就贴在屏幕下方，而删除区固定在底部中央——
-   删除区一出现就正好垫在手指底下 → 瞬时命中 → 松手即删。
+   真机痛点：长按某条备忘时手指本就贴在屏幕下方，而投放区固定在底部中央——
+   投放区一出现就正好垫在手指底下 → 瞬时命中 → 松手即触发。
    两条闸门：
    ① 距离闸门(DROP_SHOW_DIST)：拖拽激活后先不显示投放区，手指真正移动 ≥30px 才浮现；
    ② 进入闸门(+DROP_DWELL_MS)：浮现瞬间手指已在区内不算命中，必须「移出 → 再进入」，
-      且连续停留 0.4s（触摸，浅色待命态 → 红色实心）才允许松手删除，中途移出立即取消。
-      鼠标无「手指垫在区下」问题，停留阈值放宽到 0.18s，桌面拖删手感基本不变。 */
+      且连续停留 0.4s（触摸，浅色待命态 → 实心）才允许生效，中途移出立即取消。
+      鼠标无「手指垫在区下」问题，停留阈值放宽到 0.18s。
+   ★R125 起这里只剩「移出分组」一个投放区（「拖到此处删除」整块下线）。 */
 var DROP_SHOW_DIST=30, DROP_DWELL_MS=400, DROP_DWELL_MS_MOUSE=180, _dragZonesShown=false;
 /* armed 必须走 _dropSet：停留计时器是异步的，用户「停在区内不动」时不会再有 touchmove，
    若只在 update*() 里回写全局标记，松手那一刻判定拿到的还是 false(实测踩到) */
-var _dropTrash={inside:false,canArm:true,armed:false,timer:0,onArmed:function(v){dragOverTrash=v;}};
 var _dropUngroup={inside:false,canArm:true,armed:false,timer:0,onArmed:function(v){dragOverUngroup=v;}};
 function _dropSet(z,v){if(z.armed===v)return;z.armed=v;if(z.onArmed)z.onArmed(v);}
 function _dropReset(z,t){clearTimeout(z.timer);z.timer=0;z.inside=false;z.canArm=true;_dropSet(z,false);if(t)t.classList.remove('show','hover','over');}
@@ -14669,22 +14697,9 @@ function _dropUpdate(z,t,x,y,dwell){
     _dropSet(z,true);t.classList.remove('hover');t.classList.add('over');
   },typeof dwell==='number'?dwell:DROP_DWELL_MS);
 }
-function showDragTrash(x,y){
-  var t=document.getElementById('drag-trash');
-  if(!t){t=document.createElement('div');t.id='drag-trash';t.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg><span>拖到此处删除</span>';document.body.appendChild(t);}
-  dragOverTrash=false;
-  _dropReset(_dropTrash,t);
-  /* 浮现瞬间手指若已在区内(底部备忘场景)→ 本次必须先移出才能激活 */
-  if(typeof x==='number'){var r=t.getBoundingClientRect();_dropTrash.inside=(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom);_dropTrash.canArm=!_dropTrash.inside;}
-  requestAnimationFrame(function(){t.classList.add('show');});
-}
-function updateDragTrash(x,y){
-  var t=document.getElementById('drag-trash');
-  _dropUpdate(_dropTrash,t,x,y,dragIsTouch?DROP_DWELL_MS:DROP_DWELL_MS_MOUSE);
-  dragOverTrash=_dropTrash.armed;
-  var c=document.getElementById('drag-clone');if(c)c.style.opacity=dragOverTrash?'0.25':'0.5';
-}
-function removeDragTrash(){var t=document.getElementById('drag-trash');if(t)t.remove();dragOverTrash=false;_dropReset(_dropTrash,null);}
+/* ★R125 「拖到此处删除」投放区整体下线：showDragTrash / updateDragTrash / removeDragTrash
+   三个函数与 _dropTrash 状态对象、dragOverTrash 标记、endDrag 的删除分支全部移除。
+   删除入口仍在多处：左滑菜单「删除」、全屏编辑器「更多→删除」、批量模式删除、回收站彻底删除。 */
 // 拖拽合并/移出分组相关状态与辅助
 var dragOverUngroup=false;
 var dragOverGroup=null;
@@ -14697,8 +14712,8 @@ var _lastDragMode=null;
    判定是否落在上下边缘热区；上界取列表可视顶 max(0,listRect.top)，下界取列表可视底
    min(vh,listRect.bottom)，热区内按接近程度线性递增速度滚动；每次实际滚动后重跑 _dragApplyAt，
    让重排落点/克隆遮挡/投放区高亮跟随（滚动后卡片 rect 变化，不重排就会插错位）。
-   ★滚动期必须 _dropPause 暂停投放区武装：底部热区紧挨着固定投放区（#drag-trash bottom:74px、
-   #drag-ungroup bottom:124px），手指"停住继续滚"会被停留计时武装成删除 → 松手误删。
+   ★滚动期必须 _dropPause 暂停投放区武装：底部热区紧挨着固定投放区（#drag-ungroup bottom:124px），
+   手指"停住继续滚"会被停留计时武装成投放 → 松手即触发。
    暂停时 canArm=false（_dropUpdate 的 over 分支因此不武装），手指离开热区自动恢复可武装。 */
 var AUTO_SCROLL_MAX=15, AUTO_SCROLL_MIN=3.5;
 /* ★R110 热区宽度改为随视口自适应（手机端专项）：
@@ -19096,14 +19111,19 @@ function bindEvents(){
     window.removeEventListener('scroll',_fabMenuScrollClose,true);
   }
   // 批量操作开关（原底栏「批量操作」按钮逻辑，提取为函数）
-  function toggleBatchMode(){
+  /* ★R125 silent=true：长按手势触发的批量切换走静默路径 —— 不 saveData()。
+     理由：① 长按是"手势"，不该产生持久化副作用；② saveData 会同步序列化整个 data 并写
+     localStorage（真机上是"长按后有点卡"的实打实来源之一），还会 scheduleCommit() 把
+     "批量开关"记进撤销历史 —— 用户下次按撤销，先撤销掉的是批量模式而不是他的编辑。 */
+  function toggleBatchMode(silent){
     batchEnabled=!batchEnabled;
     document.body.classList.toggle('batch-off',!batchEnabled);
     document.body.classList.toggle('batch-on',batchEnabled);
     updateBatchBar();
     var abEl=document.getElementById('add-btn');
     if(abEl){var lv=(currentView==='list'||currentView==='today'||currentView==='month');var cnt=lv?document.querySelectorAll('.memo-item[data-id],.trash-item[data-id]').length:0;abEl.style.display=(lv&&cnt>0&&!batchEnabled)?'':'none';}
-    syncFloatingBars();saveData();
+    syncFloatingBars();
+    if(!silent)saveData();
   }
   /* ★R124 暴露给拖拽层：长按不动松手时由 endDrag 调用 —— endDrag 在顶层作用域，
      而 toggleBatchMode 是这里的嵌套函数，必须显式挂出来。
