@@ -14305,7 +14305,12 @@ function startDrag(e,item){
      实测旧实现里长按松手留下的 dragSuppress 还会让紧接的一次拖拽有约 300ms 拖不动（手感一顿）。
      ⚠️ 只拦"手势起点"，**不能连 activateDrag 一起拦**：
      「长按 350ms 到点即进批量、继续移动则转拖拽排序」是同一次手势内的分流（R125），
-     拦了 activateDrag 会让「长按拖拽=移动位置」整个失效 —— 那不是本规则要的。 */
+     拦了 activateDrag 会让「长按拖拽=移动位置」整个失效 —— 那不是本规则要的。
+     ★R128 勘误：上面这条"不能连 activateDrag 一起拦"的判断**已被用户实测推翻**。
+     用户规则最终收敛为：**长按不动 = 进批量（生效即定局），进批量后本次手势不能再拖**。
+     成因是两条需求在同一时间轴上互斥 —— 「长按 350ms 到点即进批量」一旦成立，
+     「长按 350ms 后再移动 = 拖拽排序」就不存在窗口了（移动发生在 350ms 前只会被判成滚动）。
+     所以 activateDrag 也加了 batchEnabled 守卫（见该函数首行），此处保留起点拦截作为第一道闸。 */
   if(batchEnabled)return;
   // 交互元素内部不触发拖拽,避免误触勾选/更多/分类/编辑
   if(e.button!==undefined&&e.button!==0)return; // 右键/中键不触发拖拽
@@ -14349,6 +14354,12 @@ function startDrag(e,item){
 }
 function activateDrag(){
   if(dragSuppress)return; // 分组头长按已打开菜单,本次触摸不进入拖拽
+  /* ★R128 已在批量操作模式 → 一律不拾起拖拽（本函数=最后一道总闸）。
+     为什么非加在这一层不可：R127 只在 startDrag（手势起点）拦 batchEnabled，
+     而触摸端有一条绕过 startDrag 的路径 —— 长按 350ms 的定时器在同一次手势**中途**调 _lpPickup()
+     开出批量，此时 dragPending 仍为 true，手指继续移动就会走到 moveDrag → activateDrag。
+     用户实测："长按进批量后继续移动，卡片还能拖走"。 */
+  if(batchEnabled)return;
   if(!dragPending||isDragging||!dragTarget)return;
   // ★R41:长按可能落在正文 textarea 上,激活拖拽时退出编辑态,避免光标/键盘干扰拖拽
   if(document.activeElement&&document.activeElement!==document.body&&document.activeElement.blur){
@@ -14429,6 +14440,13 @@ function moveDrag(e){
     var dx=Math.abs(t.clientX-dragSX), dy=Math.abs(t.clientY-dragSY);
     if(dragIsTouch){
       if(_lpArmed){
+        /* ★R128 批量模式（含本次长按刚开出的）→ 本次手势到此为止：不转拖拽，**也不掐滚动通道**。
+           两个必经动作，少一个都会出新问题：
+           ① 不能走到下面的 activateDrag —— 那就是"进了批量还能拖动卡片"（用户报的 bug）；
+           ② 不能执行 preventDefault —— 它会把列表滚动一起锁死，进批量后就没法上下翻列表勾选更多条；
+           ③ 保留 _lpArmed=true 不动，交给 endDrag 的长按收尾分支吃合成 click，
+              否则松手那一下 click 会落到卡片上，把刚长按选中的又反选掉。 */
+        if(batchEnabled)return;
         /* ★R125 长按已生效（批量已开出）。手指只要动了就立刻掐掉浏览器原生滚动通道：
            R124 在待命期间不 preventDefault，这次触摸序列会被合成器判成"滚动"接走，
            我们随后再 activateDrag 已错过手势起点（touch-action 中途修改无效），
