@@ -11660,13 +11660,38 @@ function _histList(a){var out=[],i;for(i=0;i<(a||[]).length;i++)out.push(_histSt
 function snapshotState(){return JSON.stringify({memos:_histList(memos),deleted:_histList(deleted),archived:_histList(archived),categories:categories,memo_groups:memo_groups,collapsedGroups:collapsedGroups});}
 function commitHistory(){var snap=snapshotState();if(histIndex>=0&&histStack[histIndex]===snap)return;histStack=histStack.slice(0,histIndex+1);histStack.push(snap);if(histStack.length>40){histStack.shift();}histIndex=histStack.length-1;updateHistButtons();}
 function scheduleCommit(){if(_histTimer)clearTimeout(_histTimer);_histTimer=setTimeout(commitHistory,700);}
+/* ★R122 commitHistoryNow()：把 700ms 防抖提前结算。
+   内联编辑输入时每次 keystroke 都 `updateMemo→saveData→scheduleCommit(700ms)`，
+   只在**停止输入 700ms 后**才真正入栈。用户打完字立刻点撤销时"当前状态"还不在栈里，
+   于是 undo 要么退了一步不相干的历史、要么直接落到 histIndex<=0 判空。
+   undo/redo 前必须先把这个防抖结算掉，让"此刻真实状态"成为栈顶。 */
+function commitHistoryNow(){if(_histTimer){clearTimeout(_histTimer);_histTimer=null;}commitHistory();}
+/* ★R122 编辑收尾队列：内联编辑的收尾是 `blur → setTimeout(0) → exitMemoEdit`。
+   浏览器事件顺序 = mousedown(编辑框失焦，只排队) → mouseup → **click(undo 同步跑完)** → 排队的 timer 最后跑。
+   于是迟到的 exitMemoEdit 拿着旧 textarea 的 value("原始AAAXYZ")又 updateMemo 回去，
+   把刚撤销出来的("原始AAA")原样冲掉 —— 症状：toast 明明说「已撤销」，列表纹丝不动，
+   histIndex 还会自己从 0 涨回 1（因为被覆盖后又等量 push 了一条）。
+   收口=把排队任务抬到显式队列，undo/redo 前 `_flushExits()` 同步跑完，保证"没有迟到的写入"。 */
+var _exitQ=[];
+function _deferExit(fn){_exitQ.push(fn);if(_exitQ.length===1)setTimeout(_flushExits,0);}
+function _flushExits(){while(_exitQ.length){var f=_exitQ.shift();if(typeof f==='function'){try{f();}catch(_){}}}}
+/* ★R122 主动收尾当前内联编辑：不能**只依赖 mousedown 自然触发的 blur**。
+   undo/redo 也可能是快捷键、外部脚本调用等不经 mousedown 的路径进来，那时编辑还挂着、
+   队列是空的，_flushExits 等于什么都没结算 → 撤销出来的旧值会被编辑态兜底保存再盖回去。
+   这里主动 blur 一下把收尾推进队列（非编辑态/焦点已在别处时是空操作）。 */
+function _exitActiveEdit(){try{var ae=document.activeElement;/* ★createTodoEditable 返回的是带 .value 垫片的 contenteditable DIV,千万别按 tagName==='TEXTAREA' 判 */if(ae&&ae.classList&&ae.classList.contains('memo-content'))ae.blur();}catch(_){}}
+function _flushAllEdits(){_exitActiveEdit();_flushExits();}
 function restoreHistory(snap){var s=JSON.parse(snap);memos=s.memos;deleted=s.deleted;archived=s.archived;categories=s.categories;memo_groups=s.memo_groups;collapsedGroups=s.collapsedGroups;saveData();render();}
 /* ★R120 undo/redo 还要**跳过内容等价的相邻快照**：历史栈里一旦出现两条一样的（脏数据/迁移字段等任何
    未来新引入的派生字段），点一次撤销就"看不见变化、却消耗一步"，用户只会以为撤销坏了。
    跳过它们 → 点一次必定看到变化。 */
-function undo(){if(histIndex<=0){showToast('没有可撤销的操作');return;}var from=histStack[histIndex],i=histIndex-1;while(i>0&&histStack[i]===from)i--;histIndex=i;restoreHistory(histStack[i]);updateHistButtons();showToast('已撤销');}
-function redo(){if(histIndex>=histStack.length-1){showToast('没有可重做的操作');return;}var from=histStack[histIndex],i=histIndex+1;while(i<histStack.length-1&&histStack[i]===from)i++;histIndex=i;restoreHistory(histStack[i]);updateHistButtons();showToast('已重做');}
-function updateHistButtons(){var ub=document.getElementById('undo-btn'),rb=document.getElementById('redo-btn');if(ub)ub.disabled=(histIndex<=0);if(rb)rb.disabled=(histIndex>=histStack.length-1);}
+function undo(){_flushAllEdits();commitHistoryNow();if(histIndex<=0){showToast('没有可撤销的操作');return;}var from=histStack[histIndex],i=histIndex-1;while(i>0&&histStack[i]===from)i--;histIndex=i;restoreHistory(histStack[i]);updateHistButtons();showToast('已撤销');}
+function redo(){_flushAllEdits();commitHistoryNow();if(histIndex>=histStack.length-1){showToast('没有可重做的操作');return;}var from=histStack[histIndex],i=histIndex+1;while(i<histStack.length-1&&histStack[i]===from)i++;histIndex=i;restoreHistory(histStack[i]);updateHistButtons();showToast('已重做');}
+/* ★R122 编辑态下**不禁用**撤销按钮：`updateHistButtons` 按 histIndex 判空，但编辑中的改动
+   还在 700ms 防抖里没入栈 → 用户刚打完字时 histIndex 可能仍是 0，按钮灰着。
+   灰按钮不派发 click → 连 flush 的机会都没有（点了完全没反应，连 toast 都不弹）。
+   编辑态本身即"有未结算的变更"，让它常亮，点下去由 `_flushExits()+commitHistoryNow()` 现算。 */
+function updateHistButtons(){var ub=document.getElementById('undo-btn'),rb=document.getElementById('redo-btn');var isEdit=document.body&&document.body.classList&&document.body.classList.contains('kb-edit');if(ub)ub.disabled=(histIndex<=0)&&!isEdit;if(rb)rb.disabled=(histIndex>=histStack.length-1);}
 // ===== 搜索：按内容过滤 =====
 function matchSearch(memo){
   if(!currentSearch)return true;
@@ -12589,6 +12614,7 @@ function _kbSpacer(px){
 }
 function kbEditStart(ta){
   document.body.classList.add('kb-edit');
+  try{updateHistButtons();}catch(_){} /* ★R122 进入编辑态立刻亮撤销键,别让用户对着 700ms 灰按钮空点 */
   var item=ta.closest?ta.closest('.memo-item'):null;
   var el=item||ta;
   /* ★R77 四象限内联编辑：滚动发生在 .cell-items 格子容器内(原生滚动)，页面级顶起
@@ -12708,6 +12734,7 @@ function kbEditStart(ta){
 }
 function kbEditEnd(){
   document.body.classList.remove('kb-edit');
+  try{updateHistButtons();}catch(_){} /* ★R122 离开编辑态 → 撤销按钮回到按 histIndex 判空 */
   document.body.classList.remove('kb-bar-up'); /* ★R69 */
   _cbDisarm(); /* ★R108 退出编辑 → 收起「回到编辑位置」按钮 */
   _kbUpPrev=false; _clearScrollRetry(); _kbSpacer(0); /* ★R86d 清跃迁标记/兜底重试/编辑期留白 */
@@ -13600,7 +13627,9 @@ function enterMemoEdit(mc,memo,item,isNew){
   ta.addEventListener('touchstart',function(){kbEditStart(ta);},{passive:true});
   // ★R61：焦点移到工具条/属性弹层/时间选择器时不要退出编辑（否则点「时间」就地编辑就被打断）
   ta.addEventListener('blur',function(){
-    setTimeout(function(){
+    /* ★R122 改用 _deferExit 队列（原为裸 setTimeout(0)）：延迟语义(R61 焦点判断要等焦点尘埃落定)保留,
+       但 undo/redo 能 _flushExits() 强制同步结算 —— 否则它会晚于撤销执行,把撤销结果冲掉。 */
+    _deferExit(function(){
       try{
         var ae=document.activeElement;
         if(ae&&ae!==document.body&&ae.closest&&ae.closest('.inline-edit-bar,.fs-dropdown,#picker-overlay,.lock-modal-mask,.confirm-backdrop'))return;
@@ -13613,7 +13642,7 @@ function enterMemoEdit(mc,memo,item,isNew){
         if(ae&&ae!==ta&&ae.classList&&ae.classList.contains('memo-content')&&ae.getAttribute&&ae.getAttribute('contenteditable')==='true'){exitMemoEdit(ta,item,true);return;}
       }catch(_){}
       exitMemoEdit(ta,item);
-    },0);
+    });
   });
   try{ta.focus({preventScroll:true});ta.setSelectionRange(ta.value.length,ta.value.length);}catch(e){try{ta.focus();}catch(_){}}
   autoResize(ta);
