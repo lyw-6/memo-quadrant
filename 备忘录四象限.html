@@ -2645,6 +2645,10 @@ body.batch-on .memo-list .memo-index{display:none;}
 #settings-btn.active svg{transform:rotate(60deg);}
 /* ===== ★R91 键盘光标 / 组头 hover 重命名 / 计数完成度 / 快捷键面板 ===== */
 .memo-item.kb-cursor{outline:2px solid var(--color-primary,#6366f1);outline-offset:0;}
+/* ★R124 长按「待命」按压反馈：长按 350ms 已成立、手指还没移动时的静默提示——
+   告诉用户"现在松手 = 进入批量选择，移动 = 拖拽排序"。
+   只用 box-shadow inset（不碰布局、不改 rect），避免卡片跳动或影响拖拽克隆的几何。 */
+.memo-item.lp-armed{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--color-primary,#6366f1) 50%,transparent);}
 /* ★R93 重命名按钮：默认 width:0（不占位）——两侧 -8px 负外边距正好吃掉父级 gap，
    所以隐藏时它既不占宽度也不占间距，条数与「+」之间回到正常的 8px。
    展开靠 .mgh-count 的 margin-left:auto 吸收，右侧按钮与条数位置不动（无跳动）。 */
@@ -11691,7 +11695,60 @@ function redo(){_flushAllEdits();commitHistoryNow();if(histIndex>=histStack.leng
    还在 700ms 防抖里没入栈 → 用户刚打完字时 histIndex 可能仍是 0，按钮灰着。
    灰按钮不派发 click → 连 flush 的机会都没有（点了完全没反应，连 toast 都不弹）。
    编辑态本身即"有未结算的变更"，让它常亮，点下去由 `_flushExits()+commitHistoryNow()` 现算。 */
-function updateHistButtons(){var ub=document.getElementById('undo-btn'),rb=document.getElementById('redo-btn');var isEdit=document.body&&document.body.classList&&document.body.classList.contains('kb-edit');if(ub)ub.disabled=(histIndex<=0)&&!isEdit;if(rb)rb.disabled=(histIndex>=histStack.length-1);}
+/* ★R123 编辑态下重做键同样不禁用：编辑态走的是浏览器原生撤销栈（execCommand），
+   与 histIndex/histStack 完全无关 —— 按 histIndex 判空会让"刚撤销完想重做"时按钮灰着，
+   用户点不动（真机实测 rDis=true 常亮灰）。编辑态两个键都恒可用，能不能撤销由原生栈自己答。 */
+function updateHistButtons(){var ub=document.getElementById('undo-btn'),rb=document.getElementById('redo-btn');var isEdit=document.body&&document.body.classList&&document.body.classList.contains('kb-edit');if(ub)ub.disabled=(histIndex<=0)&&!isEdit;if(rb)rb.disabled=(histIndex>=histStack.length-1)&&!isEdit;}
+/* ★R123 编辑态顶栏撤销/重做的接线（真机"点了没效果"的根因）
+   —— 旧链路是一条自毁链：
+        mousedown(#undo-btn) → 按钮获得焦点 → 编辑框 blur → exitMemoEdit → 移除 body.kb-edit
+        → 而 .hist-actions 的显示条件正是 `body.kb-edit .hist-actions{display:inline-flex}`
+        → 【按钮把自己点没了】→ mouseup 落到隔壁「更多」上
+        → click 派发给共同祖先 .header-actions，挂在 #undo-btn 上的监听器永远收不到
+        → 症状：点了没反应 + 编辑态被无缘无故踢出（用户猜测"失去焦点所以没效果"，完全说对了）。
+   新链路两条原则：
+     ① **不夺焦**：编辑态里 pointerdown/mousedown/touchstart 一律 preventDefault，
+        焦点留在编辑框 → kb-edit 不掉 → 按钮不会自己消失（无论桌面还是触摸都成立）；
+     ② **不等 click**：动作在按下瞬间就执行，走浏览器原生撤销栈（与 Ctrl+Z/Ctrl+Y 同一套），
+        编辑状态保持、光标不丢；并用时间窗吃掉随后可能派发的合成 click，避免重复执行一次。
+   非编辑态（浏览态）保持原样，继续走数据层 undo/redo。 */
+var _histEatClickUntil=0,_histLastRunAt=0;
+function _activeEditable(){
+  var ae=document.activeElement;
+  if(ae&&(ae.isContentEditable||ae.tagName==='TEXTAREA'))return ae;
+  return null;
+}
+function _editHistUndoRedo(cmd,emptyMsg){
+  var ta=_activeEditable();
+  if(!ta){showToast(emptyMsg);return;}
+  try{ta.focus({preventScroll:true});}catch(_){try{ta.focus();}catch(__){}}
+  var did=false;
+  try{did=document.execCommand(cmd,false,null);}catch(_){did=false;}
+  if(!did){showToast(emptyMsg);return;}
+  /* 原生撤销只改 DOM，不会自己回到数据层；补一个 input 让既有同步链(updateMemo→saveData)接手 */
+  try{ta.dispatchEvent(new Event('input',{bubbles:true}));}catch(_){}
+}
+function _bindHistBtn(btn,cmd,fallback,emptyMsg){
+  if(!btn)return;
+  var isEdit=function(){return !!(document.body&&document.body.classList&&document.body.classList.contains('kb-edit'));};
+  var grab=function(e){
+    if(!isEdit())return;                                  /* 浏览态：交给 click → 数据层 undo/redo */
+    if(btn.disabled)return;
+    if(Date.now()-_histLastRunAt<120)return;              /* touchstart 与 mousedown 双触发去重 */
+    _histLastRunAt=Date.now();
+    if(e&&e.cancelable!==false){try{e.preventDefault();}catch(_){}} /* ★不夺焦=按钮不会自己消失 */
+    _histEatClickUntil=Date.now()+450;
+    _editHistUndoRedo(cmd,emptyMsg);
+  };
+  /* 触摸端必须在 touchstart 拦（合成 mousedown 之前焦点就转移完了）；拦掉后不会再合成 click，
+     所以不存在重复执行。桌面端 mousedown 的 preventDefault 不吞 click → 由 _histEatClickUntil 吃掉。 */
+  btn.addEventListener('touchstart',grab,{passive:false});
+  btn.addEventListener('mousedown',grab);
+  btn.addEventListener('click',function(e){
+    if(Date.now()<_histEatClickUntil){try{e.preventDefault();e.stopPropagation();}catch(_){}return;}
+    fallback();
+  });
+}
 // ===== 搜索：按内容过滤 =====
 function matchSearch(memo){
   if(!currentSearch)return true;
@@ -14207,6 +14264,14 @@ function setGroupColor(gid,col){
 }
 function closeGroupColorPicker(){var o=document.getElementById('groupColorOverlay');if(o)o.hidden=true;}
 
+/* ★R124 长按「待命」态：长按 350ms 成立后先不拾起，等看手指接下来是"动"还是"松手"——
+   动 ≥LONGPRESS_DRAG_SLOP → 拾起拖拽排序；始终没动就松手 → 进入批量选择。
+   这样「长按不动=批量操作」与「长按拖拽=移动位置」两个意图由同一个长按手势分流，互不干扰。 */
+var _lpArmed=false, LONGPRESS_DRAG_SLOP=10;
+function _lpClear(){
+  _lpArmed=false;
+  try{var els=document.querySelectorAll('.memo-item.lp-armed');for(var i=0;i<els.length;i++)els[i].classList.remove('lp-armed');}catch(_){}
+}
 // ===== 拖拽(整条按住拖动,交互对齐四象限:桌面移动即拖,触摸长按) =====
 function startDrag(e,item){
   // 交互元素内部不触发拖拽,避免误触勾选/更多/分类/编辑
@@ -14234,9 +14299,15 @@ function startDrag(e,item){
   dragSX=p.clientX; dragSY=p.clientY;
   dragIsTouch=isTouch;
   dragPending=true; isDragging=false; dragTimer=null; dragOverMergeMemo=null; _lastDragMode=null;
+  _lpClear();
   if(isTouch){
-    // 触摸:长按 350ms 进入;此前移动视为滚动,moveDrag 会取消
-    dragTimer=setTimeout(function(){activateDrag();},350);
+    /* ★R124 长按 350ms 不再直接拾起：先进入「长按待命」，由后续"移动 or 松手"分流 */
+    dragTimer=setTimeout(function(){
+      dragTimer=null;
+      if(!dragPending||isDragging||!dragTarget)return;
+      _lpArmed=true;
+      try{dragTarget.classList.add('lp-armed');}catch(_){}
+    },350);
   }
   // 桌面:不立即 preventDefault,等 moveDrag 激活后再阻止选中
 }
@@ -14258,8 +14329,10 @@ function activateDrag(){
   var _reId=dragTarget&&dragTarget.getAttribute('data-id');
   if(_reId){var _reEl=memoListEl.querySelector('.memo-item[data-id="'+_reId+'"]');if(_reEl)dragTarget=_reEl;}
   isDragging=true;
+  _lpArmed=false; /* ★R124 已进入拖拽路径，长按待命态解除（卡片上的按压反馈同时撤掉） */
   dragOverGroup=null;
   var item=dragTarget;
+  if(item)item.classList.remove('lp-armed');
   var rect=item.getBoundingClientRect();
   item.classList.add('dragging');
   var clone=item.cloneNode(true);
@@ -14320,9 +14393,16 @@ function moveDrag(e){
   if(!isDragging){
     var dx=Math.abs(t.clientX-dragSX), dy=Math.abs(t.clientY-dragSY);
     if(dragIsTouch){
-      // 触摸:长按前移动过多 -> 视为滚动,取消拖拽
-      if(dx>8||dy>8){clearTimeout(dragTimer);dragTimer=null;dragPending=false;_grpDwellReset();return;}
-      return; // 等长按定时器
+      if(_lpArmed){
+        /* ★R124 长按已待命：手指真正移动了才算"要排序"，10px 容差防微抖误判；
+           没超过就继续等 —— 松手时 endDrag 会把它判成一次「长按不动」= 批量选择 */
+        if(dx>LONGPRESS_DRAG_SLOP||dy>LONGPRESS_DRAG_SLOP)activateDrag();
+        else return;
+      }else{
+        // 触摸:长按前移动过多 -> 视为滚动,取消拖拽
+        if(dx>8||dy>8){clearTimeout(dragTimer);dragTimer=null;dragPending=false;_lpClear();_grpDwellReset();return;}
+        return; // 等长按定时器
+      }
     }else{
       // 鼠标:移动超阈值即进入拖拽
       if(dx>5||dy>5){activateDrag();}
@@ -14443,6 +14523,30 @@ function endDrag(e){
   /* ★R92 清掉入组停留计时器，但**故意不动 dragOverGroup** —— 下方 13614 行还要靠它判定落点 */
   clearTimeout(_grpDwellTimer);_grpDwellTimer=null;_grpDwellArmed=false;_grpDwellGid=null;
   var droppedTrash=dragOverTrash;var droppedUngroup=dragOverUngroup;removeDragTrash();removeDragUngroup();clearGroupDropHighlight();
+  /* ★R124 长按不动就松手 = 进入批量选择。走到这里说明：长按 350ms 已成立(_lpArmed)、
+     但手指全程没移动够 LONGPRESS_DRAG_SLOP → 拖拽路径从未激活(!isDragging)。
+     用户要求：「长按某一个备忘录不动进入批量操作模式；长按拖拽移动则仍然是移动位置」。
+     touchcancel（系统手势打断）不算主动松手，不进批量。 */
+  if(_lpArmed&&!isDragging&&dragPending&&dragTarget&&(!e||e.type!=='touchcancel')){
+    var _lpId=dragTarget.getAttribute('data-id');
+    _lpClear();
+    dragPending=false;
+    if(_lpId){
+      if(!batchEnabled&&typeof window.toggleBatchMode==='function'){try{window.toggleBatchMode();}catch(_){}}
+      if(batchEnabled){
+        if(!selectedIds.has(_lpId))toggleSelect(_lpId);
+        try{refreshSelectionBoxes();}catch(_){}
+      }else{
+        /* 兜底：批量模式没开起来也不能让这个手势白费，至少把这一条勾上 */
+        try{if(!selectedIds.has(_lpId))toggleSelect(_lpId);refreshSelectionBoxes();}catch(_){}
+      }
+    }
+    /* 吃掉紧随其后的合成 click，避免松手瞬间又落进卡片触发编辑/勾选 */
+    dragSuppress=true;setTimeout(function(){dragSuppress=false;},350);
+    dragTarget=null;dragKind='memo';dragGroupId=null;dragOverGroup=null;dragOverMergeMemo=null;_lastDragMode=null;
+    return;
+  }
+  _lpArmed=false;
   if(isDragging&&dragTarget){
     if(droppedTrash&&(dragKind==='memo'||dragKind==='groupMember')){
       var _delId=dragTarget.getAttribute('data-id');
@@ -19001,6 +19105,11 @@ function bindEvents(){
     if(abEl){var lv=(currentView==='list'||currentView==='today'||currentView==='month');var cnt=lv?document.querySelectorAll('.memo-item[data-id],.trash-item[data-id]').length:0;abEl.style.display=(lv&&cnt>0&&!batchEnabled)?'':'none';}
     syncFloatingBars();saveData();
   }
+  /* ★R124 暴露给拖拽层：长按不动松手时由 endDrag 调用 —— endDrag 在顶层作用域，
+     而 toggleBatchMode 是这里的嵌套函数，必须显式挂出来。
+     ⚠️ 必须写在**函数体外**：写进函数体里只有"被调用过一次"之后才赋值，
+     而第一次调用恰恰就来自 endDrag —— 死锁，永远拿不到（实测踩到）。 */
+  window.toggleBatchMode=toggleBatchMode;
   document.getElementById('export-btn').addEventListener('click',exportData);
   // 清除自定义背景(把 memo_glass_bg_custom 删掉 + 隐藏清除按钮 + 重渲染 swatch)
   var bgClearBtn=document.getElementById('bg-clear-btn');
@@ -19041,9 +19150,9 @@ function bindEvents(){
       },120);
     });
   }
-  // 撤销 / 重做
-  var undoBtn=document.getElementById('undo-btn');if(undoBtn)undoBtn.addEventListener('click',undo);
-  var redoBtn=document.getElementById('redo-btn');if(redoBtn)redoBtn.addEventListener('click',redo);
+  // 撤销 / 重做（★R123 走 _bindHistBtn：编辑态不夺焦、按下即作用于原生撤销栈，浏览态仍走数据层 undo/redo）
+  _bindHistBtn(document.getElementById('undo-btn'),'undo',undo,'没有可撤销的输入');
+  _bindHistBtn(document.getElementById('redo-btn'),'redo',redo,'没有可重做的输入');
   // 导入模式：合并 / 覆盖
   var importMergeBtn=document.getElementById('import-merge-btn');if(importMergeBtn)importMergeBtn.addEventListener('click',function(){_importMode='merge';document.getElementById('fileInput').click();});
   var importOverwriteBtn=document.getElementById('import-overwrite-btn');if(importOverwriteBtn)importOverwriteBtn.addEventListener('click',function(){_importMode='overwrite';document.getElementById('fileInput').click();});
