@@ -747,15 +747,12 @@ body.fs-editing{overflow:hidden;}
 [data-theme="glass"] body.fs-editing .fs-dropdown,
 [data-theme="glass"] body.fs-editing #toast,
 [data-theme="glass"] body.fs-editing #undo-toast{visibility:visible;}
-.fs-edit-bar{display:flex;align-items:center;gap:6px;padding:8px 10px;flex:none;border-bottom:1px solid var(--border);background:transparent;}
-.fs-edit-bar .fs-spacer{flex:1;}
-/* 顶栏 复制/剪切/删除 三键均分占满一行(2026-09-01 用户要求) */
-.fs-edit-bar button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;height:34px;padding:0 12px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);border-radius:9px;cursor:pointer;font-size:13px;font-family:inherit;font-weight:500;}
-.fs-edit-bar button:hover{background:color-mix(in srgb,var(--text) 8%,var(--card-bg));}
-.fs-edit-bar button.fs-close{margin-right:auto;border:none;background:transparent;font-size:14px;padding:0 8px;}
-.fs-edit-bar button.fs-close svg{width:16px;height:16px;flex:none;}
-.fs-edit-bar button.fs-del{color:#ef4444;border-color:rgba(239,68,68,.4);}
-.fs-edit-bar button.fs-del:hover{background:rgba(239,68,68,.1);}
+/* ★R121 原 `.fs-edit-bar`（顶栏「复制/剪切/删除」三键均分一行，2026-09-01 加的）整行删除：
+   实测这一行独占 51px，却只放 3 个低频按钮，而且三个动作与左滑菜单的「复制」「删除」重复。
+   现全部搬进属性行行尾的「更多」按钮（.fs-more-btn）弹出的小菜单 → 工具栏 3 行变 2 行，
+   腾出的 51px 直接给编辑区，新增的「撤销/重做」则填进底部操作行原本空着的位置。
+   顺带：旧规则 `.fs-edit-bar button.fs-close`(0,2,1) 特异性高于 `.fs-action-bar .fs-close`(0,2,0)，
+   以前"关闭"按钮在两种容器里样式并不一致；现在只剩 action-bar 一处，反而统一了。 */
 .fs-edit-area{flex:1;min-height:0;overflow-y:auto;width:100%;border:none;outline:none;resize:none;padding:20px 22px 16px;box-sizing:border-box;background:transparent;color:var(--text);font-size:15px;line-height:1.6;font-family:inherit;overscroll-behavior:contain;white-space:break-spaces;}
 /* ★R104 回车换行根因：R82 contenteditable 的回车由 beforeinput 插入 "\n" 文本节点（非 <br>）。
    fs-edit-area/q-edit-ta 无 white-space 声明=normal → "\n" 被折叠成空白，全屏/象限编辑「无法换行」；
@@ -777,6 +774,14 @@ body.fs-editing{overflow:hidden;}
 .fs-action-bar .fs-close svg{width:14px;height:14px;flex:none;}
 .fs-action-bar .fs-close:hover{background:color-mix(in srgb,var(--text) 8%,var(--card-bg));}
 .fs-action-bar .fs-close:active{transform:scale(.96);}
+/* ★R121 撤销 / 重做：填进底部操作行原本空着的位置（.fs-action-bar button 已是 flex:1，
+   4 个按钮等分整行）。样式与「关闭」同一族（描边胶囊 + 同高同圆角），保持按钮族一致。
+   .fs-bar-sep 只做视觉分组（撤销重做 ｜ 关闭确定），必须 flex:none 否则会被 flex:1 撑开。 */
+.fs-action-bar .fs-undo,.fs-action-bar .fs-redo{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);font-family:inherit;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.fs-action-bar .fs-undo svg,.fs-action-bar .fs-redo svg{width:16px;height:16px;flex:none;pointer-events:none;}
+.fs-action-bar .fs-undo:hover,.fs-action-bar .fs-redo:hover{background:color-mix(in srgb,var(--text) 8%,var(--card-bg));}
+.fs-action-bar .fs-undo:active,.fs-action-bar .fs-redo:active{transform:scale(.96);}
+.fs-bar-sep{flex:none;width:1px;height:18px;background:var(--border);align-self:center;}
 .fs-action-bar .fs-edit-ok{margin-left:0;height:34px;border-radius:17px;font-size:13px;}
 /* 全屏编辑：底部工具栏里的「确定」按钮（嵌入 .fs-meta-bar 最右，与时间/标签/紧急程度/加锁同行）
    由 .fs-edit-ok 前身（右下角悬浮）改为工具栏内普通按钮：margin-left:auto 推到最右。 */
@@ -861,7 +866,11 @@ body.kb-bar-up .inline-edit-bar{bottom:0!important;border-bottom-left-radius:0;b
 .todo-ov-mirror{position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;white-space:pre-wrap;box-sizing:border-box;margin:0;border:0;}
 /* 全屏编辑器属性工具条：时间/分类/紧急程度/加锁（位于 textarea 下方第一行）
    安全区下内边距已移交 .fs-action-bar（关闭/确定行） */
-.fs-meta-bar{display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px 0;flex:none;border-top:1px solid var(--border);background:transparent;}
+/* ★R121 水平内边距 10→6：属性行本来就满载（360px 只剩 8px 富余），行尾要接一个「更多」按钮，
+   必须腾出真宽度。只从**内边距**里抠、不动图标尺寸与间距 —— 这样触摸目标不变小、相邻按钮的
+   真实间隙不变（R110 触摸吸附铁律），省下的不够的部分由「标签/紧急」两个弹性按钮自然让出
+   （它们 flex:1 会缩，但仍在自然宽度之上，不会压扁文字；R112 那种"被压扁裁字"不会发生）。 */
+.fs-meta-bar{display:flex;flex-wrap:wrap;gap:4px;padding:6px 6px 0;flex:none;border-top:1px solid var(--border);background:transparent;}
 /* ★R44：属性条分组一行化——无序/有序改纯图标(30px)，竖线分隔「格式｜属性」两组 */
 .fs-meta-btn.fs-icon-btn{width:28px;padding:0;justify-content:center;flex:none;}
 .fs-meta-btn.fs-icon-btn svg{width:14px;height:14px;}
@@ -877,6 +886,9 @@ body.kb-bar-up .inline-edit-bar{bottom:0!important;border-bottom-left-radius:0;b
 .fs-dropdown .fs-opt{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text);white-space:nowrap;transition:background .12s;}
 .fs-dropdown .fs-opt:hover{background:var(--hover-bg);}
 .fs-dropdown .fs-opt.selected{background:var(--hover-bg);font-weight:600;color:var(--color-primary,#6366f1);}
+/* ★R121 「更多」菜单里的破坏性项（删除）用危险色，与左滑菜单的删除按钮同一套语义色 */
+.fs-dropdown .fs-opt.danger{color:#ef4444;}
+.fs-dropdown .fs-opt.danger:hover{background:rgba(239,68,68,.1);}
 .fs-dropdown .fs-opt .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
 /* 编辑态隐藏「回到顶部」与新增 FAB：避免与确定按钮重叠、也避免穿透到背后列表；
    就地编辑(kb-edit)时同样隐藏 FAB，与回到顶部行为一致，避免遮住输入框 */
@@ -11635,12 +11647,25 @@ function toggleSearch(force){
 }
 // ===== 撤销/重做历史栈 =====
 var histStack=[]; var histIndex=-1; var _histTimer=null;
-function snapshotState(){return JSON.stringify({memos:memos,deleted:deleted,archived:archived,categories:categories,memo_groups:memo_groups,collapsedGroups:collapsedGroups});}
+/* ★R120 快照必须剥离「派生/缓存」字段（下划线开头的，典型是 render 时写回的 memo._esc）：
+   ① 启动阶段 render 会把 _esc 补进 memo 对象 → 同一份内容序列化成两个不同字符串 → 刚进 App
+      历史栈里就有两条**内容完全一样**的条目；
+   ② 更致命：撤销后 restoreHistory→saveData→scheduleCommit 过 700ms 又跑一次 commitHistory，
+      此时活数据（带 _esc）与栈里那条（快照时剥过）不等 → 把"等价快照"当作新状态重新 push，
+      histIndex 自己涨回去 → **撤销原地打转**（真机表现：点撤销→toast 闪一下→列表纹丝不动→还能一直点）。
+   剥离后"快照串 == 栈里那条"恒成立，dedupe 才真正生效。撤销恢复出来的对象没有 _esc，
+   render 会按需重算（它本来就只是 escape 结果缓存，丢了一点副作用都没有）。 */
+function _histStrip(o){var r={},k;for(k in o){if(o.hasOwnProperty(k)&&k.charAt(0)!=='_')r[k]=o[k];}return r;}
+function _histList(a){var out=[],i;for(i=0;i<(a||[]).length;i++)out.push(_histStrip(a[i]));return out;}
+function snapshotState(){return JSON.stringify({memos:_histList(memos),deleted:_histList(deleted),archived:_histList(archived),categories:categories,memo_groups:memo_groups,collapsedGroups:collapsedGroups});}
 function commitHistory(){var snap=snapshotState();if(histIndex>=0&&histStack[histIndex]===snap)return;histStack=histStack.slice(0,histIndex+1);histStack.push(snap);if(histStack.length>40){histStack.shift();}histIndex=histStack.length-1;updateHistButtons();}
 function scheduleCommit(){if(_histTimer)clearTimeout(_histTimer);_histTimer=setTimeout(commitHistory,700);}
 function restoreHistory(snap){var s=JSON.parse(snap);memos=s.memos;deleted=s.deleted;archived=s.archived;categories=s.categories;memo_groups=s.memo_groups;collapsedGroups=s.collapsedGroups;saveData();render();}
-function undo(){if(histIndex<=0){showToast('没有可撤销的操作');return;}histIndex--;restoreHistory(histStack[histIndex]);updateHistButtons();showToast('已撤销');}
-function redo(){if(histIndex>=histStack.length-1){showToast('没有可重做的操作');return;}histIndex++;restoreHistory(histStack[histIndex]);updateHistButtons();showToast('已重做');}
+/* ★R120 undo/redo 还要**跳过内容等价的相邻快照**：历史栈里一旦出现两条一样的（脏数据/迁移字段等任何
+   未来新引入的派生字段），点一次撤销就"看不见变化、却消耗一步"，用户只会以为撤销坏了。
+   跳过它们 → 点一次必定看到变化。 */
+function undo(){if(histIndex<=0){showToast('没有可撤销的操作');return;}var from=histStack[histIndex],i=histIndex-1;while(i>0&&histStack[i]===from)i--;histIndex=i;restoreHistory(histStack[i]);updateHistButtons();showToast('已撤销');}
+function redo(){if(histIndex>=histStack.length-1){showToast('没有可重做的操作');return;}var from=histStack[histIndex],i=histIndex+1;while(i<histStack.length-1&&histStack[i]===from)i++;histIndex=i;restoreHistory(histStack[i]);updateHistButtons();showToast('已重做');}
 function updateHistButtons(){var ub=document.getElementById('undo-btn'),rb=document.getElementById('redo-btn');if(ub)ub.disabled=(histIndex<=0);if(rb)rb.disabled=(histIndex>=histStack.length-1);}
 // ===== 搜索：按内容过滤 =====
 function matchSearch(memo){
@@ -17071,15 +17096,28 @@ function openFullEdit(id){
   if(item)closeSwipe(item);
   var mask=document.createElement('div');mask.className='fs-edit-mask';
   var box=document.createElement('div');box.className='fs-edit-box';
+  /* ★R121 排版改造（方案 A：三行 → 两行）：
+     删掉原来顶部那整行「复制 / 剪切 / 删除」——只放 3 个按钮却独占一行、实测占 51px；
+     这三项低频，且与左滑菜单的「复制」「删除」重复 → 收进属性行行尾的「更多」按钮，弹小菜单，
+     顺带降低误触（删除是破坏性操作）。
+     腾出来的位置给「撤销 / 重做」：放在底部操作行，正好填掉「关闭 / 确定」之间原本空着的一大片，
+     而且落在拇指最容易够到的地方（比放顶部好按得多）。
+     撤销走浏览器对 contenteditable 的原生撤销栈（与键盘 Ctrl+Z 同一套，见全局 keydown 里
+     "正在输入框/contenteditable 里编辑时交给浏览器原生撤销"那条），所以撤销的是"正在打的字"。
+     实测属性行本来就是满载的（360px 只剩 8px 富余），所以同步收紧了图标按钮宽度与间距，
+     否则新按钮会把「标签 / 紧急」压扁换行 —— 正是 R112 那个老坑。 */
   box.innerHTML=
-    '<div class="fs-edit-bar">'+
-      '<button type="button" class="fs-copy">复制</button>'+
-      '<button type="button" class="fs-cut">剪切</button>'+
-      '<button type="button" class="fs-del">删除</button>'+
-    '</div>'+
     '<div class="fs-edit-area"></div>'+
-    '<div class="fs-meta-bar">'+fsMetaBarHtml()+'</div>'+
+    '<div class="fs-meta-bar">'+fsMetaBarHtml()+
+      /* 行尾「更多」：收着 复制 / 剪切 / 删除（★R121 从顶部那行搬来的）。
+         只挂在全屏编辑器的属性行上——fsMetaBarHtml() 就地编辑栏也在用，那条浮条窄得多、放不下。 */
+      '<span class="fs-meta-sep"></span>'+
+      '<button type="button" class="fs-meta-btn fs-icon-btn fs-more-btn" data-fs="more" title="更多操作：复制 / 剪切 / 删除" aria-label="更多操作"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></button>'+
+    '</div>'+
     '<div class="fs-action-bar">'+
+      '<button type="button" class="fs-undo" title="撤销输入 (Ctrl+Z)" aria-label="撤销输入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg></button>'+
+      '<button type="button" class="fs-redo" title="重做输入 (Ctrl+Shift+Z)" aria-label="重做输入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h1"/></svg></button>'+
+      '<span class="fs-bar-sep"></span>'+
       '<button type="button" class="fs-close" title="关闭并保存"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>关闭</button>'+
       '<button type="button" class="fs-edit-ok" title="完成编辑"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>确定</button>'+
     '</div>';
@@ -17188,23 +17226,40 @@ function openFullEdit(id){
     if(_r==='cleared'){ try{ fsAskClearConfirm(); }catch(_){ } }
     else if(!_r){ try{ showToast('已保存'); }catch(_){} }
   });
-  box.querySelector('.fs-copy').addEventListener('click',function(e){
+  /* ★R121 复制 / 剪切 / 删除 从顶部那行搬进属性行行尾的「更多」菜单（低频 + 与左滑菜单重复），
+     逻辑原样保留、只换入口；showConfirm 的锚点从已删掉的 .fs-edit-bar 改成「更多」按钮本身
+     （确认框贴着按钮弹出，位置反而更贴近操作点）。 */
+  function fsDoCopy(){ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(function(){showToast('已复制');});} else showToast('复制失败'); }
+  function fsDoCut(){ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(function(){showToast('已剪切');});} closeFs();softDeleteMemo(id); }
+  function fsDoDel(anchor){ showConfirm(anchor||box,{ title:'删除这条备忘录？', desc:'删除后将移入回收站，可恢复。', danger:true, okText:'删除', cancelText:'取消', onOk:function(){ closeFs(); softDeleteMemo(id); } }); }
+  var moreBtn=box.querySelector('.fs-more-btn');
+  if(moreBtn)moreBtn.addEventListener('click',function(e){
     e.stopPropagation();
-    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(function(){showToast('已复制');});}
-    else showToast('复制失败');
+    if(_fsCurDd&&_fsCurDd._anchor===moreBtn){closeFsDropdownsAll();return;}
+    var _ic=function(p){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex:none;">'+p+'</svg>';};
+    var h='<div class="fs-opt" data-v="copy">'+_ic('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>')+'复制全文</div>'+
+          '<div class="fs-opt" data-v="cut">'+_ic('<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>')+'剪切全文</div>'+
+          '<div class="fs-opt danger" data-v="del">'+_ic('<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>')+'删除</div>';
+    openFsDropdownAt(moreBtn,h,function(opt){
+      var v=opt.getAttribute('data-v');
+      if(v==='copy')fsDoCopy(); else if(v==='cut')fsDoCut(); else fsDoDel(moreBtn);
+    },mask);
   });
-  box.querySelector('.fs-cut').addEventListener('click',function(e){
-    e.stopPropagation();
-    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(function(){showToast('已剪切');});}
-    closeFs();softDeleteMemo(id);
-  });
-  box.querySelector('.fs-del').addEventListener('click',function(e){
-    e.stopPropagation();
-    showConfirm(box.querySelector('.fs-edit-bar'),{
-      title:'删除这条备忘录？', desc:'删除后将移入回收站，可恢复。', danger:true, okText:'删除', cancelText:'取消',
-      onOk:function(){ closeFs(); softDeleteMemo(id); }
-    });
-  });
+  /* ★R121 撤销 / 重做（新增）：编辑区是 contenteditable，浏览器自带原生撤销栈，
+     用 execCommand 驱动即可 —— 与键盘 Ctrl+Z / Ctrl+Shift+Z 走的是同一套栈（全局 keydown 里
+     对 contenteditable 本来就是直接 return 交给浏览器），所以撤销的是"你正在打的字"。
+     点按钮会先把焦点抢走 → 必须把焦点还给编辑区再执行，否则撤销作用不到内容上。
+     栈空时 execCommand 返回 false → 明确提示，避免又变成"点了没反应"。 */
+  function fsHist(cmd,emptyMsg){
+    try{ ta.focus({preventScroll:true}); }catch(_){ try{ta.focus();}catch(__){} }
+    var did=false;
+    try{ did=document.execCommand(cmd,false,null); }catch(_){ did=false; }
+    if(!did){ try{ showToast(emptyMsg); }catch(__){} return; }
+    try{ ta.dispatchEvent(new Event('input',{bubbles:true})); }catch(_){}
+  }
+  var uBtn=box.querySelector('.fs-undo'),rBtn=box.querySelector('.fs-redo');
+  if(uBtn)uBtn.addEventListener('click',function(e){e.stopPropagation();fsHist('undo','没有可撤销的输入');});
+  if(rBtn)rBtn.addEventListener('click',function(e){e.stopPropagation();fsHist('redo','没有可重做的输入');});
   mask.addEventListener('mousedown',function(e){ if(e.target===mask){ try{fsResolveEmpty();}catch(_){} closeFs(); } });
   // 打开全屏编辑器前"接管"列表里正聚焦的就地编辑:标记后其失焦(由下方 ta.focus() 触发)走 exitMemoEdit 的跳过分支,
   // 不撤销新增空备忘、不弹清空确认——否则空备忘会被就地失焦逻辑删除,后续分类/时间等设置全部失效(点击无反应)
