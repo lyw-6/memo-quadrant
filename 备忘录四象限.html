@@ -11981,12 +11981,18 @@ function fmtDur(abs){
   if(hours>0)return hours+'时'+mins+'分';
   return mins+'分';
 }
+/* ★R133「全天」截止语义：全天任务的到期时刻 = **当天 23:59:59.999**，不是当天 00:00。
+   原实现一律用 `deadline < now` 直判，而全天任务的 deadline 全都被写成「当天 00:00」
+   （createDeadline / 时间选择器的 allday 分支 / openQuickAdd 的 T00:00）→
+   于是「今日」tab 里新建的备忘一落地就显示「已过期 9/17」，用户手动把截止选成
+   "今天 全天"也是同样下场。语义上说，"全天"的活儿到当天结束才算没做完。 */
+function dayEnd(ts){var d=new Date(ts);d.setHours(23,59,59,999);return d.getTime();}
 function formatCountdown(memo){
   var now=new Date();
   // 全天
   if(memo.timeType==='allday' && memo.deadline && !memo.done && memo.repeat==='once'){
     var ad=new Date(memo.deadline);
-    if(ad<now)return {text:'已过期 '+(ad.getMonth()+1)+'/'+ad.getDate(),cls:'overdue',icon:''};
+    if(dayEnd(ad.getTime())<now.getTime())return {text:'已过期 '+(ad.getMonth()+1)+'/'+ad.getDate(),cls:'overdue',icon:''};
     return {text:(ad.getMonth()+1)+'/'+ad.getDate()+' 全天',cls:'',icon:''};
   }
   if(memo.done)return{text:'已完成',cls:'done',icon:''};
@@ -12056,13 +12062,15 @@ function memosOnDate(date){
     return d.getFullYear()===date.getFullYear()&&d.getMonth()===date.getMonth()&&d.getDate()===date.getDate();
   });
 }
-/* ★R91 逾期判定：一次性任务已过截止时间且未完成（重复任务按"下次时间"算，不算逾期） */
+/* ★R91 逾期判定：一次性任务已过截止时间且未完成（重复任务按"下次时间"算，不算逾期）
+   ★R133 全天任务按「当天结束」判（dayEnd）—— 否则今日新建的条目当天就带上 .overdue 红标 */
 function isOverdue(memo){
   if(!memo||memo.done||!memo.deadline)return false;
   if(memo.repeat&&memo.repeat!=='once')return false;
   var d=new Date(memo.deadline);
   if(isNaN(d.getTime()))return false;
-  return d.getTime()<Date.now();
+  var t=memo.timeType==='allday'?dayEnd(d.getTime()):d.getTime();
+  return t<Date.now();
 }
 function getDateMemos(date,span){
   var base;
@@ -17695,11 +17703,21 @@ function openTagPanel(id){
   })(opts[oi]);}
   el.querySelector('.tag-done').addEventListener('click',closeTagPanel);
 }
-function openQuickAdd(q,dateStr){quickAddText.value='';quickAddText.dataset.q=q;if(quickAddDateEl){if(dateStr)quickAddDateEl.value=dateStr;else{ if(!quickAddDateEl.value){ if(currentView==='today'){quickAddDateEl.value=dateKey(new Date());} else if(currentView==='month'){var _cd=currentCalDate||new Date();quickAddDateEl.value=dateKey(new Date(_cd.getFullYear(),_cd.getMonth(),1));} else { quickAddDateEl.value=''; } } }}quickAddOverlay.classList.add('open');setTimeout(function(){quickAddText.focus();},200);}
+function openQuickAdd(q,dateStr){quickAddText.value='';quickAddText.dataset.q=q;if(quickAddDateEl){if(dateStr)quickAddDateEl.value=dateStr;else{ if(!quickAddDateEl.value){ if(currentView==='today'){quickAddDateEl.value=dateKey(new Date());} else if(currentView==='month'){/* ★R133 与 createDeadline 同口径：真实当月 + 月末（原来取日历浏览月 + 当月 1 日，会锚错月份且当天即判过期） */var _cd=new Date();quickAddDateEl.value=dateKey(new Date(_cd.getFullYear(),_cd.getMonth()+1,0));} else { quickAddDateEl.value=''; } } }}quickAddOverlay.classList.add('open');setTimeout(function(){quickAddText.focus();},200);}
 function closeQuickAdd(){quickAddOverlay.classList.remove('open');}
 // 新建备忘录时：若当前正按某分类筛选，则直接归入该分类；否则归入默认首个分类
 function createCategory(){return (currentCatFilter&&currentCatFilter!=='all'&&categories[currentCatFilter])?currentCatFilter:(Object.keys(categories)[0]||'other');}
-function createDeadline(){if(currentView==='today'){var d=new Date();d.setHours(0,0,0,0);return d.toISOString();}if(currentView==='month'){var cd=currentCalDate||new Date();return new Date(cd.getFullYear(),cd.getMonth(),1).toISOString();}return null;}
+/* ★R133 月任务日期锚点修正两处：
+   ① 原来取 currentCalDate（**日历视图浏览到的**月份），而月视图取数用的是**真实当月**
+      （render() 里是 getDateMemos(new Date(),'month')）→ 只要在日历里翻过月份再回月 tab 新建，
+      截止日就落到别的月份，新条目在月 tab 里根本不出现（实测 items:0，"创建了却找不到"）。
+   ② 原来锚在当月 1 日 00:00 —— 1 号一过就恒判「已过期 9/1」。
+      改锚**当月最后一天 00:00**（配合 dayEnd ⇒ 月末 23:59:59 到期），语义＝「本月内完成」。 */
+function createDeadline(){
+  if(currentView==='today'){var d=new Date();d.setHours(0,0,0,0);return d.toISOString();}
+  if(currentView==='month'){var n=new Date();return new Date(n.getFullYear(),n.getMonth()+1,0).toISOString();}
+  return null;
+}
 function confirmQuickAdd(){var text=quickAddText.value.trim();if(!text){showToast('请输入内容');return;}var q=parseInt(quickAddText.dataset.q)||0;var firstCat=createCategory();var deadline=createDeadline();if(quickAddDateEl&&quickAddDateEl.value){deadline=new Date(quickAddDateEl.value+'T00:00:00').toISOString();}memos.push({id:generateId(),text:text,quadrant:q,category:firstCat,done:false,deadline:deadline,deadlineEnd:null,timeType:'allday',repeat:'once',createdAt:Date.now(),updatedAt:Date.now()});stats.totalCreated++;saveData();closeQuickAdd();render();showToast('已添加');}
 
 // ===== 分类筛选 =====
