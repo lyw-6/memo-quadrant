@@ -515,6 +515,10 @@ body>.memo-item.drag-clone-compact .quadrant-tag{flex-shrink:0;height:18px!impor
 body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50%;bottom:auto;transform:translateY(-50%);margin-left:0;z-index:3;}
 /* 切换按钮高亮态 */
 .compact-toggle.active{background:var(--color-primary,#6366f1);border-color:var(--color-primary,#6366f1);color:#fff;} /* ★R53:与 .filter-chip.active 同款深色胶囊,选中态颜色统一 */
+/* ★R141 视图密度两态图标（对齐用户截图：松四格=普通 / 紧四格=省略视图激活），CSS-only 切换不进 JS */
+.compact-toggle .ci-tight{display:none;}
+.compact-toggle.active .ci-loose{display:none;}
+.compact-toggle.active .ci-tight{display:block;}
 .memo-item.done .memo-content{text-decoration:line-through;color:var(--text-tertiary);}
 /* ★R88 左侧色条：卡片内贴左缘的圆角胶囊（4px 宽 / 上下内缩 6px / 2px 圆角）。
    ★R87 曾把它画到卡片外侧的 gutter（列表 padding-left 腾 10px）：卡片整体右移 10px、与标题栏
@@ -2876,7 +2880,7 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
   </h1>
   <div class="header-actions" data-page-node-id="EVMc5bRSh0kFNpAY7si6lF">
     <button class="btn-icon search-toggle" id="search-toggle" title="搜索" aria-label="搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
-    <button class="btn-icon compact-toggle" id="compact-toggle" title="省略视图（一行两个）" aria-label="省略视图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
+    <button class="btn-icon compact-toggle" id="compact-toggle" title="省略视图（一行两个）" aria-label="省略视图"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><g class="ci-loose"><rect x="4" y="4" width="6.5" height="6.5" rx="1.3"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.3"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.3"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.3"/></g><g class="ci-tight"><rect x="4" y="4" width="7.4" height="7.4" rx="1.3"/><rect x="12.6" y="4" width="7.4" height="7.4" rx="1.3"/><rect x="4" y="12.6" width="7.4" height="7.4" rx="1.3"/><rect x="12.6" y="12.6" width="7.4" height="7.4" rx="1.3"/></g></svg></button>
     <div class="more-wrap-h">
       <button class="btn-icon" id="more-btn" title="更多" aria-label="更多" aria-haspopup="menu"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
       <div class="header-more" id="headerMore" role="menu">
@@ -12357,6 +12361,7 @@ var LIQ_BEZEL=0.22, LIQ_BEND=0.17; /* 折射带宽度占 min(半宽,半高) 的�
    ★这两个值决定「液体感 vs 可读性」的平衡：0.42/0.30 时折射带 8px（占玻璃高 21%）→ 连图标都被推糊；
      0.15/0.12 又几乎看不出折射；0.22/0.17（带 4.2px、位移峰值 3.2px）实测最平衡 —— 图标清晰、边缘有弯折。 */
 var liq={down:false,on:false,armed:false,pid:null,pidType:'mouse',raf:0,last:0,holdTimer:0,mode:'drag',
+         cacheTabs:null,
          sx:0,sy:0,px:0,py:0,ox:0,oy:0,tx:0,ty:0,hit:null,noClick:0,hoverTab:null,
          lx:0,ly:0,travel:0,ax:0,ay:0,
          x:0,y:0,s:0,ang:0,o:0,gw:0,gh:0,gr:14,layW:0,layH:0};
@@ -12367,7 +12372,7 @@ function _liqTabs(){
   var n=_liqNav();if(!n)return[];
   var a=n.querySelectorAll('.nav-tab'),o=[],i;
   for(i=0;i<a.length;i++){var r=a[i].getBoundingClientRect();
-    o.push({el:a[i],v:a[i].getAttribute('data-view'),cx:r.left+r.width/2,cy:r.top+r.height/2});}
+    o.push({el:a[i],v:a[i].getAttribute('data-view'),cx:r.left+r.width/2,cy:r.top+r.height/2,w:r.width});}
   return o;
 }
 function _liqNN(v){v=Math.round(v);return v<0?0:(v>255?255:v);}
@@ -12501,6 +12506,7 @@ function _liqArm(cx,cy){
 
   liq.layW=r.width;liq.layH=r.height;
   var tabs=_liqTabs(),n=Math.max(1,tabs.length);
+  liq.cacheTabs=tabs; /* ★R141 拖动期间 hover 判定用（泡中心 X vs tab 中心距离），缓存避免每帧重排 rect */
   /* 先找离按下点最近的 tab，同时量出它「图标+文字」的实际占高 */
   var best=1e9,hc=cx,ch=0;
   for(var i=0;i<tabs.length;i++){var d=Math.abs(tabs[i].cx-cx);if(d<best){best=d;hc=tabs[i].cx;ch=_liqContentH(tabs[i].el);}}
@@ -12528,7 +12534,7 @@ function _liqArm(cx,cy){
   _liqGlass.style.height=liq.gh+'px';
   _liqGlass.style.borderRadius=liq.gr+'px';
 
-  /* 起始位 = 离按下点最近的 tab 中心（「回弹归位」就是回到这个 tab；hc 上面已一并算出） */
+  /* 起始位 = 离按下点最近的 tab 中心（★R141 玻璃泡原地出现；落空松手就原地淡出，不再飞回这里） */
   liq.ox=_liqClampX(hc-r.left);liq.oy=_liqClampY(r.height/2);
   liq.x=liq.ox;liq.y=liq.oy;
   liq.px=liq.ox;liq.py=liq.oy;
@@ -12542,7 +12548,7 @@ function _liqArm(cx,cy){
   liq.noClick=Date.now()+500;
   _liqPaint();
   liq.raf=requestAnimationFrame(_liqTick);
-  _liqHover(cx,cy);
+  _liqHoverX();
 }
 function _liqMove(e){
   if(!liq.on||liq.mode!=='drag'||e.pointerId!==liq.pid)return;
@@ -12553,13 +12559,19 @@ function _liqMove(e){
   liq.travel+=Math.hypot(nx-liq.lx,ny-liq.ly);
   liq.ax+=nx-liq.lx;liq.ay+=ny-liq.ly;
   liq.lx=nx;liq.ly=ny;
-  liq.px=_liqClampX(nx);liq.py=_liqClampY(ny);
-  _liqHover(e.clientX,e.clientY);
+  /* ★R141 仿酷安液态玻璃：Y 轴锁死在导航条中线、只横向流动 —— 用户反馈「上下左右乱飞」，
+     参考实现（Qwen_html_20260918）正是 targetX 仅 X 轴、y 恒 centerY。 */
+  liq.px=_liqClampX(nx);liq.py=liq.layH/2;
+  _liqHoverX();
 }
-function _liqHover(cx,cy){
-  var el=null;
-  try{el=document.elementFromPoint(cx,cy);}catch(_){}
-  var tab=el&&el.closest?el.closest('.nav-tab'):null;
+/* ★R141 改「玻璃泡压住的 tab」判定：玻璃泡只横滑后指针可能跑到导航条上/下方（elementFromPoint
+   会落空丢 hover），改用泡中心 X 的水平距离判定 —— 最近 tab 且在其自身半宽内才算压住（与参考实现同口径）。 */
+function _liqHoverX(){
+  var tabs=liq.cacheTabs;if(!tabs||!tabs.length)return;
+  var lr=_liqLayer.getBoundingClientRect();
+  var x=lr.left+liq.px,tab=null,bd=1e9;
+  for(var i=0;i<tabs.length;i++){var d=Math.abs(tabs[i].cx-x);if(d<bd){bd=d;tab=tabs[i];}}
+  tab=(tab&&bd<=tab.w/2)?tab.el:null;
   if(tab===liq.hoverTab)return;
   if(liq.hoverTab)liq.hoverTab.classList.remove('lp-hover');
   liq.hoverTab=tab;
@@ -12571,10 +12583,12 @@ function _liqUp(e){
   var tab=liq.hoverTab;
   if(tab){
     liq.hit=tab.getAttribute('data-view');
-    var lr=_liqLayer.getBoundingClientRect(),tr=tab.getBoundingClientRect();
-    liq.tx=_liqClampX(tr.left-lr.left+tr.width/2,0);liq.ty=_liqClampY(tr.top-lr.top+tr.height/2,0);
+    var tabs=liq.cacheTabs,tw=null;
+    for(var i=0;i<tabs.length;i++){if(tabs[i].el===tab)tw=tabs[i];}
+    liq.tx=_liqClampX(tw?tw.cx-_liqLayer.getBoundingClientRect().left:liq.x,0);liq.ty=liq.layH/2;
   }else{
-    liq.hit=null;liq.tx=liq.ox;liq.ty=liq.oy;
+    /* ★R141 仿参考实现：落空时玻璃泡「原地淡出」，不再飞回起始 tab（消灭回弹感） */
+    liq.hit=null;liq.tx=liq.x;liq.ty=liq.y;
   }
   if(liq.hoverTab){liq.hoverTab.classList.remove('lp-hover');liq.hoverTab=null;}
   liq.mode='settle';
@@ -12603,7 +12617,7 @@ function _liqTick(ts){
     liq.x+=(liq.px-liq.x)*a;liq.y+=(liq.py-liq.y)*a;
     liq.s+=(Math.min(LIQ_MAXS,(liq.travel/Math.max(1,dt)*16.7)/LIQ_SV)-liq.s)*Math.min(1,0.22*k);
     liq.travel=0;
-    if(Math.hypot(liq.ax,liq.ay)>1.2)liq.ang=_liqAng(liq.ang,Math.atan2(liq.ay,liq.ax),Math.min(1,0.30*k));
+    if(Math.abs(liq.ax)>1.2)liq.ang=_liqAng(liq.ang,liq.ax<0?Math.PI:0,Math.min(1,0.30*k)); /* ★R141 只横移 → 拉伸恒沿水平轴 */
     liq.ax=0;liq.ay=0;
     /* x/y 跟着拉伸量再钳一次：this 帧的 s 可能比上一次 pointermove 钳制时更大 */
     liq.x=_liqClampX(liq.x);liq.y=_liqClampY(liq.y);
@@ -12631,7 +12645,7 @@ function _liqDone(){
   if(_liqLayer)_liqLayer.style.display='none';
   document.documentElement.classList.remove('liq-grabbing');
   var hit=liq.hit;
-  liq.on=false;liq.down=false;liq.armed=false;liq.pid=null;liq.last=0;liq.hit=null;
+  liq.on=false;liq.down=false;liq.armed=false;liq.pid=null;liq.last=0;liq.hit=null;liq.cacheTabs=null;
   if(hit&&typeof setView==='function'&&hit!==currentView)setView(hit);
 }
 function _liqClickGuard(e){
