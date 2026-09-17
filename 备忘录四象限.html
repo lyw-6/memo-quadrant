@@ -14982,7 +14982,9 @@ document.addEventListener('keydown',function(e){
   if(e.isComposing)return;
   var k=(e.key||'').toLowerCase();
   if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&k==='f'){e.preventDefault();toggleSearch(true);return;}
-  if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&k==='n'){e.preventDefault();if(currentView!=='list')setView('list');addMemo();return;}
+  /* ★R132 同上：今日/月 tab 里 Ctrl+N 不再跳回「备忘录」—— 新条目会被 createDeadline()
+     钉在当天/当月，留在当前 tab 即可见可编辑。只有真正装不下它的视图（四象限/日历/统计/回收站）才切回列表。 */
+  if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&k==='n'){e.preventDefault();if(!(currentView==='list'||currentView==='today'||currentView==='month'))setView('list');addMemo();return;}
   if(e.altKey&&!e.ctrlKey&&!e.metaKey&&/^[1-9]$/.test(e.key)){
     var vis=[];
     for(var vi=0;vi<viewPrefs.order.length;vi++){var vv=viewPrefs.order[vi];if(viewPrefs.visible[vv])vis.push(vv);}
@@ -17756,6 +17758,16 @@ function addMemo(){
   // ★R117 落位由设置决定（默认置顶）：置顶=unshift(数组首位，自定义顺序下就是列表第一条)，
   //   置底=push(原来的行为)。排序为创建/截止时间时位置另由排序方向决定，这里只管数组次序。
   if(getNewPos()==='bottom')memos.push(nm);else memos.unshift(nm);
+  /* ★R132 新条目必须落在当前筛选的可见范围内 —— 与 createCategory() 是同一条原则的两半：
+     它让新条目的分类自动跟随「分类筛选」（筛了"工作"就直接建成"工作"），
+     但**状态筛选**这一维此前没人管：筛着「已完成」时新建的是未完成条目 → 渲染出来是空的
+     → 用户看到"点了 + 什么也没发生"（今日/月 tab 里同样有状态页签，一样会中）。
+     新条目必然 done=false，只有「已完成」这一档会把它滤掉，归位到「全部」即可。
+     分类那一维不用管：createCategory() 已经保证它与 currentCatFilter 一致。 */
+  if((currentView==='list'||currentView==='today'||currentView==='month')&&currentFilter==='done'){
+    currentFilter='all';
+    try{saveLastFilter('all');}catch(_){}
+  }
   _freshAddId=nid;
   stats.totalCreated++;
   saveData();render();
@@ -19109,12 +19121,20 @@ function bindEvents(){
     saveData();renderSettings();render();
     showToast('已添加标签');
   });
-  // 空状态占位区：点击直接进入添加流程（非列表视图先切回列表，确保新条目可见且可聚焦）
-  emptyStateEl.addEventListener('click',function(){
-    if(currentView!=='list')currentView='list';
+  /* ★R132 空状态占位区创建：**留在当前 tab**，不再一律跳回「备忘录」。
+     旧实现 `if(currentView!=='list')currentView='list'` —— 在「今日 / 月」tab 里点这个大虚线框，
+     会先把视图切回「备忘录」再新建（用户反馈"创建备忘录时都会跳回备忘录tab"）。
+     跳转本身是多余的：`createDeadline()` 已按当前视图给新条目定好日期
+     （今日→当天 0 点 / 月→当月 1 日），新条目天然落在该视图的取数范围内，
+     留在原 tab 就能立刻看到它并进入编辑态（★R117 的置顶/置底滚动逻辑照旧生效）。
+     只有"当前视图根本装不下新条目"时才回列表 —— 四象限/日历/统计/回收站属于此类
+     （正常路径下空状态只在 列表/今日/月 三个视图出现，这里是防御性兜底）。 */
+  function addFromEmptyState(){
+    if(!(currentView==='list'||currentView==='today'||currentView==='month'))currentView='list';
     addMemo();
-  });
-  emptyStateEl.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();if(currentView!=='list')currentView='list';addMemo();}});
+  }
+  emptyStateEl.addEventListener('click',function(){addFromEmptyState();});
+  emptyStateEl.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();addFromEmptyState();}});
   /* ★R69 原 #copy-all-btn / #tool-batch 底栏已删,批量开关提取为函数供 FAB 菜单调用 */
   /* ★R69 FAB 长按菜单：批量操作 / 复制全部 / 清空已完成 */
   var FAB_ICO_BATCH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
