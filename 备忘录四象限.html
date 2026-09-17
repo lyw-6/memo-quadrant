@@ -139,7 +139,11 @@
 .q-cat-row.fade-l{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16px);mask-image:linear-gradient(90deg,transparent 0,#000 16px);}
 .q-cat-row.fade-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 16px),transparent 100%);mask-image:linear-gradient(90deg,#000 calc(100% - 16px),transparent 100%);}
 .q-cat-row.fade-l.fade-r{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 16px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 16px),transparent 100%);}
-.q-cat-more{flex:none;display:flex;align-items:center;justify-content:center;width:27px;height:27px;border-radius:50%;border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);cursor:pointer;padding:0;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+/* ★R131 transition 只留颜色/边框，**绝不含 opacity/visibility**：本按钮的显隐完全由 JS 按溢出同步切换，
+   而 renderQuadrant 每次都会重建它；若带 all .15s，新建元素会先以可见态(默认无 .qcm-hide)落地、
+   再加 .qcm-hide → 触发一次 150ms 的**淡出**，肉眼即"点一下旁边闪一下三个点"（实测 10 帧 opacity 1→0）。
+   去掉透明度过渡后 class 切换当帧生效，不存在中间态。 */
+.q-cat-more{flex:none;display:flex;align-items:center;justify-content:center;width:27px;height:27px;border-radius:50%;border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);cursor:pointer;padding:0;transition:color .15s,border-color .15s,background .15s;-webkit-tap-highlight-color:transparent;}
 .q-cat-more svg{width:14px;height:14px;display:block;pointer-events:none;}
 .q-cat-more:hover{color:var(--text);border-color:var(--text-tertiary);}
 .q-cat-more.qcm-hide{opacity:0;visibility:hidden;pointer-events:none;} /* ★R71b 无溢出时隐藏「…」（占位保留防「已完成」跳动） */
@@ -15049,7 +15053,10 @@ function renderQuadrant(){
   var _doneTotal=memos.filter(function(m){return m.done;}).filter(_qMatch).length;
   var _chips='<button class="q-cat-chip'+(_qCat==='all'?' on':'')+'" data-cat="all" type="button">全部</button>';
   for(var _ck in categories){var _c=categories[_ck];_chips+='<button class="q-cat-chip'+(_qCat===_ck?' on':'')+'" data-cat="'+escapeHtml(_ck)+'" type="button"><span class="dot" style="background:'+_c.color+'"></span>'+escapeHtml(_c.label)+'</button>';}
-  html+='<div class="q-topbar"><div class="q-cat-row" id="q-cat-row">'+_chips+'</div><button class="q-cat-more" id="q-cat-more" type="button" title="全部分类"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button><button class="q-done-chip'+(_qShowDone?' on':'')+'" id="q-done-toggle" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>已完成'+(_doneTotal?' '+_doneTotal:'')+'</button></div>';
+  /* ★R131 「…」**默认就带 qcm-hide**（R71b 是渲染完再补）：本行 HTML 每次 render 都重建，
+     若默认可见、再由 _qRowFade() 补隐藏，配上原 transition:all .15s 就是一次可见→隐藏的淡出
+     （用户报的"点已完成旁边闪一下三个点"）。默认隐藏 + 溢出时移除 = 最坏也只是晚一帧出现。 */
+  html+='<div class="q-topbar"><div class="q-cat-row" id="q-cat-row">'+_chips+'</div><button class="q-cat-more qcm-hide" id="q-cat-more" type="button" title="全部分类"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button><button class="q-done-chip'+(_qShowDone?' on':'')+'" id="q-done-toggle" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>已完成'+(_doneTotal?' '+_doneTotal:'')+'</button></div>';
   for(var q=0;q<4;q++){
     var qdata=QUADRANTS[q];
     var items=memos.filter(function(m){return (m.quadrant||0)===q && !m.done;}).filter(_qMatch).sort(function(a,b){return (b.pinned?1:0)-(a.pinned?1:0);});
