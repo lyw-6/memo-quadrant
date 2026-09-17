@@ -192,6 +192,12 @@ html.glass-text-dark [data-theme="glass"] {
 /* ★R56: 根元素禁止横向滚动——切视图时经典滚动条(Windows)出现/消失引起视口宽度瞬时变化，
    某一帧的微小横向溢出会弹出页面级横向滚动条(用户截图)；本应用设计上不存在横向滚动，直接根除 */
 html{overflow-x:hidden;}
+/* ★R143 曾用 html{scrollbar-gutter:stable} 常驻滚动条槽来消掉「切到日历（唯一会出纵向滚动条的视图）时
+   底栏布局跳变 → 选中胶囊右偏 12px」。★R144 撤掉：常驻槽在 Windows 上是**永久**吃掉 15px 视口内容宽
+   （不只是有滚动条时）→ 窄屏 360px 下每个页签/标签凭空少 3~5px（R119②/R119⑥/R121⑨ 三条宽度断言
+   正是被它压到 55px 而红）。改为「事后纠正」而不是「提前占位」：保留下面 watchNavResize() 的
+   ResizeObserver —— 底栏宽度一变就重排胶囊，任何原因（滚动条、旋屏、字体加载）引起的跳变都能纠正，
+   且不牺牲一像素布局宽度。 */
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);padding:12px 12px calc(76px + env(safe-area-inset-bottom));margin:0;touch-action:manipulation;overscroll-behavior-y:contain;line-height:1.5;transition:background .3s,color .3s;}
 /* 玻璃背景固定层：用 ::before 承载渐变/自定义图，position:fixed + translateZ(0) 走 GPU 合成，
    只在设置时绘制一次，滚动时仅合成而非逐帧重绘 —— 彻底消除移动端 background-attachment:fixed 的卡顿。
@@ -1699,8 +1705,12 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
 [data-theme="glass"] .nav-batch.ghost{color:var(--text-secondary);}
 [data-theme="glass"] .nav-tab:hover{background:transparent;color:var(--text);}
 [data-theme="glass"] .nav-tab.active{color:var(--color-primary);}
-/* 毛玻璃主题：选中胶囊 = 液态玻璃透镜 —— 顶部高光渐变 + 更强模糊/饱和 + 玻璃边 + 沉浸光晕 */
-[data-theme="glass"] .nav-pill{
+/* 毛玻璃主题：选中胶囊 = 液态玻璃透镜 —— 顶部高光渐变 + 更强模糊/饱和 + 玻璃边 + 沉浸光晕
+   ★R143 拖动泡 .liquid-glass 并入同一条规则（同源 → 不可能再走偏）：泡就是「会流动的选中胶囊」，
+   必须跟常态胶囊长得一模一样。此前 .liquid-glass 只吃通用 primary 渐变，glass 主题下
+   常态胶囊是白的、拖动时泡却「变蓝」（用户实测反馈）。并进来后 4 个主题 + glass-text-dark 全自动同源。 */
+[data-theme="glass"] .nav-pill,
+[data-theme="glass"] .liquid-glass{
   border-radius:22px;
   background:
     radial-gradient(130% 150% at 50% -32%, rgba(255,255,255,.80) 0%, rgba(255,255,255,.30) 46%, rgba(255,255,255,.08) 100%),
@@ -1717,8 +1727,9 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
     0 8px 22px rgba(31,38,135,.20),
     0 0 20px color-mix(in srgb, var(--color-primary) 34%, transparent);
 }
-/* 掠过玻璃表面的镜面高光，营造「液态」折射感 */
-[data-theme="glass"] .nav-pill::after{
+/* 掠过玻璃表面的镜面高光，营造「液态」折射感（泡与胶囊共用，交接时零观感跳变） */
+[data-theme="glass"] .nav-pill::after,
+[data-theme="glass"] .liquid-glass::after{
   content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   background:linear-gradient(112deg, transparent 26%, rgba(255,255,255,.42) 44%, rgba(255,255,255,.06) 56%, transparent 70%);
   mix-blend-mode:screen;
@@ -2522,7 +2533,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 }
 .bottom-nav.batch-mode .nav-pill{opacity:0;}
 /* ★R142 拖动期玻璃泡接管「选中胶囊」→ 藏真 pill 防双泡；泡滑到位后摘类，pill 淡入交接 */
-.bottom-nav.liq-drag .nav-pill{opacity:0!important;}
+/* ★R144 拖动期 pill 一律「瞬移」（transition:none）：它在拖动期是藏着的（opacity 0），
+   可 positionNavPill() 仍会在 setView → renderBottomNav 的 rAF 里被调用并把 transform 写成新 tab 的位置。
+   若照常态走 .42s 缓动，交接（摘 liq-drag）那一刻它才刚走到中途 —— 可见期里它会从「上一个 tab 的位置
+   一路滑过来」+ 弹簧过冲（实测可见位移 375px、过冲 9.5px）。用户口径「导航栏拖动放手后，不要有这么大的
+   回弹」= 就是这个：泡已经把这颗 tab 走完了，胶囊不该再走一遍。transition:none → 拖动期任何重排都是瞬移，
+   交接时胶囊已经在正确位置，只剩 opacity 淡入（保留 .26s）。 */
+.bottom-nav.liq-drag .nav-pill{opacity:0!important;transition:none!important;}
 /* ★R142 拖动期「原选中 tab 压暗成常规样式」：亮谁由玻璃泡决定（lp-hover=选中样式），
    原先的 active 高亮此时会误导（用户：其他都是常规样式） */
 .bottom-nav.liq-drag .nav-tab.active{color:var(--text-secondary);}
@@ -2553,7 +2570,9 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    泡身后是 nav 的不透明 card-bg 底 → 边缘折射挤弯的是 nav 底色，图标不经过滤镜 */
 .liquid-layer{position:absolute;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;}
 /* ★R142 泡 = 「会流动的选中胶囊」：与 .nav-pill 同款 primary 渐变（用户定稿：保留原来的背景
-   效果 + 拖动的液体效果即可，不必透明玻璃）。边缘保留透镜折射的液态感（@supports url）。 */
+   效果 + 拖动的液体效果即可，不必透明玻璃）。边缘保留透镜折射的液态感（@supports url）。
+   ★R143 毛玻璃主题下由 [data-theme="glass"] 那条规则把本行全部覆盖成「与常态胶囊同款的白色玻璃」
+   （两处选择器已并在一起，见样式区 1703 行附近）——4 个主题里「泡」和「选中胶囊」永远同一张皮。 */
 .liquid-glass{position:absolute;left:0;top:0;box-sizing:border-box;border-radius:14px;opacity:0;
   will-change:transform,opacity;
   background:linear-gradient(180deg,
@@ -12270,6 +12289,23 @@ function updateTitle(){
     syncBottomNav();
 }
 var _navPillEl=null; // 底部导航「液态玻璃」选中胶囊（常驻单例，跨 render 复用以保持滑动过渡）
+/* ★R143 只换「槽位里的按钮」，绝不整块 nav.innerHTML —— 选中胶囊是常驻单例：
+   被 remove+insert 之后它只能从「当前终态」起算，同一帧里底栏被重建第二次时（★今日/月 走列表分支 →
+   updateBatchBar 会再重建一次底栏）第一次写下的终态就成了起始值 → 滑动过渡当场作废
+   （用户实测：「备忘录→四象限/日历 有过渡，→今日/月 没有」）。改成把新按钮插到胶囊之前，
+   胶囊与液态玻璃层全程不出 DOM，过渡永远从旧位置起算。 */
+function _navSwapChildren(html){
+  var nav=document.getElementById('bottomNav');
+  if(!nav)return null;
+  var old=nav.querySelectorAll('.nav-tab,.nav-batch,.batch-count,.batch-row-break');
+  for(var i=0;i<old.length;i++)old[i].remove();
+  var pill=_ensureNavPill();
+  if(pill.parentNode!==nav)nav.appendChild(pill);
+  var tmp=document.createElement('div');
+  tmp.innerHTML=html;
+  while(tmp.firstChild)nav.insertBefore(tmp.firstChild,pill);
+  return nav;
+}
 function renderBottomNav(){
   var nav=document.getElementById('bottomNav');
   if(!nav)return;
@@ -12295,7 +12331,7 @@ function renderBottomNav(){
       html+='<button class="nav-batch" id="batch-copy" type="button">'+nbIco(ICON_COPY)+'<span class="b-lbl">复制</span></button>';
       html+='<button class="nav-batch danger" id="batch-delete" type="button">'+nbIco(ICON_TRASH)+'<span class="b-lbl">删除</span></button>';
     }
-    nav.innerHTML=html;
+    _navSwapChildren(html);
     nav.style.display='';
     nav.classList.add('batch-mode');
     bindBatchNav();
@@ -12309,7 +12345,7 @@ function renderBottomNav(){
     html+='<button class="nav-tab'+(v===currentView?' active':'')+'" data-view="'+v+'" type="button">'+m.icon+'<span>'+m.label+'</span></button>';
   }
   nav.classList.remove('batch-mode');
-  nav.innerHTML=html;
+  _navSwapChildren(html);
   var _vis=0;for(var _i=0;_i<viewPrefs.order.length;_i++){if(viewPrefs.visible[viewPrefs.order[_i]])_vis++;}
   nav.style.display=(_vis<=1)?'none':'';
   var tabs=nav.querySelectorAll('.nav-tab');
@@ -12319,9 +12355,8 @@ function renderBottomNav(){
     if(_v===currentView){try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}return;}
     setView(_v);
   });})(tabs[t]);}
-  // 选中胶囊：复用同一个持久元素(不随 innerHTML 重建),保证切换视图时是滑动过渡而非闪跳
-  nav.appendChild(_ensureNavPill());
-  _liqReattach(); /* ★R142 把液态玻璃拖动层接回 nav（innerHTML 重建把它删了） */
+  // 选中胶囊：常驻单例（_navSwapChildren 已保证它在 nav 里且不被换掉）→ 切视图是滑动过渡而非闪跳
+  _liqReattach(); /* ★R142 把液态玻璃拖动层接回 nav（兜底：万一被别处整块重建过） */
   requestAnimationFrame(positionNavPill);
 }
 // 底部导航「液态玻璃」选中胶囊：常驻单例元素
@@ -12354,6 +12389,20 @@ function positionNavPill(retry){
 window.addEventListener('resize',function(){positionNavPill();});
 window.addEventListener('focus',function(){positionNavPill();});
 document.addEventListener('visibilitychange',function(){if(!document.hidden)positionNavPill();});
+/* ★R143 底栏宽度还会被「页面纵向滚动条出现/消失」改掉（固定元素宽度是百分比 → 视口内容宽变 15px），
+   这既不会触发 resize 事件、也不会重新 render → 胶囊的 inline width/translateX 会停在旧布局上。
+   （用户实测：窄屏切到「日历」——内容最高的视图、唯一出现滚动条的那个 —— 被选中的背景泡整体偏右。）
+   兜底：盯着底栏尺寸，任何变化都重排一次胶囊（rAF 合帧，不与切视图时的那次重排打架）。 */
+function watchNavResize(){
+  var nav=document.getElementById('bottomNav');
+  if(!nav||nav._pillRO||typeof ResizeObserver!=='function')return;
+  var raf=0;
+  nav._pillRO=new ResizeObserver(function(){
+    if(raf)cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(function(){raf=0;if(typeof positionNavPill==='function')positionNavPill();});
+  });
+  nav._pillRO.observe(nav);
+}
 function bindBatchNav(){
   var nav=document.getElementById('bottomNav');
   if(!nav)return;
@@ -12376,7 +12425,19 @@ function bindBatchNav(){
 var LIQ_HOLD=350, LIQ_SLOP=8;
 var LIQ_MAXS=0.34, LIQ_SV=50;      /* 拉伸强度上限 / 速度标定(px per 16.7ms) */
 var LIQ_PADY=9, LIQ_GW=1.10, LIQ_BREATH=3; /* 上下留白(仅兜底路径用) / 宽 = tab 宽 × 此值（★R142 用户：拖动块要比选中背景「更大」→ 1.10 倍 tab 宽） / 内容外额外余量(px) */
-var LIQ_RROUND=0.85;                /* ★R142 圆角动态幅度：拖得快(s→MAXS)圆角向「全圆椭圆」逼近 85%，慢/静止回到基础圆角（液体感） */
+var LIQ_PULL=0.62;                  /* ★R143 柔性磁吸最大拉力：指针正落在 tab 中心时最多把它拉到
+   距中心 (1-LIQ_PULL) 的位置。用户口径「不要这么黏、拖一下就吸附」→ 只给柔性牵引（越近越强），
+   全程保持连续流动；硬吸附（一颗一颗跳）在 R143 首版被用户退回。 */
+var LIQ_RFULL=0.16;                 /* ★R143 圆角吃满「全圆端」所需的拉伸量 s（上限 LIQ_MAXS=0.34 的一半）。
+   ★用户实测口径：「速度快时是椭圆」。全圆端 border-radius = min(gw,gh)/2 → 圆角矩形变成胶囊/椭圆
+   （再叠上 scale(1+s,…) 的横向拉伸就是椭圆状）；旧实现「0.85 × 线性映射」，
+   快甩时 s≈0.20 → 只走到全圆的 85%×(0.20/0.34)=50%，看上去还是方的 → 改成 sqrt 提前段 + 到点吃满。 */
+var LIQ_EDGE=18;                    /* ★R144 「归属外扩」(px)：tab 半宽之外再往外这么一段，也算归属这颗 tab。
+   ★为什么需要：5 颗 tab 的中心间距 ≈ 91px、而每颗 tab 宽 89px → 相邻两颗的「半宽判定区」之间还剩 2px 缝；
+     两端还各有 ~9px 导航条内边距。旧规则在这些死区里判「谁都不高亮 = 落空 → 泡飞回当前选中位」，
+     一旦拖到栏最右端（想选最后一颗）落在留白里放手，泡就会横穿整条栏飞回去 —— 实测 273px（用户口径
+     「放手后这么大的回弹」）。外扩 18px 后死区全部归属最近 tab，配合下面的「就近归属」彻底消除飞回。
+     只作用于「高亮 + 落点归属」，不改拉伸/跟手手感（_liqPullX 仍按半宽算 q，边界处拉力照旧归零）。 */
 var LIQ_BEZEL=0.22, LIQ_BEND=0.17; /* 折射带宽度占 min(半宽,半高) 的比例 / 最大位移比例。
    ★这两个值决定「液体感 vs 可读性」的平衡：0.42/0.30 时折射带 8px（占玻璃高 21%）→ 连图标都被推糊；
      0.15/0.12 又几乎看不出折射；0.22/0.17（带 4.2px、位移峰值 3.2px）实测最平衡 —— 图标清晰、边缘有弯折。 */
@@ -12549,13 +12610,20 @@ function _liqArm(cx,cy){
 
   /* ★R142 活动区尺寸 = 层的真实 rect（nav 内容盒），不能用 nav border box（差 2px border →
      泡起步偏离栏中线 1px，Y 锁断言会抓到） */
-  var tabs=_liqTabs(),n=Math.max(1,tabs.length);
+  var tabs=_liqTabs();
   liq.cacheTabs=tabs; /* ★R141 拖动期间 hover 判定用（泡中心 X vs tab 中心距离），缓存避免每帧重排 rect */
-  /* 先找离按下点最近的 tab，同时量出它「图标+文字」的实际占高 */
-  var best=1e9,hc=cx,ch=0;
-  for(var i=0;i<tabs.length;i++){var d=Math.abs(tabs[i].cx-cx);if(d<best){best=d;hc=tabs[i].cx;ch=_liqContentH(tabs[i].el);}}
-  liq.gw=Math.round((r.width/n)*LIQ_GW);
-  liq.gw=Math.max(48,Math.min(liq.gw,Math.round(r.height*2.4),Math.round(r.width-6)));
+  /* 先找离按下点最近的 tab，同时量出它「图标+文字」的实际占高 + 它的真实宽度 */
+  var best=1e9,hc=cx,ch=0,tw=0;
+  for(var i=0;i<tabs.length;i++){var d=Math.abs(tabs[i].cx-cx);if(d<best){best=d;hc=tabs[i].cx;ch=_liqContentH(tabs[i].el);tw=tabs[i].w;}}
+  /* ★R143 泡宽改用「实测 tab 宽 × LIQ_GW」：旧写法 nav 的 border-box 宽 / n 会把两侧内边距一起
+     摊进每格 → 泡比 tab 系统性偏宽（窄屏上「泡比选中背景宽出一圈」更明显）。
+     再收一条「两端 tab 中心必须落在 clamp 可覆盖范围内」的硬上限：泡宽 = 1.1×tab 宽时，
+     第一/最后一颗 tab 的中心离层边缘只有 padding + tab/2，若 gw/2 超过它，clamp 会把泡顶回来
+     → 端部 tab 永远吸附不到位（= 用户看到的「偏了」）。上限 = 2×(padding + tab/2) - 2px 余量。 */
+  var _npad=parseFloat(getComputedStyle(nav).paddingLeft)||0;
+  var _gmax=Math.round(2*(_npad+tw/2)-2);
+  liq.gw=Math.round(tw*LIQ_GW);
+  liq.gw=Math.max(48,Math.min(liq.gw,_gmax,Math.round(r.height*2.4),Math.round(r.width-6)));
   /* ★R140 高度按「内容高 + 上下各一条折射带」反推，而不是写死 nav 高 -18：
      折射带 = LIQ_BEZEL × min(半宽,半高)，若玻璃只比内容高 2~3px，这条带就会切进文字字形
      → 被压住的 tab 标签出现「重影」（R140 实测标签底边距玻璃底边仅 0.95px、带却有 4.29px）。
@@ -12607,18 +12675,42 @@ function _liqMove(e){
   liq.travel+=Math.hypot(nx-liq.lx,ny-liq.ly);
   liq.lx=nx;liq.ly=ny;
   /* ★R141 仿酷安液态玻璃：Y 轴锁死在导航条中线、只横向流动 —— 用户反馈「上下左右乱飞」，
-     参考实现（Qwen_html_20260918）正是 targetX 仅 X 轴、y 恒 centerY。 */
-  liq.px=_liqClampX(nx);liq.py=liq.layH/2;
-  _liqHoverX();
+     参考实现（Qwen_html_20260918）正是 targetX 仅 X 轴、y 恒 centerY。
+     ★R143 横向 = 跟手 + 「柔性磁吸」：泡就是「会流动的选中胶囊」，靠近某颗 tab 时被它轻轻拉过去，
+     但**不是硬吸附**（用户实测口径：「不要这么黏、拖一下就吸过去，要有中间的过渡显示」）。
+     磁吸权重 pull = LIQ_PULL × (1-距离/半宽)^1.4 → 越接近 tab 中心拉力越强（中心处 100% 对齐、
+     tab 边界处拉力归零 = 完全跟手）→ 拖动全程是连续的流动过渡，泡在边界附近自然落在两颗 tab 之间。
+     高亮判定同样用指针 nx → 「亮谁」与「泡偏向谁」永远同一个答案；拉伸强度仍取指针速度 liq.travel。 */
+  liq.px=_liqClampX(_liqPullX(nx));liq.py=liq.layH/2;
+  _liqHoverX(nx);
+}
+/* ★R144 统一的「最近 tab」判定（layer 坐标系 x）—— 磁吸 / 高亮 / 落点归属三处共用同一口径，
+   保证「亮谁」「泡偏向谁」「松手给谁」永远同一个答案。
+   edge = 归属外扩（见 LIQ_EDGE）：bd 超过「半宽 + edge」才算真的谁都不沾（返回 null）。 */
+function _liqNearTab(x,edge){
+  var tabs=liq.cacheTabs;if(!tabs||!tabs.length)return null;
+  var lr=_liqLayer.getBoundingClientRect();
+  var best=null,bd=1e9,i,d;
+  for(i=0;i<tabs.length;i++){d=Math.abs((tabs[i].cx-lr.left)-x);if(d<bd){bd=d;best=tabs[i];}}
+  if(!best||bd>best.w/2+(edge||0))return null;
+  return {tab:best,bd:bd,lx:lr.left};
+}
+/* ★R143 柔性磁吸：指针在哪颗 tab 的「半宽」内（= 这颗会被高亮）→ 按接近度把它往该 tab 中心拉
+   (最多 LIQ_PULL)；落在两端留白里（谁都不高亮）→ 原样跟手。 */
+function _liqPullX(x){
+  var n=_liqNearTab(x,0);if(!n)return x;
+  var q=1-n.bd/(n.tab.w/2);              /* 0=刚进这颗 tab 的边界, 1=正落在它中心 */
+  var pull=LIQ_PULL*Math.pow(q,1.4);
+  return x+((n.tab.cx-n.lx)-x)*pull;
 }
 /* ★R141 改「玻璃泡压住的 tab」判定：玻璃泡只横滑后指针可能跑到导航条上/下方（elementFromPoint
    会落空丢 hover），改用泡中心 X 的水平距离判定 —— 最近 tab 且在其自身半宽内才算压住（与参考实现同口径）。 */
-function _liqHoverX(){
-  var tabs=liq.cacheTabs;if(!tabs||!tabs.length)return;
-  var lr=_liqLayer.getBoundingClientRect();
-  var x=lr.left+liq.px,tab=null,bd=1e9;
-  for(var i=0;i<tabs.length;i++){var d=Math.abs(tabs[i].cx-x);if(d<bd){bd=d;tab=tabs[i];}}
-  tab=(tab&&bd<=tab.w/2)?tab.el:null;
+function _liqHoverX(x0){
+  /* ★R143 x0 = 指针位置（layer 坐标，可选）：高亮要用「手指在哪」判定，不能拿吸附后的泡位置反推 */
+  /* ★R144 判定外扩 LIQ_EDGE：栏两端留白 / 相邻半宽之间的 2px 缝也要高亮（否则「没有高亮」却能在
+     松手时归属过去，预判和结果不一致；外扩后与落点判定完全同口径） */
+  var n=_liqNearTab(x0===undefined?liq.px:x0,LIQ_EDGE);
+  var tab=n?n.tab.el:null;
   if(tab===liq.hoverTab)return;
   if(liq.hoverTab)liq.hoverTab.classList.remove('lp-hover');
   liq.hoverTab=tab;
@@ -12628,6 +12720,10 @@ function _liqUp(e){
   if(!liq.on||liq.mode!=='drag')return;
   if(e&&e.pointerId!==undefined&&e.pointerId!==liq.pid)return;
   var tab=liq.hoverTab;
+  /* ★R144 就近归属（消除「放手后这么大的回弹」）：hover 只认「半宽 + LIQ_EDGE」，而指针完全甩出栏外
+     （如 200px 上方、屏幕两端之外）时连外扩区都不沾 → 退化为「离玻璃泡最近的 tab」——
+     泡永远被钳在栏内，所以一定有解。旧逻辑这里直接判落空 → 泡横穿整条栏飞回当前选中位（实测最大 273px）。 */
+  if(!tab){var _n=_liqNearTab(liq.lx,LIQ_EDGE)||_liqNearTab(liq.px,1e9);if(_n)tab=_n.tab.el;}
   if(tab){
     liq.hit=tab.getAttribute('data-view');
     var tabs=liq.cacheTabs,tw=null;
@@ -12653,10 +12749,13 @@ function _liqPaint(){
   if(liq.s>0.004)tf+=' scale('+(1+liq.s).toFixed(4)+','+(1-liq.s*0.55).toFixed(4)+')';
   _liqGlass.style.transform=tf;
   _liqGlass.style.opacity=liq.o.toFixed(3);
-  /* ★R142 圆角随速度变：拖得越快 s 越大 → 圆角向「全圆椭圆」逼近（满速走 85% 路程）；
-     慢/静止回到基础圆角。半径变化 → 位移图按新圆角重算（档位节流） */
+  /* ★R142 圆角随速度变：拖得越快 s 越大 → 圆角向「全圆椭圆」逼近；
+     ★R143 改为 sqrt 提前段 + 到点吃满（用户要「速度快时是椭圆」）：s⇒LIQ_RFULL 即 100% 全圆，
+     之后 border-radius = min(gw,gh)/2（两端正圆）+ 横向拉伸 = 椭圆状；慢/静止回到基础圆角。
+     半径变化 → 位移图按新圆角重算；★2px 量化档位：既省 SDF 重算次数，视觉上又看不出跳档 */
   var fullR=Math.floor(Math.min(liq.gw,liq.gh)/2)-1;
-  var dynR=Math.round(liq.gr+(fullR-liq.gr)*LIQ_RROUND*(liq.s/LIQ_MAXS));
+  var rq=liq.s/LIQ_RFULL;if(rq>1)rq=1;rq=Math.sqrt(rq);
+  var dynR=Math.round((liq.gr+(fullR-liq.gr)*rq)/2)*2;
   if(dynR>fullR)dynR=fullR;if(dynR<2)dynR=2;
   if(dynR!==liq.lastR){liq.lastR=dynR;_liqGlass.style.borderRadius=dynR+'px';_liqRefract(dynR);}
 }
@@ -12673,13 +12772,20 @@ function _liqTick(ts){
     liq.x=_liqClampX(liq.x);liq.y=_liqClampY(liq.y);
     liq.o+=(1-liq.o)*Math.min(1,0.30*k);
   }else{
-    var a2=Math.min(1,0.26*k);
+    /* ★R144 收敛略快（0.26 → 0.32）：旧值下 45px 的「归位」要 ~180ms 才落进 1.5px 内、尾巴拖得长，
+       看上去像慢慢飘回去；加快后是干脆到位，配合交接瞬移 → 放手后没有任何多余位移。 */
+    var a2=Math.min(1,0.32*k);
     liq.x+=(liq.tx-liq.x)*a2;liq.y+=(liq.ty-liq.y)*a2;
     liq.s+=(0-liq.s)*Math.min(1,0.28*k);
     if(liq.mode==='settle'&&Math.abs(liq.tx-liq.x)<1.5&&Math.abs(liq.ty-liq.y)<1.5&&liq.s<0.015){
-      /* ★R142 到位 → 摘 liq-drag 让真 pill 淡入，玻璃泡同步淡出交接（「选中的背景块」永远都在） */
+      /* ★R142 到位 → 摘 liq-drag 让真 pill 淡入，玻璃泡同步淡出交接（「选中的背景块」永远都在）
+         ★R144 摘类前先把胶囊「摆正」：此刻 liq-drag 还在 → .nav-pill 是 transition:none → 瞬移到位，
+         胶囊与玻璃泡重叠淡入淡出，肉眼只看到一次移动（玻璃泡那次）。
+         ⚠️不能指望 renderBottomNav 排的那次 positionNavPill：rAF 队列里它排在本函数之后，
+         等它跑时 liq-drag 已摘、过渡已恢复 → 胶囊会从「上一个 tab」滑过来并弹簧过冲 = 就是要消除的回弹。 */
       liq.mode='fade';
-      var nv=_liqNav();if(nv)nv.classList.remove('liq-drag');
+      var nv=_liqNav();
+      if(nv){try{positionNavPill();}catch(_){}nv.classList.remove('liq-drag');}
     }
     if(liq.mode==='fade'){
       liq.o+=(0-liq.o)*Math.min(1,0.20*k);
@@ -20237,6 +20343,7 @@ function init(){
   renderCategoryFilter();
   renderBottomNav();
   _liqBind(); /* ★R138 底部导航液态玻璃长按拖拽 */
+  watchNavResize(); /* ★R143 底栏尺寸变化（滚动条出现/消失）时重排选中胶囊 */
   render();
   setInterval(function(){
     syncTimeProgressBars();
