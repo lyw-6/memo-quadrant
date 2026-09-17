@@ -2017,14 +2017,27 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .bottom-btn.active{background:var(--color-primary,#6366f1);color:#fff;border-color:var(--color-primary,#6366f1);}
 .picker-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay-bg);z-index:10040;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);}
 .picker-overlay.open{display:flex;}
-.picker-box{background:var(--card-bg);border-radius:16px;padding:16px;width:100%;max-width:340px;box-shadow:0 20px 50px rgba(0,0,0,.2);border:1px solid var(--border);}
+.picker-box{background:var(--card-bg);border-radius:16px;padding:16px;width:100%;max-width:380px;box-shadow:0 20px 50px rgba(0,0,0,.2);border:1px solid var(--border);}
 .picker-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
 .picker-title{font-size:16px;font-weight:600;color:var(--text);}
 .picker-close{width:26px;height:26px;border-radius:6px;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;}
 .picker-close:hover{background:var(--hover-bg);color:var(--text);}
-.picker-tabs{display:flex;gap:3px;margin-bottom:12px;background:var(--picker-tab-bg);padding:3px;border-radius:8px;}
-.picker-tab{flex:1;text-align:center;padding:5px;font-size:12px;border-radius:6px;cursor:pointer;color:var(--text-secondary);transition:all .2s;border:none;background:transparent;font-family:inherit;}
-.picker-tab.active{background:var(--card-bg);color:var(--text);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+/* ★R135 弹层改「单页一屏」：原 时间/日期/重复 三个页签已删除（设一个截止要来回跳三次、
+   「时间」页签里默认选中的却是「全天」→ 点进去只看到"不指定具体时刻"，页签名与内容语义打架）。
+   现结构 = 结果行(最上) + 日期段 + 时间段 + 重复段，一屏看全、改哪项结果行实时更新。 */
+.pk-sec{margin-bottom:10px;}
+.pk-sec-head{font-size:11px;font-weight:600;color:var(--text-tertiary);margin-bottom:5px;letter-spacing:.3px;}
+.pk-quick{display:flex;flex-wrap:wrap;gap:4px;}
+.pk-chip{padding:5px 10px;border-radius:999px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);font-size:12px;cursor:pointer;font-family:inherit;
+  /* transition 只留颜色/边框：本条在「本月 ⇄ 具体日期」切换时会被 JS 改显隐，带 all 就会闪一次 */
+  transition:color .15s,border-color .15s,background .15s;}
+.pk-chip:hover{border-color:var(--text-tertiary);color:var(--text);}
+.pk-chip.on{border-color:var(--color-primary,#6366f1);background:var(--color-primary,#6366f1);color:#fff;font-weight:500;}
+.pk-chip-cal{display:inline-flex;align-items:center;gap:4px;margin-left:auto;}
+.pk-chip-cal svg{width:11px;height:11px;flex:none;transition:transform .15s;}
+.pk-chip-cal[aria-expanded="true"] svg{transform:rotate(180deg);}
+.pk-cal-wrap{margin-top:8px;border:1px solid var(--border);border-radius:10px;padding:8px 10px 10px;background:var(--bg);}
+.pk-cal-wrap[hidden]{display:none;}
 .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
 .cal-nav-btn{width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s;}
 .cal-nav-btn:hover{background:var(--hover-bg);}
@@ -2071,7 +2084,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .confirm-popover.in-modal::after{display:none;}
 .range-dur b{color:var(--text);font-weight:600;}
 .repeat-options{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px;}
-.repeat-opt{padding:8px 2px;text-align:center;border:1.5px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text-secondary);transition:all .2s;background:var(--card-bg);}
+.repeat-opt{padding:8px 2px;text-align:center;border:1.5px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text-secondary);transition:color .15s,border-color .15s,background .15s;background:var(--card-bg);}
 .repeat-opt:hover{border-color:var(--text-tertiary);}
 .repeat-opt.active{border-color:var(--color-primary,#6366f1);background:var(--color-primary,#6366f1);color:#fff;font-weight:500;}
 /* ★ 2026-09-01 修复：玻璃主题下 repeat-opt.active 用蓝色玻璃(与其他 picker 选中态一致),
@@ -2083,8 +2096,20 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
   color:#fff;
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.7), 0 2px 10px rgba(37,99,235,0.4);
 }
-.picker-preview{margin-top:10px;padding:8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text-secondary);text-align:center;}
-.picker-preview strong{color:var(--text);}
+/* ★R135 玻璃主题下日期快捷 chip 的选中态与上面 repeat-opt.active 同档（否则纯色 var(--color-primary) 在玻璃底上过实） */
+[data-theme="glass"] .pk-chip.on{
+  background:linear-gradient(180deg, rgba(59,130,246,0.64), rgba(37,99,235,0.50));
+  border-color:rgba(255,255,255,0.6);
+  color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.7), 0 2px 10px rgba(37,99,235,0.4);
+}
+/* ★R135 结果行：原为「下次提醒：…」（措辞误导，本应用没有系统通知能力）→ 改为「截止 …」的结果展示，
+   并在时间已过去时挂 .pk-warn 红字提示。 */
+.picker-preview{margin:0 0 12px;padding:9px 10px;background:var(--bg);border-radius:8px;font-size:13px;color:var(--text-secondary);text-align:center;line-height:1.45;}
+.picker-preview strong{color:var(--text);font-size:14px;}
+.picker-preview .pk-warn{color:#ef4444;font-weight:600;margin-left:6px;}
+.picker-preview .pk-sub{display:block;margin-top:3px;font-size:11px;color:var(--text-tertiary);}
+.picker-preview .pk-sub.is-warn{color:#ef4444;font-weight:600;}
 .picker-footer{display:flex;gap:6px;margin-top:12px;}
 .picker-btn{flex:1;padding:6px;border-radius:8px;border:none;font-size:13px;cursor:pointer;transition:all .2s;font-family:inherit;font-weight:500;}
 .picker-btn.secondary{background:var(--bg);color:var(--text-secondary);}
@@ -2240,7 +2265,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .view-select .select-dropdown{min-width:128px;}
 /* 时间类型分段 */
 .time-type-seg{display:flex;gap:4px;margin-bottom:10px;background:var(--picker-tab-bg);padding:3px;border-radius:8px;}
-.tt-opt{flex:1;text-align:center;padding:6px;font-size:12px;border-radius:6px;cursor:pointer;color:var(--text-secondary);transition:all .2s;border:none;background:transparent;font-family:inherit;}
+.tt-opt{flex:1;text-align:center;padding:6px;font-size:12px;border-radius:6px;cursor:pointer;color:var(--text-secondary);transition:color .15s,border-color .15s,background .15s;border:none;background:transparent;font-family:inherit;}
 .tt-opt.active{background:var(--card-bg);color:var(--text);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.08);}
 .allday-hint{text-align:center;font-size:12px;color:var(--text-tertiary);margin-top:6px;}
 /* 循环图标 */
@@ -2952,7 +2977,12 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
 </div>
 
 <!-- 时间选择器 -->
-<div class="picker-overlay" id="picker-overlay" data-page-node-id="bFpLCAxdya45DY58qTwVr9"><div class="picker-box" data-page-node-id="MfoRQNEC09gefWtJlYijcL"><div class="picker-header" data-page-node-id="ZBxeDQQHsfNYtVtzmXsDHU"><div class="picker-title" id="picker-title" data-page-node-id="ziOYwmw1YI7LgkoAqPsbbF">设置时间</div><button class="picker-close" id="picker-close" data-page-node-id="tVB5jyoCvoVwhOVXn0Byo8">✕</button></div><div class="picker-tabs" data-page-node-id="7fSX7Z5GujInHKo2BXEBTu"><button class="picker-tab active" data-tab="time" data-page-node-id="4dNl7AtTwCdGDBpEjvdlSR">时间</button><button class="picker-tab" data-tab="date" data-page-node-id="JtO71CDI7LLoGw68LY1BuW">日期</button><button class="picker-tab" data-tab="repeat" data-page-node-id="iX8cnxx98TZzcpZnlA1Auw">重复</button></div><div id="picker-body-time" data-page-node-id="uF8Y5L0lJNbQdSOVCGiraj"><div class="time-type-seg" data-page-node-id="FijpEHwyv5ZYN7FbADOlAE"><button class="tt-opt active" data-type="allday" data-page-node-id="SLbNj9Ji9IfDYEeZUB2rIK">全天</button><button class="tt-opt" data-type="point" data-page-node-id="7MVvmhGV31Z0rmNFWHW8of">时间点</button><button class="tt-opt" data-type="range" data-page-node-id="hZyzJSfgpz7tMo7t6JBuPU">时间段</button></div><div class="time-row" id="time-row-single" data-page-node-id="G5OISarQjJnSfCTgNxNWp1"><span class="time-cap" id="single-cap" data-page-node-id="mm50DoAJuCACG590yVWQhP">时间</span><input type="text" inputmode="numeric" class="time-input" id="time-hour" value="12" data-page-node-id="XT6AFdzd6QGYykDFZvLZYW"><span class="time-sep" data-page-node-id="SR8Y4GRA8k0wdnd6AwVveU">:</span><input type="text" inputmode="numeric" class="time-input" id="time-min" value="00" data-page-node-id="Sh1Wc1evQfgLkFNvCRkig2"></div><div class="range-dur" id="range-dur" style="display:none" data-page-node-id="BIWFm1doZcLXEau7Y4AD3Y"></div><div class="time-row" id="time-row-range" style="display:none" data-page-node-id="pTB0rmrz2YNB1lDQlJgiEO"><span class="time-cap" data-page-node-id="RTHsInW8DCUrC1XIJH1f2M">止</span><input type="text" inputmode="numeric" class="time-input" id="time-hour2" value="14" data-page-node-id="xhQC1YejVumaDhBpEKZtXz"><span class="time-sep" data-page-node-id="BzMgw9jZ942nFRsOL1iDWn">:</span><input type="text" inputmode="numeric" class="time-input" id="time-min2" value="00" data-page-node-id="fhw6ucmKAxJzgWMHyANAiH"></div><div class="allday-hint" id="allday-hint" data-page-node-id="fxXDm41zVFrTknyBKCtBuP">不指定具体时刻</div></div><div id="picker-body-date" style="display:none" data-page-node-id="bJw7gY818nJXkuQYVcAsye"><div class="cal-nav" data-page-node-id="FZfJrARNI5E1ENOlHPY4Ow"><button class="cal-nav-btn" id="cal-prev" data-page-node-id="aRDw07zQEj6VftMdSQJZfH">‹</button><div class="cal-title" id="cal-title" data-page-node-id="KEPG02LpmOnAxVrHBVfyzE">2026年7月</div><button class="cal-nav-btn" id="cal-next" data-page-node-id="OrHlhRvouKNx1GTbtDJHNK">›</button></div><div class="cal-grid" id="cal-grid" data-page-node-id="XQM14PS3g5C2vHOTJhf7PF"></div></div><div id="picker-body-repeat" style="display:none" data-page-node-id="aVrozTW3IaJqR2UZqccLN1"><div class="repeat-options" id="repeat-options" data-page-node-id="aWC6aVTfWAHXGKkinYNVcr"></div></div><div class="picker-preview" id="picker-preview" data-page-node-id="nFqGbaKwSfzPYhDm6ZG401"></div><div class="picker-footer" data-page-node-id="qMEvveiiUZzBaATDyvmMTQ"><button class="picker-btn secondary" id="picker-clear" data-page-node-id="wyBnxGJHFMicxxRbDzqeJn">清除</button><button class="picker-btn primary" id="picker-confirm" data-page-node-id="apQ93xw3G5n63ox833wwCC">确定</button></div></div></div>
+<div class="picker-overlay" id="picker-overlay" data-page-node-id="bFpLCAxdya45DY58qTwVr9"><div class="picker-box" id="picker-box" data-page-node-id="MfoRQNEC09gefWtJlYijcL"><div class="picker-header" data-page-node-id="ZBxeDQQHsfNYtVtzmXsDHU"><div class="picker-title" id="picker-title" data-page-node-id="ziOYwmw1YI7LgkoAqPsbbF">设置时间</div><button class="picker-close" id="picker-close" type="button" title="关闭" data-page-node-id="tVB5jyoCvoVwhOVXn0Byo8">✕</button></div>
+<div class="picker-preview" id="picker-preview"></div>
+<div class="pk-sec"><div class="pk-sec-head">日期</div><div class="pk-quick" id="pk-quick"><button class="pk-chip" type="button" data-quick="0">今天</button><button class="pk-chip" type="button" data-quick="1">明天</button><button class="pk-chip" type="button" data-quick="2">后天</button><button class="pk-chip" type="button" data-quick="nextmon">下周一</button><button class="pk-chip pk-chip-month" type="button" data-scope="month">本月</button><button class="pk-chip pk-chip-cal" type="button" id="pk-cal-toggle" data-cal="1" aria-expanded="false"><span id="pk-cal-label">选日期</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button></div><div class="pk-cal-wrap" id="pk-cal-wrap" hidden><div class="cal-nav"><button class="cal-nav-btn" id="cal-prev" type="button">‹</button><div class="cal-title" id="cal-title"></div><button class="cal-nav-btn" id="cal-next" type="button">›</button></div><div class="cal-grid" id="cal-grid"></div></div></div>
+<div class="pk-sec" id="pk-sec-time"><div class="pk-sec-head">时间</div><div class="time-type-seg" id="time-type-seg"><button class="tt-opt" type="button" data-type="allday">全天</button><button class="tt-opt" type="button" data-type="point">时间点</button><button class="tt-opt" type="button" data-type="range">时间段</button></div><div class="time-row" id="time-row-single"><span class="time-cap" id="single-cap">时间</span><input type="text" inputmode="numeric" class="time-input" id="time-hour" value="12"><span class="time-sep">:</span><input type="text" inputmode="numeric" class="time-input" id="time-min" value="00"></div><div class="range-dur" id="range-dur" style="display:none"></div><div class="time-row" id="time-row-range" style="display:none"><span class="time-cap">止</span><input type="text" inputmode="numeric" class="time-input" id="time-hour2" value="14"><span class="time-sep">:</span><input type="text" inputmode="numeric" class="time-input" id="time-min2" value="00"></div><div class="allday-hint" id="allday-hint">不指定具体时刻 · 按当天结束判定</div></div>
+<div class="pk-sec" id="pk-sec-repeat"><div class="pk-sec-head">重复</div><div class="repeat-options" id="repeat-options"></div></div>
+<div class="picker-footer"><button class="picker-btn secondary" id="picker-clear" type="button">清除</button><button class="picker-btn primary" id="picker-confirm" type="button">确定</button></div></div></div>
 
 
 <div class="toast" id="toast" data-page-node-id="AcI6frymGk3QOhp1VXoix0">已复制</div>
@@ -11590,7 +11620,12 @@ var calTitle=document.getElementById('cal-title');
 var timeHour=document.getElementById('time-hour');
 var timeMin=document.getElementById('time-min');
 var repeatOptionsEl=document.getElementById('repeat-options');
-var pickerBodyTime=document.getElementById('picker-body-time');
+var pickerQuickEl=document.getElementById('pk-quick');
+var pickerCalWrapEl=document.getElementById('pk-cal-wrap');
+var pickerCalToggleEl=document.getElementById('pk-cal-toggle');
+var pickerCalLabelEl=document.getElementById('pk-cal-label');
+var pickerSecTimeEl=document.getElementById('pk-sec-time');
+var pickerSecRepeatEl=document.getElementById('pk-sec-repeat');
 var timeRowSingle=document.getElementById('time-row-single');
 var timeRowRange=document.getElementById('time-row-range');
 var alldayHint=document.getElementById('allday-hint');
@@ -11613,8 +11648,6 @@ var daySummaryInputEl=document.getElementById('daySummaryInput');
 var daySummarySaveEl=document.getElementById('daySummarySave');
 var clearDoneBtn=document.getElementById('clear-done-btn');
 var pickerPreview=document.getElementById('picker-preview');
-var pickerBodyDate=document.getElementById('picker-body-date');
-var pickerBodyRepeat=document.getElementById('picker-body-repeat');
 var themeIconSun=document.getElementById('theme-icon-sun');
 var themeIconMoon=document.getElementById('theme-icon-moon');
 var themeIconGlass=document.getElementById('theme-icon-glass');
@@ -11817,10 +11850,14 @@ function syncTimeProgressBars(){
   for(var j=0;j<qitems.length;j++){var qid=qitems[j].getAttribute('data-id');var qm=findMemoById(qid);if(qm)applyTimeProgress(qitems[j],qm);}
 }
 var editingMemoId=null;
-var pickerMode='date';
 var pickerDate=new Date();
 var pickerSelectedDate=null;
 var pickerRepeat='once';
+/* ★R135 月任务模式：scope:'month' 的备忘不绑具体日期，只记「属于哪个月」（scopeMonth='YYYY-MM'）。
+   日期段选「本月」chip 即进入该模式；选任意具体日期/日历某天则退出（变成普通有日期任务）。 */
+var pickerMonthMode=false;
+var pickerScopeMonth=null;
+var pickerCalOpen=false;
 var categories={};
 var memos=[];
 var lockHash=null;          // 全局锁定密码的 SHA-256 哈希(不存明文)
@@ -11988,8 +12025,25 @@ function fmtDur(abs){
    于是「今日」tab 里新建的备忘一落地就显示「已过期 9/17」，用户手动把截止选成
    "今天 全天"也是同样下场。语义上说，"全天"的活儿到当天结束才算没做完。 */
 function dayEnd(ts){var d=new Date(ts);d.setHours(23,59,59,999);return d.getTime();}
+/* ★R135 月份键 'YYYY-MM'：月号零填充 ⇒ 可直接用字符串比较判先后（'2026-09' < '2026-10'）。
+   月任务（scope:'month'）靠它定位"属于哪个月"，不再借 deadline 的"哪一天"。 */
+function monthKeyOf(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1);}
+function monthKeyParse(k){var p=String(k||'').split('-');if(p.length<2)return null;var y=parseInt(p[0],10),m=parseInt(p[1],10);if(!y||!m||m<1||m>12)return null;return new Date(y,m-1,1);}
+function weekdayLabel(d){return ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];}
+function fmtDateCn(d){return (d.getMonth()+1)+'月'+d.getDate()+'日 '+weekdayLabel(d);}
+function fmtMonthCn(k){var d=monthKeyParse(k);if(!d)return '';var y=(d.getFullYear()!==new Date().getFullYear())?d.getFullYear()+'年':'';return y+(d.getMonth()+1)+'月';}
+/* 严格晚于今天的最近一个周一（今天恰是周一时取"下周一"= +7 天） */
+function nextMondayFrom(base){var d=new Date(base.getFullYear(),base.getMonth(),base.getDate());var delta=(8-d.getDay())%7;if(delta===0)delta=7;d.setDate(d.getDate()+delta);return d;}
 function formatCountdown(memo){
   var now=new Date();
+  /* ★R135 月任务：没有"哪一天"这个概念 —— 显示「本月」/「10月」，跨到下一个自然月才判过期 */
+  if(memo && memo.scope==='month'){
+    if(memo.done)return{text:'已完成',cls:'done',icon:''};
+    var _mk=memo.scopeMonth||monthKeyOf(new Date(memo.createdAt||Date.now()));
+    var _cur=monthKeyOf(now);
+    if(_mk<_cur)return{text:'已过期 '+fmtMonthCn(_mk),cls:'overdue',icon:''};
+    return{text:(_mk===_cur?'本月':fmtMonthCn(_mk)),cls:'',icon:''};
+  }
   // 全天
   if(memo.timeType==='allday' && memo.deadline && !memo.done && memo.repeat==='once'){
     var ad=new Date(memo.deadline);
@@ -12066,7 +12120,10 @@ function memosOnDate(date){
 /* ★R91 逾期判定：一次性任务已过截止时间且未完成（重复任务按"下次时间"算，不算逾期）
    ★R133 全天任务按「当天结束」判（dayEnd）—— 否则今日新建的条目当天就带上 .overdue 红标 */
 function isOverdue(memo){
-  if(!memo||memo.done||!memo.deadline)return false;
+  if(!memo||memo.done)return false;
+  /* ★R135 月任务：整月到期 —— 本月的活儿到月底都算没做完，跨月才判过期 */
+  if(memo.scope==='month'){var _mk=memo.scopeMonth||monthKeyOf(new Date(memo.createdAt||Date.now()));return _mk<monthKeyOf(new Date());}
+  if(!memo.deadline)return false;
   if(memo.repeat&&memo.repeat!=='once')return false;
   var d=new Date(memo.deadline);
   if(isNaN(d.getTime()))return false;
@@ -12076,7 +12133,13 @@ function isOverdue(memo){
 function getDateMemos(date,span){
   var base;
   if(span==='month'){
+    /* ★R135 月任务走「月份级取数」：scope:'month' 的条目只看它属于哪个月（scopeMonth），
+       与 deadline 无关 —— 它本来就不绑具体日期。
+       其余条目保留原口径（deadline 落在该月 / 每天重复），历史数据（当年月任务曾被写成"当月最后一天"）
+       因此照旧能被取到，无需迁移。 */
+    var _mk=monthKeyOf(date);
     base=memos.filter(function(m){
+      if(m.scope==='month')return (m.scopeMonth||monthKeyOf(new Date(m.createdAt||Date.now())))===_mk;
       if(m.repeat==='daily')return true;
       if(!m.deadline)return false;
       var d=new Date(m.deadline);
@@ -12096,15 +12159,6 @@ function getDateMemos(date,span){
   return base;
 }
 // 视图图标映射（下拉选项与 trigger 共用，单一来源）
-var VIEW_ICONS={
-  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
-  quadrant:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
-  calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>',
-  month:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><circle cx="8" cy="13" r="1"/><circle cx="12" cy="13" r="1"/><circle cx="16" cy="13" r="1"/><circle cx="8" cy="17" r="1"/><circle cx="12" cy="17" r="1"/><circle cx="16" cy="17" r="1"/></svg>'
-};
-function getViewIcon(v){return VIEW_ICONS[v]||VIEW_ICONS.list;}
-var VIEW_NAMES={list:'备忘录',quadrant:'四象限',today:'今日任务',month:'月任务',calendar:'日历'};
 function updateTitle(){
   var tb=document.getElementById('trash-btn-top');
     if(tb)tb.classList.toggle('active',currentView==='trash');
@@ -12451,14 +12505,6 @@ function updateBatchBar(){
   if(typeof renderBottomNav==='function')renderBottomNav();
   if(typeof syncFloatingBars==='function')syncFloatingBars();
 }
-function selectionHasGrouped(){
-  if(!memo_groups.length)return false;
-  for(var i=0;i<memo_groups.length;i++){
-    var m=memo_groups[i].members;
-    for(var j=0;j<m.length;j++){ if(selectedIds.has(m[j])) return true; }
-  }
-  return false;
-}
 function batchUngroup(idsArg){
   /* ★R92 支持显式 ids（单条入组弹层里的「移出所在分组」） */
   var ids=(idsArg&&idsArg.length)?idsArg.slice():Array.from(selectedIds);
@@ -12516,7 +12562,6 @@ function cancelBatch(){
   if(typeof renderBottomNav==='function')renderBottomNav();
   syncFloatingBars();
 }
-function nearestScroller(el){var n=el?el.parentElement:null;while(n){var s=getComputedStyle(n);var oy=s.overflowY;if((oy==='auto'||oy==='scroll')&&n.scrollHeight>n.clientHeight+1)return n;n=n.parentElement;}return null;}
 // 输入法（软键盘）弹出时：把当前聚焦的备忘录输入框「整页上滚」到键盘上方。
 // 关键：用 window.scrollBy 滚动页面，绝不用 scrollIntoView（会把 scroll 落在 textarea
 // 自身 overflow 上，导致长备忘内部滚动被弹回顶部）。
@@ -12526,14 +12571,6 @@ function nearestScroller(el){var n=el?el.parentElement:null;while(n){var s=getCo
 //   ① 编辑时给 body 加 .kb-edit（CSS 据此隐藏切换视图导航，满足「输入时切换栏消失」的需求）；
 //   ② 把聚焦备忘（及紧邻其下的添加/批量栏）滚入 keyboard 上方的可视区。
 var _vhRef=window.innerHeight||0; // 键盘收起时的基准视口高度
-function getFlowBottom(){
-  var cand=[];
-  var ab=document.getElementById('add-btn'); if(ab&&getComputedStyle(ab).display!=='none')cand.push(ab.getBoundingClientRect().bottom);
-  var bb=document.querySelector('.bottom-bar'); if(bb&&getComputedStyle(bb).display!=='none')cand.push(bb.getBoundingClientRect().bottom);
-  if(cand.length)return Math.max.apply(null,cand);
-  var last=document.querySelector('.memo-item:last-child'); if(last)return last.getBoundingClientRect().bottom;
-  return window.innerHeight;
-}
 // 获取键盘上方的可见区底边：优先 visualViewport.height（键盘弹起时收缩），否则退化 innerHeight。
 // ★R86d 坐标口径修正：键盘顶边在**布局视口坐标**里 = vv.offsetTop + vv.height。
 //   resizes-visual 平移模式下 offsetTop>0（浏览器为露出光标把可视视口下移），只用 vv.height 会少滚
@@ -13122,7 +13159,9 @@ function createMemoElement(memo,index,groupId){
   var cd=formatCountdown(memo);
   // ★R45 修复：原写法 memo.repeat!=='once' 在老数据 repeat 字段缺失(undefined)时恒为 true
   // → 没设时间的备忘也被判成"已设"：左滑标签显示「已设」、卡片上还多出一个「未设置时间」徽章。
-  var hasDeadline=!!(memo.deadline||memo.deadlineEnd);
+  // ★R135 月任务(scope:'month')没有 deadline，但它同样"设过时间"（本月）—— 不一起计入的话，
+  //   卡片上那个显示「本月」的倒计时徽章和左滑的「已设」标签都渲染不出来（等于设了看不出来）。
+  var hasDeadline=!!(memo.deadline||memo.deadlineEnd||memo.scope==='month');
 
   var html='';
   var sel=selectedIds.has(memo.id)?' checked':'';
@@ -13175,8 +13214,8 @@ function createMemoElement(memo,index,groupId){
   // 左滑菜单按钮：圆框包图标 + 文字下的统一布局；激活态按 memo 当前状态挂 is-active
   var pinAct=memo.pinned?' is-active':'';
   var lockAct=memo.locked?' is-active':'';
-  // 仅当用户显式设置了 deadline 时显示激活态（比 hasDeadline 更严,避免 repeat 循环误激活）
-  var timeAct=memo.deadline?' is-active':'';
+  // 仅当用户显式设置了 deadline 时显示激活态（比 hasDeadline 更严,避免 repeat 循环误激活）；★R135 月任务同算已设
+  var timeAct=(memo.deadline||memo.scope==='month')?' is-active':'';
   div.innerHTML='<div class="swipe-fore">'+html+'</div>'+
     '<div class="swipe-clip"><div class="swipe-actions" data-id="'+memo.id+'">'+
     '<button type="button" class="sw-action act-pin' +pinAct +'" data-act="pin" data-id="'+memo.id+'" title="置顶"><span class="sw-icon">'+ICON_PIN+'</span><span class="sw-label">置顶</span></button>'+
@@ -13539,13 +13578,6 @@ function vEstimateHeight(memo){
   return Math.max(60,24+contentH+30+20);   // 文本框底 + 正文 + meta 行 + 卡片 padding
 }
 // 估算 textarea 渲染高度(零 reflow,避免虚拟滚动窗口重建时读 scrollHeight 强制同步布局)
-function vSetTextHeight(ta,memo){
-  var txt=memo.text||'';
-  var lines=Math.ceil((txt.length||1)/24);
-  var h=Math.max(21,lines*21+6); // 行高 21 + 上下 padding
-  try{ta.style.height=h+'px';ta.style.minHeight='0';}catch(e){}
-  return h;
-}
 // 估算是否为长备忘(文本超过约 2 行,即约 48 字),替代 scrollHeight 检测
 // 长备忘判定：vIsLong 为字符估算兜底(jsdom 等无布局环境);真实环境用 _syncLong 实测溢出
 function vIsLong(memo){var txt=memo.text||'';return Math.ceil((txt.length||1)/24)>2;}
@@ -13614,10 +13646,6 @@ function vRenderWindow(){
     else _syncLong(_e.n);
     var _h=_e.n.offsetHeight;if(_h)vList.heights[_e.i]=_h;
   }
-}
-function vMeasure(){
-  var items=memoListEl.querySelectorAll('.memo-item'),idx=vList.start;
-  for(var i=0;i<items.length;i++){var h=items[i].offsetHeight;if(h)vList.heights[idx]=h;idx++;}
 }
 function vRebuildWindow(){
   if(!vList.active||document.body.classList.contains('kb-edit'))return; // 编辑中不裁剪(正在编辑的 textarea 必须保留)
@@ -14192,7 +14220,7 @@ function addMemoToGroup(gid){
   if(!grp)return;
   delete collapsedGroups[gid]; /* 折叠态下新建会看不见 → 先展开 */
   var nid=generateId();
-  var nm={id:nid,text:'',quadrant:0,category:createCategory(),done:false,deadline:createDeadline(),deadlineEnd:null,timeType:'allday',repeat:'once',locked:false,createdAt:Date.now(),updatedAt:Date.now()};
+  var nm=applyMonthScope({id:nid,text:'',quadrant:0,category:createCategory(),done:false,deadline:createDeadline(),deadlineEnd:null,timeType:'allday',repeat:'once',locked:false,createdAt:Date.now(),updatedAt:Date.now()});
   memos.push(nm);            /* 推到末尾 → render 时排在组内最后一位 */
   grp.members.push(nid);
   stats.totalCreated++;
@@ -14910,12 +14938,6 @@ function updateDragUngroup(x,y){
   var c=document.getElementById('drag-clone');if(c)c.style.opacity=dragOverUngroup?'0.25':'0.5';
 }
 function removeDragUngroup(){var t=document.getElementById('drag-ungroup');if(t)t.remove();dragOverUngroup=false;_dropReset(_dropUngroup,null);}
-function showUndoToast(msg,undoFn){
-  var el=document.getElementById('undo-toast');
-  if(!el){el=document.createElement('div');el.id='undo-toast';el.innerHTML='<span class="ut-msg"></span><button type="button" class="ut-undo">撤销</button>';document.body.appendChild(el);el.querySelector('.ut-undo').addEventListener('click',function(){if(el._undo)el._undo();el.classList.remove('show');});}
-  el.querySelector('.ut-msg').textContent=msg;el._undo=undoFn;el.classList.add('show');
-  clearTimeout(el._timer);el._timer=setTimeout(function(){el.classList.remove('show');},4000);
-}
 
 // ===== 四象限视图 =====
 // 象限全屏状态:记录当前全屏的象限索引(-1=无),render 重建后仍可恢复
@@ -17036,54 +17058,6 @@ function _ovRects(el){
     return out;
   }catch(_){return [];}
 }
-function startTodoOverlay(ta){
-  if(!ta)return null;
-  stopTodoOverlay(ta);
-  var wrap=document.createElement('div');wrap.className='todo-ov-wrap';
-  var ov=document.createElement('div');ov.className='todo-ov';
-  var mir=document.createElement('div');mir.className='todo-ov-mirror';
-  wrap.style.zIndex=(ta.closest&&ta.closest('.fs-edit-mask'))?'10030':'9930';
-  wrap.appendChild(ov);document.body.appendChild(wrap);document.body.appendChild(mir);
-  var o={ta:ta,ov:ov,wrap:wrap,mir:mir};
-  o.upd=function(){_ovUpdate(o);};
-  ta.addEventListener('input',o.upd);
-  /* ★R81 ta 内部滚动：真机上 textarea 由合成器线程异步滚动，主线程重建必然滞后 1~几帧，
-     勾选框相对文字拖尾漂移（待办在最后一行时拖进下方空白最明显）。滚动期间隐藏浮层
-     （裸 [x] 原文始终可见，无信息损失），停下后由 rAF 循环的 idle 重建恢复显示。 */
-  ta.addEventListener('scroll',function(){
-    wrap.style.display='none';o._moved=true;o._idle=0;
-  });
-  ta.addEventListener('keyup',o.upd);
-  window.addEventListener('resize',o.upd);
-  attachTodoBackspace(ta);
-  _todoOvs.push(o);
-  /* ★R81 rAF 自同步 v3：
-     - ta 被 render() 从 DOM 移除时元素不派发 blur → 循环里检测 isConnected=false 自动清理。
-     - 容器/页面滚动（ta 视口 rect 变化）期间同样隐藏浮层，位移停止数帧后完整重算并显示。
-       R77 平移 / R80 位移锚定方案在真机异步滚动下都无法避免帧级滞后（列表视图抖动、
-       四象限拖尾漂浮），统一改为"滚动隐藏、停稳重建"。 */
-  o._lastRect=null;o._moved=false;o._idle=0;
-  o._rafLoop=requestAnimationFrame(function _ovLoop(){
-    if(!ta.isConnected){try{stopTodoOverlay(ta);}catch(_){ }return;}
-    var r=ta.getBoundingClientRect(),p=o._lastRect;
-    if(!p){o._lastRect={l:r.left,t:r.top,w:r.width,h:r.height};}
-    else{
-      var dl=r.left-p.l,dt=r.top-p.t,dw=r.width-p.w,dh=r.height-p.h;
-      if(Math.abs(dw)>0.5||Math.abs(dh)>0.5){_ovUpdate(o);o._moved=false;o._idle=0;}
-      else if(Math.abs(dl)>0.5||Math.abs(dt)>0.5){
-        wrap.style.display='none'; /* ★R81 滚动中隐藏,防帧级滞后拖影 */
-        o._moved=true;o._idle=0;
-      }else if(o._moved){
-        o._idle++;
-        if(o._idle>=6){_ovUpdate(o);o._moved=false;o._idle=0;}
-      }
-      o._lastRect={l:r.left,t:r.top,w:r.width,h:r.height};
-    }
-    o._rafLoop=requestAnimationFrame(_ovLoop);
-  });
-  o.upd();
-  return o;
-}
 function stopTodoOverlay(ta){
   for(var i=_todoOvs.length-1;i>=0;i--){
     var o=_todoOvs[i];
@@ -17219,7 +17193,7 @@ function bindFsMetaBar(mBar,id,ta,opts){
     catBtn.classList.toggle('is-set',!!(m.category&&m.category!=='other'));
     quadBtn.innerHTML='<span class="dot" style="background:'+q.color+'"></span>'+(FS_QUAD_SHORT[q.id]!=null?FS_QUAD_SHORT[q.id]:q.label);
     // ★R61：时间/加锁已图标化 → 状态只用 is-set 高亮 + title 文本表达
-    if(timeBtn){timeBtn.classList.toggle('is-set',!!m.deadline);timeBtn.title=m.deadline?((m.repeat&&m.repeat!=='once')?'重复：'+m.deadline:'已设：'+m.deadline):'设置时间';}
+    if(timeBtn){var _isMon=(m.scope==='month');timeBtn.classList.toggle('is-set',!!(m.deadline||_isMon));timeBtn.title=_isMon?'本月任务':(m.deadline?((m.repeat&&m.repeat!=='once')?'重复：'+m.deadline:'已设：'+m.deadline):'设置时间');}
     if(lockBtn){lockBtn.classList.toggle('is-set',!!m.locked);lockBtn.title=m.locked?'已加锁（点击解锁）':'加密锁定';}
   }
   // 标签
@@ -17785,22 +17759,24 @@ function openTagPanel(id){
   })(opts[oi]);}
   el.querySelector('.tag-done').addEventListener('click',closeTagPanel);
 }
-function openQuickAdd(q,dateStr){quickAddText.value='';quickAddText.dataset.q=q;if(quickAddDateEl){if(dateStr)quickAddDateEl.value=dateStr;else{ if(!quickAddDateEl.value){ if(currentView==='today'){quickAddDateEl.value=dateKey(new Date());} else if(currentView==='month'){/* ★R133 与 createDeadline 同口径：真实当月 + 月末（原来取日历浏览月 + 当月 1 日，会锚错月份且当天即判过期） */var _cd=new Date();quickAddDateEl.value=dateKey(new Date(_cd.getFullYear(),_cd.getMonth()+1,0));} else { quickAddDateEl.value=''; } } }}quickAddOverlay.classList.add('open');setTimeout(function(){quickAddText.focus();},200);}
+function openQuickAdd(q,dateStr){quickAddText.value='';quickAddText.dataset.q=q;if(quickAddDateEl){if(dateStr)quickAddDateEl.value=dateStr;else{ if(!quickAddDateEl.value){ if(currentView==='today'){quickAddDateEl.value=dateKey(new Date());} else { quickAddDateEl.value=''; } } }}quickAddOverlay.classList.add('open');setTimeout(function(){quickAddText.focus();},200);}
 function closeQuickAdd(){quickAddOverlay.classList.remove('open');}
 // 新建备忘录时：若当前正按某分类筛选，则直接归入该分类；否则归入默认首个分类
 function createCategory(){return (currentCatFilter&&currentCatFilter!=='all'&&categories[currentCatFilter])?currentCatFilter:(Object.keys(categories)[0]||'other');}
-/* ★R133 月任务日期锚点修正两处：
-   ① 原来取 currentCalDate（**日历视图浏览到的**月份），而月视图取数用的是**真实当月**
-      （render() 里是 getDateMemos(new Date(),'month')）→ 只要在日历里翻过月份再回月 tab 新建，
-      截止日就落到别的月份，新条目在月 tab 里根本不出现（实测 items:0，"创建了却找不到"）。
-   ② 原来锚在当月 1 日 00:00 —— 1 号一过就恒判「已过期 9/1」。
-      改锚**当月最后一天 00:00**（配合 dayEnd ⇒ 月末 23:59:59 到期），语义＝「本月内完成」。 */
+/* ★R135 月任务改「月份级」：不再把"本月要做的事"伪装成"当月最后一天到期"。
+   条目写 scope:'month' + scopeMonth:'YYYY-MM'、deadline 留空；取数由 getDateMemos(...,'month')
+   按 scopeMonth 匹配（日历里自然就没有它 —— 它本来就没有"哪一天"），倒计时显示「本月」/「10月」，
+   只有跨到下一个自然月才判过期。
+   历史数据不用迁移：旧月任务写的是"当月最后一天 00:00"，`deadline 落在该月`这条兼容分支照样能取到。 */
 function createDeadline(){
   if(currentView==='today'){var d=new Date();d.setHours(0,0,0,0);return d.toISOString();}
-  if(currentView==='month'){var n=new Date();return new Date(n.getFullYear(),n.getMonth()+1,0).toISOString();}
   return null;
 }
-function confirmQuickAdd(){var text=quickAddText.value.trim();if(!text){showToast('请输入内容');return;}var q=parseInt(quickAddText.dataset.q)||0;var firstCat=createCategory();var deadline=createDeadline();if(quickAddDateEl&&quickAddDateEl.value){deadline=new Date(quickAddDateEl.value+'T00:00:00').toISOString();}memos.push({id:generateId(),text:text,quadrant:q,category:firstCat,done:false,deadline:deadline,deadlineEnd:null,timeType:'allday',repeat:'once',createdAt:Date.now(),updatedAt:Date.now()});stats.totalCreated++;saveData();closeQuickAdd();render();showToast('已添加');}
+function applyMonthScope(m){
+  if(currentView==='month'){m.scope='month';m.scopeMonth=monthKeyOf(new Date());}
+  return m;
+}
+function confirmQuickAdd(){var text=quickAddText.value.trim();if(!text){showToast('请输入内容');return;}var q=parseInt(quickAddText.dataset.q)||0;var firstCat=createCategory();var deadline=createDeadline();var hasDate=!!(quickAddDateEl&&quickAddDateEl.value);if(hasDate)deadline=new Date(quickAddDateEl.value+'T00:00:00').toISOString();var nm=applyMonthScope({id:generateId(),text:text,quadrant:q,category:firstCat,done:false,deadline:deadline,deadlineEnd:null,timeType:'allday',repeat:'once',createdAt:Date.now(),updatedAt:Date.now()});if(hasDate){nm.scope=null;nm.scopeMonth=null;}memos.push(nm);stats.totalCreated++;saveData();closeQuickAdd();render();showToast('已添加');}
 
 // ===== 分类筛选 =====
 function renderCategoryFilter(){
@@ -17854,7 +17830,7 @@ function discardFreshAddIfBlank(id,text){
 function addMemo(){
   var firstCat=createCategory();
   var nid=generateId();
-  var nm={id:nid,text:'',quadrant:0,category:firstCat,done:false,deadline:createDeadline(),deadlineEnd:null,timeType:'allday',repeat:'once',locked:false,createdAt:Date.now(),updatedAt:Date.now()};
+  var nm=applyMonthScope({id:nid,text:'',quadrant:0,category:firstCat,done:false,deadline:createDeadline(),deadlineEnd:null,timeType:'allday',repeat:'once',locked:false,createdAt:Date.now(),updatedAt:Date.now()});
   // ★R117 落位由设置决定（默认置顶）：置顶=unshift(数组首位，自定义顺序下就是列表第一条)，
   //   置底=push(原来的行为)。排序为创建/截止时间时位置另由排序方向决定，这里只管数组次序。
   if(getNewPos()==='bottom')memos.push(nm);else memos.unshift(nm);
@@ -18157,9 +18133,77 @@ function renderStats(){
 }
 
 // ===== 时间选择器 =====
-function openPicker(id){editingMemoId=id;var memo=null;for(var i=0;i<memos.length;i++){if(memos[i].id===id){memo=memos[i];break;}}if(!memo)return;pickerMode='time';pickerTimeType=memo.timeType||'allday';pickerRepeat=memo.repeat||'once';if(memo.deadline){var _nd=(memo.repeat&&memo.repeat!=='once')?getNextDeadline(memo):null;var _seed=_nd||new Date(memo.deadline);pickerSelectedDate=_seed;pickerDate=_seed;}else{pickerSelectedDate=new Date();pickerDate=new Date();}timeHour.value=pad2(pickerSelectedDate.getHours());timeMin.value=pad2(pickerSelectedDate.getMinutes());if(memo.deadlineEnd){var de=new Date(memo.deadlineEnd);timeHour2.value=pad2(de.getHours());timeMin2.value=pad2(de.getMinutes());}else{timeHour2.value='12';timeMin2.value='00';}renderPickerTabs();renderTimeTypeSeg();renderPickerCalendar();renderRepeatOptions();updatePickerPreview();pickerOverlay.classList.add('open');}
-function renderPickerTabs(){var tabs=document.querySelectorAll('.picker-tab');for(var i=0;i<tabs.length;i++){var t=tabs[i];if(t.getAttribute('data-tab')===pickerMode)t.classList.add('active');else t.classList.remove('active');}pickerBodyTime.style.display=pickerMode==='time'?'block':'none';pickerBodyDate.style.display=pickerMode==='date'?'block':'none';pickerBodyRepeat.style.display=pickerMode==='repeat'?'block':'none';}
-function renderTimeTypeSeg(){var opts=pickerBodyTime.querySelectorAll('.tt-opt');for(var i=0;i<opts.length;i++){var o=opts[i];if(o.getAttribute('data-type')===pickerTimeType)o.classList.add('active');else o.classList.remove('active');}timeRowSingle.style.display=pickerTimeType==='allday'?'none':'flex';if(singleCapEl)singleCapEl.textContent=pickerTimeType==='range'?'起':'时间';timeRowRange.style.display=pickerTimeType==='range'?'flex':'none';if(rangeDurEl)rangeDurEl.style.display=pickerTimeType==='range'?'block':'none';alldayHint.style.display=pickerTimeType==='allday'?'block':'none';}
+/* ★R135 设置时间 = 单页一屏（原「时间 / 日期 / 重复」三页签已删除：设一个截止要在三个页签间来回跳、
+   任何时刻只看得到 1/3 信息；且「时间」页签里默认选中的是「全天」→ 点进去只显示"不指定具体时刻"，
+   页签名与内容语义打架）。现结构 = 结果行(最上) → 日期段 → 时间段 → 重复段 → 清除/确定。
+   - 结果行实时反映"最终会写成什么"，时间已过去时红字提示（避免选完才发现是过期时间）
+   - 日期段 chips：今天 / 明天 / 后天 / 下周一 / 本月 / 选日期(展开日历)
+   - 「本月」= 月任务模式（scope:'month'）：不绑具体日期，只记 scopeMonth，时间段与重复段整段收起 */
+function openPicker(id){
+  editingMemoId=id;
+  var memo=null;for(var i=0;i<memos.length;i++){if(memos[i].id===id){memo=memos[i];break;}}
+  if(!memo)return;
+  pickerTimeType=memo.timeType||'allday';
+  pickerRepeat=memo.repeat||'once';
+  pickerMonthMode=(memo.scope==='month');
+  pickerScopeMonth=memo.scopeMonth||monthKeyOf(new Date());
+  pickerCalOpen=false;
+  if(pickerMonthMode){
+    /* 月任务模式下 pickerSelectedDate 只当日历的浏览锚点（月末），界面上不高亮任何一天 */
+    var mm=monthKeyParse(pickerScopeMonth)||new Date();
+    pickerDate=new Date(mm.getFullYear(),mm.getMonth(),1);
+    pickerSelectedDate=new Date(mm.getFullYear(),mm.getMonth()+1,0);
+  }else if(memo.deadline){
+    var _nd=(memo.repeat&&memo.repeat!=='once')?getNextDeadline(memo):null;
+    var _seed=_nd||new Date(memo.deadline);
+    pickerSelectedDate=_seed;pickerDate=_seed;
+  }else{
+    pickerSelectedDate=new Date();pickerDate=new Date();
+  }
+  timeHour.value=pad2(pickerSelectedDate.getHours());
+  timeMin.value=pad2(pickerSelectedDate.getMinutes());
+  if(memo.deadlineEnd){var de=new Date(memo.deadlineEnd);timeHour2.value=pad2(de.getHours());timeMin2.value=pad2(de.getMinutes());}
+  else{timeHour2.value='12';timeMin2.value='00';}
+  renderTimeTypeSeg();renderPickerCalendar();renderRepeatOptions();renderPickerQuick();updatePickerPreview();
+  pickerOverlay.classList.add('open');
+}
+/* 日期段 chips 的选中态 + 「选日期」按钮上的日期回显（自己挑的日子直接把日期写在按钮上，
+   否则用户看不出到底选了哪天）。★只改文本与 class、不重建节点 —— 重建会让选中态晚一帧出现。 */
+function renderPickerQuick(){
+  if(!pickerQuickEl)return;
+  var chips=pickerQuickEl.querySelectorAll('.pk-chip');
+  var today=new Date();today.setHours(0,0,0,0);
+  var mon=nextMondayFrom(today);
+  var sel=pickerSelectedDate?new Date(pickerSelectedDate.getFullYear(),pickerSelectedDate.getMonth(),pickerSelectedDate.getDate()):null;
+  var selTs=sel?sel.getTime():null;
+  var matched=false;
+  for(var i=0;i<chips.length;i++){
+    var c=chips[i],on=false;
+    if(c.getAttribute('data-scope')==='month')on=pickerMonthMode;
+    else if(!pickerMonthMode&&selTs!==null){
+      var q=c.getAttribute('data-quick');
+      if(q==='nextmon')on=(selTs===mon.getTime());
+      else if(q!==null){var dd=new Date(today.getFullYear(),today.getMonth(),today.getDate()+parseInt(q,10));on=(selTs===dd.getTime());}
+    }
+    if(on)matched=true;
+    c.classList.toggle('on',on);
+  }
+  if(pickerCalToggleEl)pickerCalToggleEl.setAttribute('aria-expanded',pickerCalOpen?'true':'false');
+  if(pickerCalWrapEl)pickerCalWrapEl.hidden=!pickerCalOpen;
+  if(pickerCalLabelEl)pickerCalLabelEl.textContent=(!pickerMonthMode&&!matched&&sel)?((sel.getMonth()+1)+'月'+sel.getDate()+'日'):'选日期';
+}
+function renderTimeTypeSeg(){
+  var opts=pickerOverlay.querySelectorAll('.tt-opt');
+  for(var i=0;i<opts.length;i++){var o=opts[i];if(o.getAttribute('data-type')===pickerTimeType)o.classList.add('active');else o.classList.remove('active');}
+  /* 月任务模式：整段「时间」与「重复」收起（月任务没有"几点"，也不做重复） */
+  if(pickerSecTimeEl)pickerSecTimeEl.style.display=pickerMonthMode?'none':'';
+  if(pickerSecRepeatEl)pickerSecRepeatEl.style.display=pickerMonthMode?'none':'';
+  timeRowSingle.style.display=pickerTimeType==='allday'?'none':'flex';
+  if(singleCapEl)singleCapEl.textContent=pickerTimeType==='range'?'起':'时间';
+  timeRowRange.style.display=pickerTimeType==='range'?'flex':'none';
+  if(rangeDurEl)rangeDurEl.style.display=pickerTimeType==='range'?'block':'none';
+  if(alldayHint)alldayHint.style.display=(pickerTimeType==='allday'&&!pickerMonthMode)?'block':'none';
+}
 function renderPickerCalendar(){
   var year=pickerDate.getFullYear();
   var month=pickerDate.getMonth();
@@ -18175,7 +18219,8 @@ function renderPickerCalendar(){
   for(var d=1;d<=daysInMonth;d++){
     var cls='cal-day';
     if(year===today.getFullYear()&&month===today.getMonth()&&d===today.getDate())cls+=' today';
-    if(pickerSelectedDate&&year===pickerSelectedDate.getFullYear()&&month===pickerSelectedDate.getMonth()&&d===pickerSelectedDate.getDate())cls+=' selected';
+    /* ★月任务模式下不高亮任何一天（它不绑具体日期），避免"看起来选了某天"的误导 */
+    if(!pickerMonthMode&&pickerSelectedDate&&year===pickerSelectedDate.getFullYear()&&month===pickerSelectedDate.getMonth()&&d===pickerSelectedDate.getDate())cls+=' selected';
     html+='<div class="'+cls+'" data-day="'+d+'">'+d+'</div>';
   }
   var total=firstDay+daysInMonth;
@@ -18191,7 +18236,10 @@ function renderPickerCalendar(){
         var h=pickerSelectedDate?pickerSelectedDate.getHours():0;
         var m=pickerSelectedDate?pickerSelectedDate.getMinutes():0;
         pickerSelectedDate=new Date(year,month,day,h,m,0,0);
+        pickerMonthMode=false;   /* 选了具体某一天 = 退出月任务模式 */
         renderPickerCalendar();
+        renderTimeTypeSeg();
+        renderPickerQuick();
         updatePickerPreview();
       });
     })(dayEls[de]);
@@ -18217,11 +18265,19 @@ function renderRepeatOptions(){
     })(opts[j]);
   }
 }
+/* 结果行：把"最终会写成什么"直接摆出来（原文案「下次提醒」措辞误导 —— 本应用没有系统通知能力，
+   而且「9月17日 全天」读起来不像一个截止时间） */
 function updatePickerPreview(){
+  if(pickerMonthMode){
+    var mk=pickerScopeMonth||monthKeyOf(new Date());
+    var warnM=(mk<monthKeyOf(new Date()));
+    pickerPreview.innerHTML='本月任务 · <strong>'+fmtMonthCn(mk)+'</strong><span class="pk-sub'+(warnM?' is-warn':'')+'">'+(warnM?'这个月已经过去了':'整月有效 · 不绑定具体日期')+'</span>';
+    return;
+  }
   if(!pickerSelectedDate){pickerPreview.innerHTML='请选择日期和时间';return;}
   var h=pad2(parseInt(timeHour.value)||0);
   var m=pad2(parseInt(timeMin.value)||0);
-  var dateStr=pickerSelectedDate.getFullYear()+'年'+(pickerSelectedDate.getMonth()+1)+'月'+pickerSelectedDate.getDate()+'日';
+  var dateStr=fmtDateCn(pickerSelectedDate);
   var rangeCross=false;
   if(pickerTimeType==='range'){var eh2=parseInt(timeHour2.value)||0,em2=parseInt(timeMin2.value)||0;var sh2=parseInt(timeHour.value)||0,sm2=parseInt(timeMin.value)||0;rangeCross=((eh2*60+em2)<(sh2*60+sm2));}
   var typeLabel=pickerTimeType==='allday'?'全天':(pickerTimeType==='range'?(h+':'+m+' - '+pad2(parseInt(timeHour2.value)||0)+':'+pad2(parseInt(timeMin2.value)||0)+(rangeCross?'（次日）':'')):(h+':'+m));
@@ -18234,12 +18290,31 @@ function updatePickerPreview(){
   }
   var repeatLabel='';
   for(var i=0;i<REPEAT_OPTIONS.length;i++){if(REPEAT_OPTIONS[i].value===pickerRepeat){repeatLabel=REPEAT_OPTIONS[i].label;break;}}
-  var repeatText=pickerRepeat==='once'?'':'，'+repeatLabel+'重复';
-  pickerPreview.innerHTML='下次提醒：<strong>'+dateStr+' '+typeLabel+'</strong>'+repeatText;
+  var repeatText=pickerRepeat==='once'?'':' · '+repeatLabel+'重复';
+  /* 过期预警：选出来的时刻已经在过去 → 红字提示（用户往往到这一步才发现选错了） */
+  var ey=pickerSelectedDate.getFullYear(),emo=pickerSelectedDate.getMonth(),eda=pickerSelectedDate.getDate();
+  var shm=(parseInt(timeHour.value)||0)*60+(parseInt(timeMin.value)||0);
+  var ehm=(parseInt(timeHour2.value)||0)*60+(parseInt(timeMin2.value)||0);
+  var endTs;
+  if(pickerTimeType==='allday')endTs=dayEnd(new Date(ey,emo,eda,0,0,0,0).getTime());
+  else if(pickerTimeType==='range')endTs=new Date(ey,emo,eda+(ehm<shm?1:0),parseInt(timeHour2.value)||0,parseInt(timeMin2.value)||0,0,0).getTime();
+  else endTs=new Date(ey,emo,eda,parseInt(timeHour.value)||0,parseInt(timeMin.value)||0,0,0).getTime();
+  /* ★R135 宽限 60s：没设过时间的条目打开弹层时默认取"此刻"，而输入框只有分钟精度（秒被截断）→
+     一打开就比 now 早几十秒，直接判过期会在结果行挂一句没用的红字。只有真的过去 >1 分钟才算过期。 */
+  var warn=(endTs<Date.now()-60000);
+  pickerPreview.innerHTML='截止 <strong>'+dateStr+' · '+typeLabel+'</strong>'+repeatText+(warn?'<span class="pk-warn">已过期</span>':'');
 }
 function closePicker(){pickerOverlay.classList.remove('open');editingMemoId=null;}
 function confirmPicker(){
-  if(editingMemoId&&pickerSelectedDate){
+  if(!editingMemoId){closePicker();return;}
+  if(pickerMonthMode){
+    updateMemo(editingMemoId,{deadline:null,deadlineEnd:null,timeType:'allday',repeat:'once',scope:'month',scopeMonth:pickerScopeMonth||monthKeyOf(new Date())});
+    render();
+    showToast('已设为本月任务');
+    closePicker();
+    return;
+  }
+  if(pickerSelectedDate){
     var y=pickerSelectedDate.getFullYear(),mo=pickerSelectedDate.getMonth(),da=pickerSelectedDate.getDate();
     var deadline=null,deadlineEnd=null;
     if(pickerTimeType!=='allday'){
@@ -18249,7 +18324,8 @@ function confirmPicker(){
     }else{
       deadline=new Date(y,mo,da,0,0,0,0).toISOString();
     }
-    updateMemo(editingMemoId,{deadline:deadline,deadlineEnd:deadlineEnd,timeType:pickerTimeType,repeat:pickerRepeat});
+    /* scope 一并清掉：从"本月任务"改成具体某一天，就不能再留在月任务的取数里 */
+    updateMemo(editingMemoId,{deadline:deadline,deadlineEnd:deadlineEnd,timeType:pickerTimeType,repeat:pickerRepeat,scope:null,scopeMonth:null});
     render();
     showToast('时间已设置');
   }
@@ -18257,7 +18333,7 @@ function confirmPicker(){
 }
 function clearPicker(){
   if(editingMemoId){
-    updateMemo(editingMemoId,{deadline:null,deadlineEnd:null,timeType:'allday',repeat:'once'});
+    updateMemo(editingMemoId,{deadline:null,deadlineEnd:null,timeType:'allday',repeat:'once',scope:null,scopeMonth:null});
     render();
     showToast('已清除时间设置');
   }
@@ -18640,7 +18716,6 @@ function applyAdaptiveText(luminance){
   if(luminance > 130) document.documentElement.classList.remove('glass-text-dark');
   else document.documentElement.classList.add('glass-text-dark');
 }
-function toggleTheme(){var cur=document.documentElement.getAttribute('data-theme')||'light';var next=cur==='light'?'dark':cur==='dark'?'glass':cur==='glass'?'green':'light';setTheme(next);}
 function setTheme(theme){document.documentElement.setAttribute('data-theme',theme);try{localStorage.setItem(THEME_KEY,theme);}catch(e){}updateThemeIcon(theme);applyGlassSettings();applyGlassBg(getGlassBg());renderBgSwatches();applyAccent(getAccent());renderAccentSwatches();syncThemeMenuActive(theme);} /* ★R74 切主题后重算主题色(夜间/绿色自动不生效) */
 function syncThemeMenuActive(theme){var opts=document.querySelectorAll('#themeMenu .theme-opt');for(var i=0;i<opts.length;i++){opts[i].classList.toggle('active',opts[i].getAttribute('data-theme')===theme);}}
 function updateThemeIcon(theme){var isGlass=theme==='glass';var isGreen=theme==='green';if(themeIconSun)themeIconSun.style.display=(theme==='dark'||isGlass||isGreen)?'none':'block';if(themeIconMoon)themeIconMoon.style.display=theme==='dark'?'block':'none';if(themeIconGlass)themeIconGlass.style.display=isGlass?'block':'none';if(themeIconGreen)themeIconGreen.style.display=isGreen?'block':'none';}
@@ -19529,17 +19604,39 @@ function bindEvents(){
   // 时间选择器
   document.getElementById('picker-close').addEventListener('click',closePicker);
   pickerOverlay.addEventListener('click',function(e){if(e.target===pickerOverlay)closePicker();});
-  var ptabs=document.querySelectorAll('.picker-tab');
-  for(var pt=0;pt<ptabs.length;pt++){
-    (function(tab){
-      tab.addEventListener('click',function(){
-        pickerMode=tab.getAttribute('data-tab');
-        renderPickerTabs();
-        if(pickerMode==='time')renderTimeTypeSeg();
-      });
-    })(ptabs[pt]);
-  }
-  var ttOpts=pickerBodyTime.querySelectorAll('.tt-opt');
+  /* ★R135 日期段 chips（事件委托）：
+     点「本月」→ 进月任务模式（时间段/重复段由 renderTimeTypeSeg 收起，结果行显示"本月任务 · 2026年9月"）；
+     点 今天/明天/后天/下周一 → 退出该模式并落到具体某天；点「选日期」→ 只切日历展开态。
+     一律先改状态再统一重绘三个渲染器，避免"改了日期但 chips 选中态/日历高亮没跟上"。 */
+  if(pickerQuickEl)pickerQuickEl.addEventListener('click',function(e){
+    var t=e.target.closest?e.target.closest('.pk-chip'):null;
+    if(!t)return;
+    e.stopPropagation();
+    if(t.getAttribute('data-scope')==='month'){
+      pickerMonthMode=true;
+      if(!pickerScopeMonth)pickerScopeMonth=monthKeyOf(new Date());
+      var mm=monthKeyParse(pickerScopeMonth)||new Date();
+      pickerDate=new Date(mm.getFullYear(),mm.getMonth(),1);
+      pickerSelectedDate=new Date(mm.getFullYear(),mm.getMonth()+1,0);
+    }else if(t.getAttribute('data-cal')){
+      pickerCalOpen=!pickerCalOpen;
+    }else{
+      var q=t.getAttribute('data-quick');
+      if(q===null)return;
+      var base=new Date();
+      var target=(q==='nextmon')?nextMondayFrom(base):new Date(base.getFullYear(),base.getMonth(),base.getDate()+parseInt(q,10));
+      var h=pickerSelectedDate?pickerSelectedDate.getHours():base.getHours();
+      var mi=pickerSelectedDate?pickerSelectedDate.getMinutes():base.getMinutes();
+      pickerSelectedDate=new Date(target.getFullYear(),target.getMonth(),target.getDate(),h,mi,0,0);
+      pickerMonthMode=false;   /* 落到具体某天 ⇒ 不再是月任务 */
+      pickerDate=pickerSelectedDate;
+    }
+    renderTimeTypeSeg();
+    renderPickerCalendar();
+    renderPickerQuick();
+    updatePickerPreview();
+  });
+  var ttOpts=pickerOverlay.querySelectorAll('.tt-opt');
   for(var tt=0;tt<ttOpts.length;tt++){
     (function(btn){
       btn.addEventListener('click',function(){pickerTimeType=btn.getAttribute('data-type');renderTimeTypeSeg();updatePickerPreview();});
