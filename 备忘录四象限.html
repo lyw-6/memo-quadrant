@@ -140,9 +140,10 @@
 .q-cat-row.fade-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 16px),transparent 100%);mask-image:linear-gradient(90deg,#000 calc(100% - 16px),transparent 100%);}
 .q-cat-row.fade-l.fade-r{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 16px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 16px),transparent 100%);}
 /* ★R131 transition 只留颜色/边框，**绝不含 opacity/visibility**：本按钮的显隐完全由 JS 按溢出同步切换，
-   而 renderQuadrant 每次都会重建它；若带 all .15s，新建元素会先以可见态(默认无 .qcm-hide)落地、
-   再加 .qcm-hide → 触发一次 150ms 的**淡出**，肉眼即"点一下旁边闪一下三个点"（实测 10 帧 opacity 1→0）。
-   去掉透明度过渡后 class 切换当帧生效，不存在中间态。 */
+   class 一切就该当帧生效；若带 all .15s，一旦发生"元素先以可见态落地、随后才补 .qcm-hide"，就是一次
+   150ms 的**淡出**，肉眼即"点一下旁边闪一下三个点"（实测 10 帧 opacity 1→0）。
+   ★R134 顶部行已改为持久节点（不再每次 render 重建），这条从"主要防线"退化为兜底 —— 仍然保留：
+   只要将来有人把顶部行改回重建、或让它在别处重新出现，这行 CSS 就是最后一道闸。 */
 .q-cat-more{flex:none;display:flex;align-items:center;justify-content:center;width:27px;height:27px;border-radius:50%;border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);cursor:pointer;padding:0;transition:color .15s,border-color .15s,background .15s;-webkit-tap-highlight-color:transparent;}
 .q-cat-more svg{width:14px;height:14px;display:block;pointer-events:none;}
 .q-cat-more:hover{color:var(--text);border-color:var(--text-tertiary);}
@@ -13003,6 +13004,20 @@ function onPageScroll(){
   }
   _navLastY=y;
 }
+/* ★R134 空状态文案随视图：今日/月 tab 里说"今天/本月还没有"比笼统的"暂无备忘录"贴切；
+   列表视图保持原文案（含搜索无结果的情况）。只改 h3/p 文本，不动结构。 */
+var EMPTY_TEXT={
+  list:['暂无备忘录','点击此处，添加第一条备忘录'],
+  today:['今天还没有备忘','点击此处，添加今天的备忘'],
+  month:['本月还没有备忘','点击此处，添加本月的备忘']
+};
+function syncEmptyStateText(){
+  if(!emptyStateEl)return;
+  var t=EMPTY_TEXT[currentView]||EMPTY_TEXT.list;
+  var h=emptyStateEl.querySelector('h3'),p=emptyStateEl.querySelector('p');
+  if(h&&h.textContent!==t[0])h.textContent=t[0];
+  if(p&&p.textContent!==t[1])p.textContent=t[1];
+}
 function render(){
   pruneTrashSelection(); /* ★R86 离开回收站时清掉回收站条目的选中,防残留污染列表批量态 */
   closeHeaderMore(); /* ★R113 切视图/重绘时顶栏「更多」菜单不留残影 */
@@ -13022,6 +13037,9 @@ function render(){
   var listViews=(currentView==='list'||currentView==='today'||currentView==='month');
   var list=listViews?(currentView==='today'?getDateMemos(new Date(),'day'):currentView==='month'?getDateMemos(new Date(),'month'):getFilteredMemos()):[];
   filterBar.style.display=listViews?'':'none';
+  /* ★R134 空状态文案跟当前 tab 走：放在"是否显示"之外 —— 列表非空时框虽隐藏，文案也要先归位，
+     否则从「本月」切回「备忘录」会留着"本月还没有备忘"（下次列表空了才被改回来）。 */
+  if(listViews)syncEmptyStateText();
   syncHeaderMoreCounts(); /* ★R115 行尾计数跟数据走 */
 
   /* ★R112：搜索 / 省略视图 已从筛选栏搬进 header-actions，显隐必须跟着视图走
@@ -15052,6 +15070,92 @@ function openQCatMenu(anchor,cur){
   setTimeout(function(){document.addEventListener('click',_qCatMenuDocClose,true);},0);
   window.addEventListener('scroll',_qCatMenuScrollClose,true);
 }
+/* ★R134 四象限顶部行的两个图标提成常量：顶部行改为持久节点后，模板只在建一次时用到 */
+var QCMORE_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>';
+var QDONE_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>';
+/* ★R134 溢出渐隐函数由 _qEnsureTopbar 赋值（它闭包着持久的 row/more），同步阶段直接复用 */
+var _qRowFadeFn=null;
+/* ★★R134 顶部行（分类 chips + 「…」+「已完成 n」）改为**持久节点、整块只建一次**。
+   为什么：它此前每次 render 都随 quadrantViewEl.innerHTML 重建 —— 新节点总是"先以未补 class 的样式落地，
+   再由 JS 补 class"，只要带过渡属性就是一次可见的中间态（R131「点已完成旁边闪一下三个点」的上游成因）。
+   顺带省掉每次 render 重建 chips/两个按钮/svg 与重复挂监听的开销。
+   ⚠️ 节点的类名/结构必须与 R131 版一致（`…` 按钮默认就带 qcm-hide），否则闪烁会从另一条路回来。 */
+function _qEnsureTopbar(){
+  if(!quadrantViewEl)return;
+  var _first=quadrantViewEl.firstChild;
+  if(_first&&_first.nodeType===1&&_first.classList&&_first.classList.contains('q-topbar'))return; /* 已就绪 */
+  quadrantViewEl.innerHTML=''; /* 防御性：topbar 必须占首位（.q-topbar 是 grid-column:1/-1 的首个 grid item） */
+  var tb=document.createElement('div');
+  tb.className='q-topbar';
+  tb.innerHTML='<div class="q-cat-row" id="q-cat-row"></div>'
+    +'<button class="q-cat-more qcm-hide" id="q-cat-more" type="button" title="全部分类">'+QCMORE_ICON+'</button>'
+    +'<button class="q-done-chip" id="q-done-toggle" type="button">'+QDONE_ICON+'已完成</button>';
+  quadrantViewEl.appendChild(tb);
+  var row=tb.querySelector('#q-cat-row'),more=tb.querySelector('#q-cat-more'),done=tb.querySelector('#q-done-toggle');
+  /* ★R71 分类条溢出：按滚动位置切渐隐 + 「…」菜单入口 + 桌面滚轮横滑（挂一次即持久） */
+  function _qRowFade(){
+    if(!row)return;
+    var _ov=row.scrollWidth>row.clientWidth+2;
+    row.classList.toggle('fade-l',row.scrollLeft>2);
+    row.classList.toggle('fade-r',row.scrollLeft<row.scrollWidth-row.clientWidth-2);
+    /* ★R71b 「…」仅溢出时显示（visibility 隐藏但占位，防「已完成」位置跳动） */
+    if(more)more.classList.toggle('qcm-hide',!_ov);
+  }
+  _qRowFadeFn=_qRowFade;
+  if(row){
+    row.addEventListener('scroll',_qRowFade,{passive:true});
+    row.addEventListener('wheel',function(e){
+      if(row.scrollWidth<=row.clientWidth)return;
+      var d=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;
+      if(!d)return;e.preventDefault();row.scrollLeft+=d;
+    },{passive:false});
+    /* ★R134 chips 改**事件委托**：chips 差量更新（甚至整批重建）都不会丢监听器；
+       且点击一律现读 localStorage —— 顶部行持久后，render 时的局部变量会变成陈旧闭包
+       （原实现对 chips/「已完成」各绑一次并闭包当时的 _qCat/_qShowDone，持久化后会读错值）。 */
+    row.addEventListener('click',function(e){
+      var b=e.target&&e.target.closest?e.target.closest('.q-cat-chip'):null;
+      if(!b||!row.contains(b))return;
+      e.stopPropagation();
+      var v=b.getAttribute('data-cat');if(!v)return;
+      var cur=localStorage.getItem('memo_q_cat')||'all';
+      localStorage.setItem('memo_q_cat',(v===cur)?'all':v);
+      render();
+    });
+  }
+  if(done)done.addEventListener('click',function(e){
+    e.stopPropagation();
+    var cur=localStorage.getItem('memo_q_showdone')==='1';
+    localStorage.setItem('memo_q_showdone',cur?'0':'1');render();
+  });
+  if(more)more.addEventListener('click',function(e){e.stopPropagation();openQCatMenu(more,localStorage.getItem('memo_q_cat')||'all');});
+}
+/* ★R134 每次 render 只同步顶部行的"状态"：chips 选中态 / 「已完成 n」计数 / 溢出渐隐。
+   分类集合、名称或颜色变了才重建 chips（节点不动＝不打断用户当前的横滑位置）。 */
+function _qSyncTopbar(chipsHtml,cat,showDone,doneTotal){
+  var row=document.getElementById('q-cat-row'); if(!row)return;
+  var _key='';for(var k in categories){var _c=categories[k];_key+=k+':'+_c.label+':'+_c.color+';';}
+  var _rebuild=false;
+  if(row.getAttribute('data-key')!==_key){row.innerHTML=chipsHtml;row.setAttribute('data-key',_key);row.scrollLeft=0;_rebuild=true;}
+  else{
+    var cs=row.children;
+    for(var i=0;i<cs.length;i++){var v=cs[i].getAttribute('data-cat');cs[i].classList.toggle('on',(v==='all')?(cat==='all'):(v===cat));}
+  }
+  var _d=document.getElementById('q-done-toggle');
+  if(_d){
+    _d.classList.toggle('on',!!showDone);
+    var _lbl='已完成'+(doneTotal?' '+doneTotal:'');
+    var tn=null,ns=_d.childNodes;
+    for(var n=ns.length-1;n>=0;n--){if(ns[n].nodeType===3){tn=ns[n];break;}}
+    if(tn){if(tn.nodeValue!==_lbl)tn.nodeValue=_lbl;}else _d.appendChild(document.createTextNode(_lbl));
+  }
+  /* 选中 chip 居中：只在 chips 重建 / 分类切换时做（原实现每次 render 都重置横滑位置） */
+  if(_rebuild||row.getAttribute('data-on')!==cat){
+    var _on=row.querySelector('.q-cat-chip.on');
+    if(_on){var _l=_on.getBoundingClientRect().left-row.getBoundingClientRect().left+row.scrollLeft-(row.clientWidth-_on.offsetWidth)/2;if(_l>0)row.scrollLeft=_l;}
+  }
+  row.setAttribute('data-on',cat);
+  if(_qRowFadeFn)_qRowFadeFn();
+}
 function renderQuadrant(){
   memoListEl.style.display='none';quadrantViewEl.style.display='grid';trashViewEl.style.display='none';emptyStateEl.style.display='none';
   var html='';
@@ -15063,10 +15167,10 @@ function renderQuadrant(){
   var _doneTotal=memos.filter(function(m){return m.done;}).filter(_qMatch).length;
   var _chips='<button class="q-cat-chip'+(_qCat==='all'?' on':'')+'" data-cat="all" type="button">全部</button>';
   for(var _ck in categories){var _c=categories[_ck];_chips+='<button class="q-cat-chip'+(_qCat===_ck?' on':'')+'" data-cat="'+escapeHtml(_ck)+'" type="button"><span class="dot" style="background:'+_c.color+'"></span>'+escapeHtml(_c.label)+'</button>';}
-  /* ★R131 「…」**默认就带 qcm-hide**（R71b 是渲染完再补）：本行 HTML 每次 render 都重建，
-     若默认可见、再由 _qRowFade() 补隐藏，配上原 transition:all .15s 就是一次可见→隐藏的淡出
-     （用户报的"点已完成旁边闪一下三个点"）。默认隐藏 + 溢出时移除 = 最坏也只是晚一帧出现。 */
-  html+='<div class="q-topbar"><div class="q-cat-row" id="q-cat-row">'+_chips+'</div><button class="q-cat-more qcm-hide" id="q-cat-more" type="button" title="全部分类"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button><button class="q-done-chip'+(_qShowDone?' on':'')+'" id="q-done-toggle" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>已完成'+(_doneTotal?' '+_doneTotal:'')+'</button></div>';
+  /* ★R134 顶部行是**持久节点**：这里只保证它存在 + 同步状态，不再参与下面的格子重建。
+     （原实现把 topbar 拼进 html 一起 innerHTML，是 R131 闪烁的上游成因，见 _qEnsureTopbar 注释） */
+  _qEnsureTopbar();
+  _qSyncTopbar(_chips,_qCat,_qShowDone,_doneTotal);
   for(var q=0;q<4;q++){
     var qdata=QUADRANTS[q];
     var items=memos.filter(function(m){return (m.quadrant||0)===q && !m.done;}).filter(_qMatch).sort(function(a,b){return (b.pinned?1:0)-(a.pinned?1:0);});
@@ -15080,35 +15184,13 @@ function renderQuadrant(){
     for(var j=0;j<doneItems.length;j++){html+=createQuadrantItem(doneItems[j],q);}
     html+='</div></div>';
   }
-  quadrantViewEl.innerHTML=html;
-  /* ★R68 顶部工具行事件：已完成显隐 + 分类 chips（再次点击当前分类=取消筛选回全部） */
-  var _qd=document.getElementById('q-done-toggle');
-  if(_qd)_qd.addEventListener('click',function(e){e.stopPropagation();localStorage.setItem('memo_q_showdone',_qShowDone?'0':'1');render();});
-  var _qcs=quadrantViewEl.querySelectorAll('.q-cat-chip');
-  for(var qc2=0;qc2<_qcs.length;qc2++){(function(b){b.addEventListener('click',function(e){e.stopPropagation();var v=b.getAttribute('data-cat');if(!v)return;localStorage.setItem('memo_q_cat',(v===_qCat)?'all':v);render();});})(_qcs[qc2]);}
-  /* ★R71 分类条溢出：按滚动位置切渐隐 + 选中 chip 自动滚进视野 + 「…」菜单入口 + 桌面滚轮横滑 */
-  var _crow=document.getElementById('q-cat-row');
-  var _cmore=document.getElementById('q-cat-more');
-  function _qRowFade(){
-    if(!_crow)return;
-    var _ov=_crow.scrollWidth>_crow.clientWidth+2;
-    _crow.classList.toggle('fade-l',_crow.scrollLeft>2);
-    _crow.classList.toggle('fade-r',_crow.scrollLeft<_crow.scrollWidth-_crow.clientWidth-2);
-    /* ★R71b 「…」仅溢出时显示（visibility 隐藏但占位，防「已完成」位置跳动） */
-    if(_cmore)_cmore.classList.toggle('qcm-hide',!_ov);
-  }
-  if(_crow){
-    _crow.addEventListener('scroll',_qRowFade,{passive:true});
-    _crow.addEventListener('wheel',function(e){
-      if(_crow.scrollWidth<=_crow.clientWidth)return;
-      var d=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;
-      if(!d)return;e.preventDefault();_crow.scrollLeft+=d;
-    },{passive:false});
-    var _onchip=_crow.querySelector('.q-cat-chip.on');
-    if(_onchip){var _tgt=_onchip.getBoundingClientRect().left-_crow.getBoundingClientRect().left+_crow.scrollLeft-(_crow.clientWidth-_onchip.offsetWidth)/2;if(_tgt>0)_crow.scrollLeft=_tgt;}
-    _qRowFade();
-  }
-  if(_cmore)_cmore.addEventListener('click',function(e){e.stopPropagation();openQCatMenu(_cmore,_qCat);});
+  /* ★R134 只重建格子：清掉 topbar 之后的节点，再把 4 格追加回去。
+     布局不变 —— .q-topbar 是 grid-column:1/-1 的首个 grid item，4 个格子紧随其后仍是 grid items。 */
+  var _tb=quadrantViewEl.querySelector('.q-topbar');
+  while(_tb&&_tb.nextSibling)quadrantViewEl.removeChild(_tb.nextSibling);
+  quadrantViewEl.insertAdjacentHTML('beforeend',html);
+  /* ★R134 顶部行的「已完成 n」计数变了，同步一次溢出渐隐（分类集合没变时不会重建 chips） */
+  if(_qRowFadeFn)_qRowFadeFn();
   var _stq=document.getElementById('search-toggle-q'); if(_stq)_stq.addEventListener('click',function(e){e.stopPropagation();toggleSearch();});
   syncSearchToggle();
   if(fsQuadrant>=0){var _fc=quadrantViewEl.querySelector('.quadrant-cell[data-q="'+fsQuadrant+'"]');if(_fc){_fc.classList.add('fs-active');document.body.classList.add('q-fs');}}
