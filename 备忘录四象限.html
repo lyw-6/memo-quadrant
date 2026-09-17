@@ -2430,7 +2430,18 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-sub{color:#fff;}
 .app-sub{font-size:12px;font-weight:400;color:var(--text-tertiary);letter-spacing:0;}
 
 /* ===== 底部导航栏（图标 + 文字）===== */
-.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 10px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;overflow-x:hidden;/* ★R60: auto 会在切 tab 时被 nav-pill 滑动动画的 transform 外框撑出瞬时横向滚动条(闪条)，导航本不需横滚，直接裁掉 */-webkit-overflow-scrolling:touch;-webkit-tap-highlight-color:transparent;transition:opacity .25s ease, transform .25s ease;}
+.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 10px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;overflow-x:hidden;/* ★R60: auto 会在切 tab 时被 nav-pill 滑动动画的 transform 外框撑出瞬时横向滚动条(闪条)，导航本不需横滚，直接裁掉 */-webkit-overflow-scrolling:touch;-webkit-tap-highlight-color:transparent;
+  /* ★R145 触摸端「拖不动」的真凶：底栏此前没写 touch-action → 计算值是 auto（body 的 manipulation 允许 pan）
+     → 手指在底栏上一移动就被浏览器判成「页面滚动」并派发 pointercancel，pointer 流当场中断。
+     实测（CDP 真实触摸）：长按 500ms 泡已浮起（liq-drag=true/opacity .98），一横移立刻 pointercancel@1442
+     → 泡消失、根本拖不动；按下即拖则 55ms 就 cancel、压根浮不起来。电脑端不受影响：鼠标不产生 pan 手势、
+     没有 pointercancel，所以「电脑能拖、手机不能」。
+     pan-y = 只把「纵向手势」让给浏览器：横滑归应用（pointermove 连续 10 次、cancel=0 → 可拖），
+     竖滑照旧归浏览器滚页面（滚动路径零变化）。★不能用 auto/manipulation（横向会被夺走），
+     也不必用 none（那会把底栏区域的纵向滚动一起禁掉）。 */
+  touch-action:pan-y;
+  /* ★R145 底栏是控制区、不是可读文本：禁掉长按选字（真机长按 350ms 会被文字选择手柄/放大镜打断拖拽） */
+  -webkit-user-select:none;user-select:none;transition:opacity .25s ease, transform .25s ease;}
 /* 向上滑浏览内容时底栏渐隐;向下滑/回到可导航位置时渐显 */
 .bottom-nav.nav-hidden{opacity:0;transform:translateX(-50%) translateY(160%);pointer-events:none;}
 /* ★R67 宽屏：导航栏宽度跟随备忘录容器（基础规则 max-width:640 恒定 → ≥769 屏比 720 容器窄 80px）。
@@ -12573,13 +12584,19 @@ function _liqDown(e){
 }
 function _liqPreMove(e){
   if(!liq.down||liq.armed||e.pointerId!==liq.pid)return;
-  var dx=Math.abs(e.clientX-liq.sx), dy=Math.abs(e.clientY-liq.sy);
-  if(dx<=LIQ_SLOP&&dy<=LIQ_SLOP)return;
+  var adx=Math.abs(e.clientX-liq.sx), ady=Math.abs(e.clientY-liq.sy);
+  if(adx<=LIQ_SLOP&&ady<=LIQ_SLOP)return;
   /* ★R139 鼠标没有「长按 vs 点击」的歧义：单击 = down-up 零位移、拖动 = down-move-up，
      用位移就能天然分流，不必等 350ms 定时器。若照触摸那套「一移动就放弃」，
      鼠标按住拖会永远走放弃分支 → 手感上等于「鼠标完全没效果」。 */
   if(liq.pidType==='mouse'){clearTimeout(liq.holdTimer);liq.holdTimer=0;_liqArm(liq.sx,liq.sy);return;}
-  /* 触摸：按下后先移动 = 滚动意图 → 放弃（避免误触 / 干扰正常滑动） */
+  /* ★R145 触摸：横向位移占优 = 拖动意图 → 立即浮起跟手（与鼠标同一门槛，不必再等满 350ms）。
+     用户口径「手机端拖不动、电脑端可以拖」= 触摸此前只有「原地长按 350ms」一个入口，
+     且长按成功后一移动又被浏览器派 pointercancel 打断（见 .bottom-nav 的 touch-action:pan-y 注释）。
+     ★纵向手势在那条 touch-action 下已由浏览器接管去滚页面 —— 它会先派 pointercancel 走到 _liqPreUp，
+     压根到不了这里；所以这里只需处理「横向分量占优」（含斜向时横 > 竖）。 */
+  if(adx>ady){clearTimeout(liq.holdTimer);liq.holdTimer=0;_liqArm(liq.sx,liq.sy);return;}
+  /* 余下：纵向为主但浏览器尚未接管（极短促抖动）→ 按滚动意图放弃 */
   _liqPreEnd();
 }
 function _liqPreUp(e){
