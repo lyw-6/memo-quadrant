@@ -14444,10 +14444,11 @@ function activateDrag(){
   }
   item.style.opacity='0.3';
   memoListEl.classList.add('dragging-active');
-  /* ★R130 组内卡片拖动不弹这条提示：文案后半句「拖到分组头上可加入分组」对已经在组里的卡片
-     毫无意义（它本来就在组内），前半句「拖动调整顺序」也只能在组内重排、不会改变列表层级，
-     弹出即噪声。判据直接用 startDrag 已经算好的 dragKind —— 组内成员 === 'groupMember'。 */
-  if(dragKind!=='groupMember')showToast('拖动调整顺序 · 拖到分组头上可加入分组');
+  /* ★R130 只有**组外独立卡片**才弹这条提示。另两类都不该弹：
+     · groupMember（组内卡片）—— 它本来就在组里，后半句「拖到分组头上可加入分组」毫无意义；
+     · groupHeader（整组）—— 拖的是整组，同样不可能"加入分组"，提示与场景不符。
+     判据直接用 startDrag 已经算好的 dragKind（groupHeader / groupMember / memo），不新增状态。 */
+  if(dragKind==='memo')showToast('拖动调整顺序 · 拖到分组头上可加入分组');
   /* ★R86e 投放区不在长按激活时出现,等手指真正移动 ≥30px 再浮现(见 moveDrag) */
   _dragZonesShown=false;
   /* ★R109 边缘自动滚动状态复位：坐标从长按点起算，rAF 循环等移动满 30px 才启动(见 moveDrag) */
