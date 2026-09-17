@@ -2286,7 +2286,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .cal-cell.other{opacity:.35;cursor:default;}
 .cal-cell.today{border-color:#3b82f6;color:#3b82f6;}
 .cal-cell .d-num{font-size:13px;font-weight:500;color:var(--text);}
-.cal-cell.other .d-num{color:var(--text-tertiary);}
+.cal-cell.other .d-num{color:var(--text-secondary);}
 .cal-cell .d-dots{display:flex;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:center;}
 .cal-cell .d-dot{width:5px;height:5px;border-radius:50%;}
 .cal-cell.selected{background:var(--color-primary,#6366f1);border-color:var(--color-primary,#6366f1);}
@@ -2326,10 +2326,16 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 /* 日历：农历 / 假期 */
 .cal-title-btn{background:transparent;border:none;color:var(--text);font-size:15px;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:8px;}
 .cal-title-btn:hover{background:var(--hover-bg);}
-.cal-cell{justify-content:flex-start;padding:4px 2px 2px;}
-.cal-cell .d-num{font-size:13px;font-weight:500;color:var(--text);line-height:1.1;}
-.cal-cell .d-sub{font-size:9px;line-height:1.1;color:var(--text-tertiary);margin-top:1px;max-width:100%;overflow:hidden;white-space:nowrap;}
-.cal-cell .d-dots{margin-top:auto;margin-bottom:1px;}
+/* ★R136: 内容组垂直居中 —— 原 flex-start 让"数字+农历"贴顶、圆点又被 margin-top:auto 顶到格底，
+   正方形大格子里两者相距过远（用户反馈"小点怎么这么靠底部"） */
+.cal-cell{justify-content:center;padding:3px 2px;}
+.cal-cell .d-num{font-size:13px;font-weight:600;color:var(--text);line-height:1.15;}
+/* ★R136: 农历原为 9px + --text-tertiary(第三级灰) → 浅色/护眼主题下对比不足、选中态(蓝底)几乎不可见。
+   提到 10px / --text-secondary / 500，并用固定 height 保证"有农历与无农历"的格子内容总高一致 */
+.cal-cell .d-sub{font-size:10px;line-height:1;height:10px;color:var(--text-secondary);margin-top:2px;max-width:100%;overflow:hidden;white-space:nowrap;font-weight:500;}
+/* ★R136: 去掉 margin-top:auto（它把圆点推到正方形格子的最底边），改为紧跟农历下方 3px；
+   固定 height:5px 让"有圆点与无圆点"的格子高度一致 */
+.cal-cell .d-dots{margin-top:3px;margin-bottom:0;height:5px;align-items:center;}
 .cal-ym-picker{margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--bg);}
 .cal-ym-head{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;font-size:14px;font-weight:600;color:var(--text);}
 .cal-ym-months{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
@@ -2363,6 +2369,13 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 [data-theme="glass"] .memo-item.pinned .pin-badge{color:#fff;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4));}
 /* 节气 */
 .cal-cell .d-sub.jq{color:#0ea47a;font-weight:600;}
+/* ★R136: 选中态(实色蓝底 / 玻璃深蓝底)以前只把 .d-num 改白，农历沿用灰字 → 蓝底上读不出。
+   玻璃深字模式的选择器特异性(0,4,1)高于普通主题(0,3,0)，故三条并列确保任何主题都命中 */
+.cal-cell.selected .d-sub,
+[data-theme="glass"] .cal-cell.selected .d-sub,
+html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-sub{color:#fff;}
+/* 圆点颜色来自分类色内联 style，深蓝底上（尤其灰/蓝系分类）不可辨 → 加白色外圈 */
+.cal-cell.selected .d-dot{box-shadow:0 0 0 1px rgba(255,255,255,.95);}
 /* 统计图表 */
 .stat-card-title{font-size:12px;color:var(--text-tertiary);font-weight:600;margin-bottom:6px;}
 .stat-row .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
@@ -17918,7 +17931,9 @@ function renderCalendar(dir){
   var daysInMonth=new Date(year,month+1,0).getDate();
   var daysInPrev=new Date(year,month,0).getDate();
   var today=new Date();
-  for(var p=lead-1;p>=0;p--)html+='<div class="cal-cell other" data-d="'+(new Date(year,month-1,daysInPrev-p)).getTime()+'">'+(daysInPrev-p)+'</div>';
+  /* ★R136: 其他月格子补上与本月格子同样的三层结构 "→ 内容总高一致，
+     配合 justify-content:center 才能让整月数字垂直对齐 */
+  for(var p=lead-1;p>=0;p--){var pd=daysInPrev-p;html+='<div class="cal-cell other" data-d="'+(new Date(year,month-1,pd)).getTime()+'"><span class="d-num">'+pd+'</span><span class="d-sub"></span><span class="d-dots"></span></div>';}
   for(var d=1;d<=daysInMonth;d++){
     var cls='cal-cell';
     if(year===today.getFullYear()&&month===today.getMonth()&&d===today.getDate())cls+=' today';
@@ -17929,12 +17944,12 @@ function renderCalendar(dir){
     for(var o=0;o<onDay.length&&o<5;o++){var c=categories[onDay[o].category]||categories.other||{color:'#6b7280'};dots+='<span class="d-dot" style="background:'+c.color+'"></span>';}
     var lunar=getLunarText(cellDate);
     var jq=getJieQiText(cellDate);
-    var subHtml=jq?'<span class="d-sub jq">'+jq+'</span>':(lunar?'<span class="d-sub">'+lunar+'</span>':'');
+    var subHtml='<span class="d-sub'+(jq?' jq':'')+'">'+(jq||lunar||'')+'</span>'; /* ★R136: 恒渲染（占位），避免该格高度塔陷 */
     html+='<div class="'+cls+'" data-day="'+d+'"><span class="d-num">'+d+'</span>'+subHtml+'<span class="d-dots">'+dots+'</span></div>';
   }
   var total=lead+daysInMonth;
   var nextDays=(7-(total%7))%7;
-  for(var n=1;n<=nextDays;n++)html+='<div class="cal-cell other" data-d="'+(new Date(year,month+1,n)).getTime()+'">'+n+'</div>';
+  for(var n=1;n<=nextDays;n++)html+='<div class="cal-cell other" data-d="'+(new Date(year,month+1,n)).getTime()+'"><span class="d-num">'+n+'</span><span class="d-sub"></span><span class="d-dots"></span></div>';
   html+='</div>';
   html+='<div class="cal-ym-picker" id="calYmPicker" style="display:none;"><div class="cal-ym-head"><button class="cal-nav-btn" id="ym-prev-year">‹</button><span id="ym-year-label"></span><button class="cal-nav-btn" id="ym-next-year">›</button></div><div class="cal-ym-months" id="ym-months"></div></div>';
   html+='<div class="cal-day-panel" id="calDayPanel" hidden>'
