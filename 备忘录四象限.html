@@ -2043,7 +2043,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .cal-nav-btn:hover{background:var(--hover-bg);}
 .cal-title{font-size:14px;font-weight:600;color:var(--text);}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;}
-.cal-day-label{font-size:9px;color:var(--text-tertiary);padding:3px 0;font-weight:500;}
+.cal-day-label{font-size:10px;color:var(--text-secondary);padding:3px 0;font-weight:600;text-align:center;}
 .cal-day{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:12px;border-radius:50%;cursor:pointer;margin:0 auto;color:var(--text);transition:all .15s;border:2px solid transparent;}
 .cal-day:hover{background:var(--hover-bg);}
 .cal-day.other-month{color:var(--text-tertiary);cursor:default;}
@@ -2285,7 +2285,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .cal-cell:hover{border-color:var(--text-tertiary);}
 .cal-cell.other{opacity:.35;cursor:default;}
 .cal-cell.today{border-color:#3b82f6;color:#3b82f6;}
-.cal-cell .d-num{font-size:13px;font-weight:500;color:var(--text);}
+.cal-cell .d-num{font-size:14px;font-weight:500;color:var(--text);}
 .cal-cell.other .d-num{color:var(--text-secondary);}
 .cal-cell .d-dots{display:flex;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:center;}
 .cal-cell .d-dot{width:5px;height:5px;border-radius:50%;}
@@ -2329,13 +2329,20 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 /* ★R136: 内容组垂直居中 —— 原 flex-start 让"数字+农历"贴顶、圆点又被 margin-top:auto 顶到格底，
    正方形大格子里两者相距过远（用户反馈"小点怎么这么靠底部"） */
 .cal-cell{justify-content:center;padding:3px 2px;}
-.cal-cell .d-num{font-size:13px;font-weight:600;color:var(--text);line-height:1.15;}
+.cal-cell .d-num{font-size:14px;font-weight:600;color:var(--text);line-height:1.15;}
 /* ★R136: 农历原为 9px + --text-tertiary(第三级灰) → 浅色/护眼主题下对比不足、选中态(蓝底)几乎不可见。
    提到 10px / --text-secondary / 500，并用固定 height 保证"有农历与无农历"的格子内容总高一致 */
 .cal-cell .d-sub{font-size:10px;line-height:1;height:10px;color:var(--text-secondary);margin-top:2px;max-width:100%;overflow:hidden;white-space:nowrap;font-weight:500;}
 /* ★R136: 去掉 margin-top:auto（它把圆点推到正方形格子的最底边），改为紧跟农历下方 3px；
    固定 height:5px 让"有圆点与无圆点"的格子高度一致 */
 .cal-cell .d-dots{margin-top:3px;margin-bottom:0;height:5px;align-items:center;}
+/* ★R137: 宽屏下 .cal-cell 是正方形 → 实测 99.4px，而"数字+农历+圆点"总高仅 ~36px（内容只占 35%），
+   看着空旷。只压高度、不动列宽/列数：max-height 让格子变 99.4×80（占比升到 45%），
+   窄屏格子本身 <80px 时不受影响（仍是正方形）。配套把数字 13px→14px。 */
+/* ★R137 踩坑：只有 aspect-ratio + max-height 时，高度被 clamp 后宽高比会**反过来推导宽度**
+   （实测格子变成 80×80 而不是 99.4×80，列内右侧留缝）→ 必须显式 width:100% 钉死宽度，
+   让 aspect-ratio 只负责"由宽度推高度"、再由 max-height 压低。 */
+.cal-cell{max-height:80px;width:100%;}
 .cal-ym-picker{margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--bg);}
 .cal-ym-head{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;font-size:14px;font-weight:600;color:var(--text);}
 .cal-ym-months{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
@@ -17925,7 +17932,7 @@ function renderCalendar(dir){
   html+='<div class="cal-head"><button class="cal-nav-btn" id="cal-prev2">‹</button><button class="cal-title-btn" id="cal-title-btn">'+year+'年'+(month+1)+'月 ▾</button><button class="cal-nav-btn" id="cal-next2">›</button></div>';
   html+='<div class="cal-month-grid">';
   var wdLabels=weekStart==='mon'?['一','二','三','四','五','六','日']:['日','一','二','三','四','五','六'];
-  for(var w=0;w<7;w++)html+='<div style="text-align:center;font-size:10px;color:var(--text-tertiary);padding:2px 0;">'+wdLabels[w]+'</div>';
+  for(var w=0;w<7;w++)html+='<div class="cal-day-label">'+wdLabels[w]+'</div>';
   var firstDay=new Date(year,month,1).getDay();
   var lead=weekStart==='mon'?(firstDay+6)%7:firstDay;
   var daysInMonth=new Date(year,month+1,0).getDate();
