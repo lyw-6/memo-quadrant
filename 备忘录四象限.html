@@ -2273,7 +2273,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .loop-icon svg{width:13px;height:13px;}
 /* 日历视图 */
 .calendar-view{padding:4px 0;}
-.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;position:relative;}
 .cal-head-title{font-size:15px;font-weight:600;color:var(--text);}
 .cal-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;touch-action:none;} /* ★R54:touch-action:none 让竖滑归月份切换,不触发页面滚动 */
 /* ★R54: 上下滑切月滑动动画——上滑=下个月(内容从下方滑入),下滑=上个月(从上方滑入),fade+位移不抖动 */
@@ -2343,7 +2343,18 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
    （实测格子变成 80×80 而不是 99.4×80，列内右侧留缝）→ 必须显式 width:100% 钉死宽度，
    让 aspect-ratio 只负责"由宽度推高度"、再由 max-height 压低。 */
 .cal-cell{max-height:80px;width:100%;}
-.cal-ym-picker{margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--bg);}
+/* ★R138 浮层化：原实现把面板写在文档流里、位置在 .cal-month-grid(整月网格)之后 →
+   点标题后面板出现在整月日历下方约 500px 处，还把下面内容一起下推，触发点与结果点相隔一整个月历。
+   改为锚定在标题按钮正下方的绝对定位浮层：不推挤布局、位置与触发点一致（与项目其它下拉同手感）。
+   ★ 基础态就带 opacity:0/visibility:hidden（不是由 JS 补 class）→ 重画时不会闪一下。 */
+.cal-ym-picker{position:absolute;top:calc(100% + 6px);left:50%;width:min(100%,300px);box-sizing:border-box;z-index:40;
+  transform:translateX(-50%) translateY(-6px) scale(.97);transform-origin:center top;
+  border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--card-bg);
+  box-shadow:0 14px 34px rgba(0,0,0,.18);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .16s ease,transform .16s ease,visibility .16s;}
+.cal-ym-picker.show{opacity:1;visibility:visible;pointer-events:auto;transform:translateX(-50%);}
+.cal-title-btn.on{background:var(--hover-bg);}
 .cal-ym-head{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;font-size:14px;font-weight:600;color:var(--text);}
 .cal-ym-months{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
 .ym-month{padding:8px 0;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--text-secondary);cursor:pointer;font-size:13px;transition:all .15s;}
@@ -2418,7 +2429,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-sub{color:#fff;}
 }
 /* 编辑备忘录时隐藏切换视图导航(用户需求:输入时切换导航消失,避免遮挡);键盘弹起时聚焦备忘已被滚到键盘上方 */
 .kb-edit #bottomNav{display:none!important;}
-.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s;border-radius:10px;font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;}
+.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:10px;font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;}
 /* ===== 批量操作按钮（★R59 重新设计）=====
    批量操作并入底部导航槽位：复用同一固定条，零额外占用。
    设计要点（四主题统一自适应）：
@@ -2504,6 +2515,31 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
   transition:transform .42s cubic-bezier(.34,1.28,.5,1), width .42s cubic-bezier(.34,1.28,.5,1), opacity .26s ease;
 }
 .bottom-nav.batch-mode .nav-pill{opacity:0;}
+/* ===== ★R138 底部导航「液态玻璃」长按拖拽（参考酷安） =====
+   硬约束：backdrop-filter 只能挂在矩形元素上，浏览器不允许给「液体形状」直接做背景模糊。
+   所以真液态必须走遮罩：一块铺满可拖区域的玻璃面(backdrop-filter) + 由 SVG 遮罩定义的液体形状，
+   遮罩内 feGaussianBlur→feColorMatrix 做 metaball 融合（三个图形自然粘连/分离）→
+   得到的是「一整块连续玻璃面在流动」；若用多个玻璃元素叠加，重叠处会双重模糊、一眼脏。
+   三层共用同一套图形，只是 filter 不同：#lqMask 玻璃本体 / #lqRimMask 边缘高光 / #lqHaloMask 外发光。 */
+.liquid-root{position:absolute;left:0;top:0;width:0;height:0;}
+.liquid-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;}
+.liquid-layer{position:fixed;z-index:132;pointer-events:none;}
+.liquid-glass,.liquid-rim,.liquid-halo{position:absolute;inset:0;opacity:var(--lq-o,1);}
+.liquid-glass{
+  -webkit-backdrop-filter:blur(14px) saturate(180%) brightness(1.06);
+  backdrop-filter:blur(14px) saturate(180%) brightness(1.06);
+  /* ★镜面高光：一层 46px 的柔和白斑，位置由 JS 每帧跟随 blob 中心偏左上 →
+     不用第四个遮罩就能把「玻璃有一个光源」这件事说清楚（没它就只是一块白雾） */
+  background-image:radial-gradient(closest-side,rgba(255,255,255,.62),rgba(255,255,255,0) 78%),
+    linear-gradient(150deg,rgba(255,255,255,.42),rgba(255,255,255,.17));
+  background-size:46px 46px,100% 100%;
+  background-repeat:no-repeat;
+  background-position:var(--lq-hx,0px) var(--lq-hy,0px),0 0;
+  -webkit-mask-image:url(#lqMask);mask-image:url(#lqMask);}
+.liquid-rim{background:rgba(255,255,255,.68);-webkit-mask-image:url(#lqRimMask);mask-image:url(#lqRimMask);}
+.liquid-halo{background:rgba(0,0,0,.34);-webkit-mask-image:url(#lqHaloMask);mask-image:url(#lqHaloMask);}
+/* 拖动中手指下方的 tab 预览高亮（松手即切过去） */
+.nav-tab.lp-hover{color:var(--color-primary,#6366f1);transform:scale(1.08);}
 /* 桌面端(精确指针 + 支持 hover):为列表项与导航提供鼠标 hover 反馈,移动端不触发 */
 @media (hover:hover) and (pointer:fine){
   .memo-item:hover,
@@ -12296,6 +12332,230 @@ function bindBatchNav(){
   /* ★R92 必须包一层：直接挂 openGroupPicker 会把 click 事件当 ids 传进去 */
   var mm=nav.querySelector('#batch-merge-mode');if(mm)mm.onclick=function(){openGroupPicker();};
 }
+
+/* ===== \u2605R138 \u5e95\u90e8\u5bfc\u822a\u300c\u6db2\u6001\u73bb\u7483\u300d\u957f\u6309\u62d6\u62fd =====
+   \u4ea4\u4e92\uff1a\u957f\u6309\u5e95\u90e8\u6761 350ms \u2192 \u6d6e\u8d77\u4e00\u5757\u78e8\u7802\u73bb\u7483\uff08\u4e09\u56fe\u5f62 metaball \u878d\u5408\u6210\u4e00\u4f53\uff09\u2192
+        \u8ddf\u624b\u79fb\u52a8\u3001\u6309\u901f\u5ea6\u6cbf\u8fd0\u52a8\u65b9\u5411\u62c9\u4f38\uff08\u62d6\u5c3e/\u6d41\u52a8\u611f\uff09\u2192 \u624b\u6307\u4e0b\u65b9\u7684 tab \u9ad8\u4eae\u9884\u89c8 \u2192
+        \u677e\u624b\u843d\u5728 tab \u4e0a\u5c31\u5207\u8fc7\u53bb\uff0c\u6ca1\u843d\u5728 tab \u4e0a\u5219\u56de\u5f39\u5f52\u4f4d\u6d88\u5931\u3002
+   \u2605 \u4e3a\u4ec0\u4e48\u5fc5\u987b\u7528\u906e\u7f69\uff1a\u89c1\u6837\u5f0f\u533a\u540c\u540d\u6ce8\u91ca\u3002 */
+var LIQ_HOLD=350, LIQ_SLOP=8, LIQ_LERP=[0.62,0.30,0.14];
+var LIQ_MAXS=0.55, LIQ_SV=44;
+var liq={down:false,on:false,armed:false,pid:null,raf:0,last:0,holdTimer:0,mode:'drag',
+         sx:0,sy:0,px:0,py:0,ox:0,oy:0,tx:0,ty:0,hit:null,noClick:0,hoverTab:null,
+         travel:0,ax:0,ay:0,lx:0,ly:0,
+         pts:[[0,0],[0,0],[0,0]],s:0,ang:0,g:0.62,o:0};
+var _liqLayer=null, _liqShapeEls=null;
+function _liqGoo(){ /* metaball\uff1a\u5148\u6a21\u7cca\u518d\u52a0\u9661\u7684 alpha \u659c\u5761 \u2192 \u56fe\u5f62\u9760\u8fd1\u65f6\u81ea\u52a8\u7c98\u8fde\u51fa\u6db2\u6865\u3001\u62c9\u5f00\u65f6\u81ea\u7136\u65ad\u5f00 */
+  return '<feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"></feGaussianBlur>'
+       + '<feColorMatrix in="b" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 18 -8" result="goo"></feColorMatrix>';
+}
+function _liqShapeSvg(pre){
+  return '<rect id="'+pre+'0" x="-32" y="-32" width="64" height="64" rx="22"></rect>'
+       + '<rect id="'+pre+'1" x="-24" y="-24" width="48" height="48" rx="16"></rect>'
+       + '<circle id="'+pre+'2" r="16"></circle>';
+}
+function _liqBuild(){
+  if(_liqShapeEls)return;
+  var wrap=document.createElement('div');
+  wrap.className='liquid-root';
+  var FR='x="-100%" y="-100%" width="300%" height="300%" color-interpolation-filters="sRGB"';
+  var MK='maskUnits="userSpaceOnUse" x="-4000" y="-4000" width="9000" height="9000"';
+  wrap.innerHTML='<svg class="liquid-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>'
+    + '<filter id="lqGoo" '+FR+'>'+_liqGoo()+'</filter>'
+    + '<filter id="lqRim" '+FR+'>'+_liqGoo()
+      + '<feMorphology in="goo" operator="erode" radius="2.0" result="core"></feMorphology>'
+      + '<feComposite in="goo" in2="core" operator="out"></feComposite></filter>'
+    + '<filter id="lqHalo" '+FR+'>'+_liqGoo()
+      + '<feMorphology in="goo" operator="dilate" radius="8" result="big"></feMorphology>'
+      + '<feComposite in="big" in2="goo" operator="out" result="halo"></feComposite>'
+      + '<feGaussianBlur in="halo" stdDeviation="5"></feGaussianBlur></filter>'
+    + '<mask id="lqMask" '+MK+'><g filter="url(#lqGoo)" fill="#fff">'+_liqShapeSvg('lqG')+'</g></mask>'
+    + '<mask id="lqRimMask" '+MK+'><g filter="url(#lqRim)" fill="#fff">'+_liqShapeSvg('lqR')+'</g></mask>'
+    + '<mask id="lqHaloMask" '+MK+'><g filter="url(#lqHalo)" fill="#fff">'+_liqShapeSvg('lqH')+'</g></mask>'
+    + '</defs></svg>'
+    + '<div class="liquid-layer" id="liquidLayer"><div class="liquid-halo"></div><div class="liquid-glass"></div><div class="liquid-rim"></div></div>';
+  document.body.appendChild(wrap);
+  _liqLayer=wrap.querySelector('#liquidLayer');
+  _liqLayer.style.display='none';
+  _liqShapeEls=[[],[],[]];
+  var pres=['lqG','lqR','lqH'];
+  for(var i=0;i<3;i++)for(var j=0;j<3;j++)_liqShapeEls[i][j]=wrap.querySelector('#'+pres[i]+j);
+}
+function _liqNav(){return document.getElementById('bottomNav');}
+function _liqBind(){
+  var nav=_liqNav();
+  if(!nav||nav._liqBound)return;
+  nav._liqBound=true;
+  nav.addEventListener('pointerdown',_liqDown);
+  /* \u957f\u6309\u62d6\u62fd\u540e\u7684 click \u5fc5\u987b\u5403\u6389\uff08\u5426\u5219\u677e\u624b\u53c8\u4f1a\u89e6\u53d1\u4e00\u6b21 tab \u70b9\u51fb\uff09\u2014\u2014 capture \u9636\u6bb5\u62e6\u622a */
+  nav.addEventListener('click',_liqClickGuard,true);
+}
+function _liqDown(e){
+  var nav=_liqNav();
+  if(!nav||liq.on||liq.down)return;
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  if(nav.classList.contains('batch-mode'))return;
+  if(getComputedStyle(nav).display==='none')return;
+  liq.down=true;liq.armed=false;liq.pid=e.pointerId;
+  liq.sx=e.clientX;liq.sy=e.clientY;
+  window.addEventListener('pointermove',_liqPreMove,true);
+  window.addEventListener('pointerup',_liqPreUp,true);
+  window.addEventListener('pointercancel',_liqPreUp,true);
+  liq.holdTimer=setTimeout(function(){_liqArm(liq.sx,liq.sy);},LIQ_HOLD);
+}
+function _liqPreMove(e){
+  if(!liq.down||liq.armed||e.pointerId!==liq.pid)return;
+  /* \u6309\u4f4f\u540e\u5148\u52a8\u4e86 \u2192 \u4e0d\u662f\u957f\u6309\uff0c\u653e\u5f03\uff08\u907f\u514d\u8bef\u89e6/\u5e72\u6270\u6b63\u5e38\u6ed1\u52a8\uff09 */
+  if(Math.abs(e.clientX-liq.sx)>LIQ_SLOP||Math.abs(e.clientY-liq.sy)>LIQ_SLOP)_liqPreEnd();
+}
+function _liqPreUp(e){
+  if(!liq.down||liq.armed||e.pointerId!==liq.pid)return;
+  _liqPreEnd();
+}
+function _liqPreEnd(){
+  clearTimeout(liq.holdTimer);liq.holdTimer=0;
+  liq.down=false;liq.pid=null;
+  window.removeEventListener('pointermove',_liqPreMove,true);
+  window.removeEventListener('pointerup',_liqPreUp,true);
+  window.removeEventListener('pointercancel',_liqPreUp,true);
+}
+function _liqArm(cx,cy){
+  var nav=_liqNav();if(!nav){_liqPreEnd();return;}
+  liq.armed=true;
+  window.removeEventListener('pointermove',_liqPreMove,true);
+  window.removeEventListener('pointerup',_liqPreUp,true);
+  window.removeEventListener('pointercancel',_liqPreUp,true);
+  liq.holdTimer=0;
+  var r=nav.getBoundingClientRect();
+  if(r.width<24||r.height<8){liq.armed=false;liq.down=false;liq.pid=null;return;}
+  _liqBuild();
+  var pad=16, H=Math.round(r.height+150);
+  _liqLayer.style.left=Math.round(r.left-pad)+'px';
+  _liqLayer.style.width=Math.round(r.width+pad*2)+'px';
+  _liqLayer.style.height=H+'px';
+  _liqLayer.style.top='auto';
+  _liqLayer.style.bottom=Math.round(window.innerHeight-r.bottom)+'px';
+  _liqLayer.style.display='block';
+  var lr=_liqLayer.getBoundingClientRect();
+  var lx=Math.max(38,Math.min(lr.width-38,cx-lr.left));
+  var ly=Math.max(38,Math.min(lr.height-38,cy-lr.top));
+  liq.px=lx;liq.py=ly;liq.ox=lx;liq.oy=ly;
+  liq.lx=lx;liq.ly=ly;liq.travel=0;liq.ax=0;liq.ay=0;
+  liq.pts=[[lx,ly],[lx,ly],[lx,ly]];
+  liq.s=0;liq.ang=0;liq.g=0.62;liq.o=0;liq.hit=null;liq.mode='drag';liq.last=0;
+  liq.on=true;
+  try{if(nav.setPointerCapture)nav.setPointerCapture(liq.pid);}catch(_){}
+  window.addEventListener('pointermove',_liqMove,true);
+  window.addEventListener('pointerup',_liqUp,true);
+  window.addEventListener('pointercancel',_liqUp,true);
+  liq.noClick=Date.now()+500;
+  _liqPaint();
+  liq.raf=requestAnimationFrame(_liqTick);
+  _liqHover(cx,cy);
+}
+function _liqMove(e){
+  if(!liq.on||liq.mode!=='drag'||e.pointerId!==liq.pid)return;
+  var lr=_liqLayer.getBoundingClientRect();
+  var nx=e.clientX-lr.left, ny=e.clientY-lr.top;
+  /* ★拉伸强度改用「指针速度」而不是「leader 与指针的滞后量」：
+     滞后量随刷新率变化（120Hz 每帧位移小 → 形变几乎看不出来，实测峰值 1.065 vs 1.30），
+     而速度是物理量、与刷新率无关 →「速度快就像液体一样流动」才稳定成立。 */
+  liq.travel+=Math.hypot(nx-liq.lx,ny-liq.ly);
+  liq.ax+=nx-liq.lx;liq.ay+=ny-liq.ly;
+  liq.lx=nx;liq.ly=ny;
+  liq.px=Math.max(38,Math.min(lr.width-38,nx));
+  liq.py=Math.max(38,Math.min(lr.height-38,ny));
+  _liqHover(e.clientX,e.clientY);
+}
+function _liqHover(cx,cy){
+  var el=null;
+  try{el=document.elementFromPoint(cx,cy);}catch(_){}
+  var tab=el&&el.closest?el.closest('.nav-tab'):null;
+  if(tab===liq.hoverTab)return;
+  if(liq.hoverTab)liq.hoverTab.classList.remove('lp-hover');
+  liq.hoverTab=tab;
+  if(tab)tab.classList.add('lp-hover');
+}
+function _liqUp(e){
+  if(!liq.on||liq.mode!=='drag')return;
+  if(e&&e.pointerId!==undefined&&e.pointerId!==liq.pid)return;
+  var tab=liq.hoverTab;
+  if(tab){
+    liq.hit=tab.getAttribute('data-view');
+    var lr=_liqLayer.getBoundingClientRect(),tr=tab.getBoundingClientRect();
+    liq.tx=tr.left-lr.left+tr.width/2;liq.ty=tr.top-lr.top+tr.height/2;
+  }else{
+    liq.hit=null;liq.tx=liq.ox;liq.ty=liq.oy;
+  }
+  if(liq.hoverTab){liq.hoverTab.classList.remove('lp-hover');liq.hoverTab=null;}
+  liq.mode='settle';
+  liq.noClick=Date.now()+500;
+}
+function _liqAng(cur,tgt,k){
+  var d=tgt-cur;
+  while(d>Math.PI)d-=Math.PI*2;
+  while(d<-Math.PI)d+=Math.PI*2;
+  return cur+d*k;
+}
+function _liqPaint(){
+  if(!_liqShapeEls||!_liqLayer)return;
+  var p=liq.pts,g=liq.g,deg=liq.ang*180/Math.PI;
+  var sc=[1,0.9,0.78], sf=[1,0.6,0.3];
+  for(var i=0;i<3;i++){
+    var st=liq.s*sf[i], s=g*sc[i];
+    var tf='translate('+p[i][0].toFixed(2)+' '+p[i][1].toFixed(2)+') rotate('+deg.toFixed(1)+') scale('
+         + (s*(1+st)).toFixed(3)+' '+(s*(1-st*0.72)).toFixed(3)+')';
+    for(var j=0;j<3;j++){var el=_liqShapeEls[j][i];if(el)el.setAttribute('transform',tf);}
+  }
+  _liqLayer.style.setProperty('--lq-o',liq.o.toFixed(3));
+  /* 高光偏左上 → 光源在左上方（符合页面其它高光的惯例） */
+  _liqLayer.style.setProperty('--lq-hx',(p[0][0]-35).toFixed(1)+'px');
+  _liqLayer.style.setProperty('--lq-hy',(p[0][1]-39).toFixed(1)+'px');
+}
+function _liqTick(ts){
+  if(!liq.on)return;
+  var dt=liq.last?Math.min(50,ts-liq.last):16.7;liq.last=ts;
+  var k=Math.max(0.25,Math.min(3,dt/16.7));
+  var p=liq.pts,i;
+  if(liq.mode==='drag'){
+    /* \u4e09\u4e2a\u56fe\u5f62\u5404\u81ea\u4ee5\u4e0d\u540c\u7cfb\u6570\u8ddf\u624b \u2192 \u901f\u5ea6\u8d8a\u5feb\u62d6\u5c3e\u8d8a\u957f\uff08\u6db2\u4f53\u611f\u7684\u4e3b\u8981\u6765\u6e90\uff09 */
+    for(i=0;i<3;i++){var a=1-Math.pow(1-LIQ_LERP[i],k);p[i][0]+=(liq.px-p[i][0])*a;p[i][1]+=(liq.py-p[i][1])*a;}
+    /* 拉伸强度 = 指针速度（px/16.7ms）→ 与刷新率无关；方向取本帧累计位移的合矢量 */
+    liq.s+=(Math.min(LIQ_MAXS,(liq.travel/Math.max(1,dt)*16.7)/LIQ_SV)-liq.s)*Math.min(1,0.20*k);
+    liq.travel=0;
+    if(Math.hypot(liq.ax,liq.ay)>1.2)liq.ang=_liqAng(liq.ang,Math.atan2(liq.ay,liq.ax),Math.min(1,0.30*k));
+    liq.ax=0;liq.ay=0;
+    liq.g+=((liq.g<1?1.10:1)-liq.g)*Math.min(1,0.32*k); /* \u6d6e\u8d77\u65f6\u5e26\u4e00\u70b9\u5f39\u6027\u8fc7\u51b2 */
+    liq.o+=(1-liq.o)*Math.min(1,0.30*k);
+  }else{
+    var a2=Math.min(1,0.28*k);
+    for(i=0;i<3;i++){p[i][0]+=(liq.tx-p[i][0])*a2;p[i][1]+=(liq.ty-p[i][1])*a2;}
+    liq.s+=(0-liq.s)*Math.min(1,0.28*k);
+    liq.g+=(0.6-liq.g)*Math.min(1,0.32*k);
+    liq.o+=(0-liq.o)*Math.min(1,0.26*k);
+    if(liq.o<0.05){_liqPaint();_liqDone();return;}
+  }
+  _liqPaint();
+  liq.raf=requestAnimationFrame(_liqTick);
+}
+function _liqDone(){
+  if(liq.raf)cancelAnimationFrame(liq.raf);
+  liq.raf=0;
+  var nav=_liqNav();
+  if(nav&&liq.pid!=null&&nav.releasePointerCapture){try{nav.releasePointerCapture(liq.pid);}catch(_){}}
+  window.removeEventListener('pointermove',_liqMove,true);
+  window.removeEventListener('pointerup',_liqUp,true);
+  window.removeEventListener('pointercancel',_liqUp,true);
+  if(liq.hoverTab){liq.hoverTab.classList.remove('lp-hover');liq.hoverTab=null;}
+  if(_liqLayer)_liqLayer.style.display='none';
+  var hit=liq.hit;
+  liq.on=false;liq.down=false;liq.armed=false;liq.pid=null;liq.last=0;liq.hit=null;
+  if(hit&&typeof setView==='function'&&hit!==currentView)setView(hit);
+}
+function _liqClickGuard(e){
+  if(Date.now()<liq.noClick){e.stopPropagation();e.preventDefault();}
+}
+
 // ★R69 合并模式已移除：批量「合并」直接弹分组选择弹层；拖拽合并/拖拽入组随模式一并下线，拖动=纯排序。
 // 批量置顶 / 取消置顶：全选已置顶 → 取消置顶；否则 → 置顶（保持选中便于来回切）
 function batchTogglePin(){
@@ -17924,12 +18184,21 @@ function syncSortDirUI(){
 function updateStats(){var total=memos.length;var todo=0,done=0;for(var i=0;i<memos.length;i++){if(memos[i].done)done++;else todo++;}document.getElementById('count-all').textContent=total?' ('+total+')':'';document.getElementById('count-todo').textContent=todo?' ('+todo+')':'';document.getElementById('count-done').textContent=done?' ('+done+')':'';}
 
 // ===== 日历视图 =====
+/* ★R138 年月浮层 markup：必须挂在 .cal-head 内 → 绝对定位的包含块就是标题那一行，
+   才能用 top:calc(100% + 6px) 紧贴触发按钮正下方（见 renderCalendar 内注释） */
+var YMPICKER_HTML='<div class="cal-ym-picker" id="calYmPicker"><div class="cal-ym-head"><button class="cal-nav-btn" id="ym-prev-year">‹</button><span id="ym-year-label"></span><button class="cal-nav-btn" id="ym-next-year">›</button></div><div class="cal-ym-months" id="ym-months"></div></div>';
 function renderCalendar(dir){
+  closeYmPicker(); /* ★R138: 重画会重建浮层 DOM，先把 document 上的关闭监听摘掉，避免残留 */
   calendarViewEl.style.display='block';
   syncCalTodayBtn(); /* ★R55:已在今天则不显示「今」按钮 */
   var year=currentCalDate.getFullYear(), month=currentCalDate.getMonth();
   var html='';
-  html+='<div class="cal-head"><button class="cal-nav-btn" id="cal-prev2">‹</button><button class="cal-title-btn" id="cal-title-btn">'+year+'年'+(month+1)+'月 ▾</button><button class="cal-nav-btn" id="cal-next2">›</button></div>';
+  /* ★R138 浮层的包含块必须是 .cal-head(标题所在行)：浮层是绝对定位元素，
+     而绝对定位元素在 flex 容器里不参与 flex 布局，放进去零副作用。
+     若仍留在 .cal-month-grid 之后（= .cal-head 的兄弟），就会去找更外层祖先当包含块
+     → 实测浮层落到距标题按钮 798px 处，还把文档滚动高度撑高 125px。 */
+  html+='<div class="cal-head"><button class="cal-nav-btn" id="cal-prev2">‹</button><button class="cal-title-btn" id="cal-title-btn">'+year+'年'+(month+1)+'月 ▾</button><button class="cal-nav-btn" id="cal-next2">›</button>'
+    +YMPICKER_HTML+'</div>';
   html+='<div class="cal-month-grid">';
   var wdLabels=weekStart==='mon'?['一','二','三','四','五','六','日']:['日','一','二','三','四','五','六'];
   for(var w=0;w<7;w++)html+='<div class="cal-day-label">'+wdLabels[w]+'</div>';
@@ -17958,7 +18227,7 @@ function renderCalendar(dir){
   var nextDays=(7-(total%7))%7;
   for(var n=1;n<=nextDays;n++)html+='<div class="cal-cell other" data-d="'+(new Date(year,month+1,n)).getTime()+'"><span class="d-num">'+n+'</span><span class="d-sub"></span><span class="d-dots"></span></div>';
   html+='</div>';
-  html+='<div class="cal-ym-picker" id="calYmPicker" style="display:none;"><div class="cal-ym-head"><button class="cal-nav-btn" id="ym-prev-year">‹</button><span id="ym-year-label"></span><button class="cal-nav-btn" id="ym-next-year">›</button></div><div class="cal-ym-months" id="ym-months"></div></div>';
+  html+='<div class="cal-ym-picker" id="calYmPicker"><div class="cal-ym-head"><button class="cal-nav-btn" id="ym-prev-year">‹</button><span id="ym-year-label"></span><button class="cal-nav-btn" id="ym-next-year">›</button></div><div class="cal-ym-months" id="ym-months"></div></div>';
   html+='<div class="cal-day-panel" id="calDayPanel" hidden>'
     +'<div class="cdp-head"><span class="cdp-title" id="cdpTitle"></span><button class="cdp-close" id="cdpClose" type="button">✕</button></div>'
     +'<div class="cdp-list" id="cdpList"></div>'
@@ -17974,7 +18243,7 @@ function renderCalendar(dir){
   bindCalGestures();
   document.getElementById('cal-prev2').addEventListener('click',function(){currentCalDate=new Date(year,month-1,1);renderCalendar();});
   document.getElementById('cal-next2').addEventListener('click',function(){currentCalDate=new Date(year,month+1,1);renderCalendar();});
-  document.getElementById('cal-title-btn').addEventListener('click',function(){var p=document.getElementById('calYmPicker');if(p.style.display==='block'){p.style.display='none';}else{openYmPicker(year,month);}});
+  document.getElementById('cal-title-btn').addEventListener('click',function(){var p=document.getElementById('calYmPicker');if(p&&p.classList.contains('show')){closeYmPicker();}else{openYmPicker(year,month);}});
   var cells=calendarViewEl.querySelectorAll('.cal-cell:not(.other)');
   for(var ci=0;ci<cells.length;ci++){
     (function(cell){
@@ -18034,6 +18303,25 @@ function bindCalGestures(){
     renderCalendar(e.deltaY>0?'up':'down');
   },{passive:true});
 }
+var _ymDocBound=false;
+/* ★R138 年月浮层的关闭通道：点外部 / Esc */
+function _ymOutside(e){
+  var t=e.target;
+  if(t&&t.closest&&(t.closest('#calYmPicker')||t.closest('#cal-title-btn')))return;
+  closeYmPicker();
+}
+function _ymKey(e){ if(e.key==='Escape')closeYmPicker(); }
+function closeYmPicker(){
+  var p=document.getElementById('calYmPicker');
+  if(p)p.classList.remove('show');
+  var tb=document.getElementById('cal-title-btn');
+  if(tb)tb.classList.remove('on');
+  if(_ymDocBound){
+    _ymDocBound=false;
+    document.removeEventListener('pointerdown',_ymOutside,true);
+    document.removeEventListener('keydown',_ymKey,true);
+  }
+}
 function openYmPicker(y,m){
   var picker=document.getElementById('calYmPicker');
   var yl=document.getElementById('ym-year-label');
@@ -18049,7 +18337,7 @@ function openYmPicker(y,m){
         b.textContent=mi+'月';
         b.addEventListener('click',function(){
           currentCalDate=new Date(ymYear,mi-1,1);
-          picker.style.display='none';
+          closeYmPicker();
           renderCalendar();
         });
         mbox.appendChild(b);
@@ -18059,7 +18347,16 @@ function openYmPicker(y,m){
   renderYm();
   document.getElementById('ym-prev-year').onclick=function(){ymYear--;renderYm();};
   document.getElementById('ym-next-year').onclick=function(){ymYear++;renderYm();};
-  picker.style.display='block';
+  if(!picker)return;
+  picker.classList.add('show');
+  var _tb=document.getElementById('cal-title-btn');if(_tb)_tb.classList.add('on');
+  /* ★R138 浮层需要「点外部 / Esc 关闭」。用 capture 阶段的 pointerdown 判断，
+     并排除触发按钮自身 —— 否则同一次点击冒泡到 document 会立刻关掉刚打开的浮层。 */
+  if(!_ymDocBound){
+    _ymDocBound=true;
+    document.addEventListener('pointerdown',_ymOutside,true);
+    document.addEventListener('keydown',_ymKey,true);
+  }
 }
 function openDayDetail(date){
   var panel=document.getElementById('calDayPanel');
@@ -19786,6 +20083,7 @@ function init(){
   syncSortUI(); /* ★R112 把恢复的排序回填到排序按钮(文字/选中项/方向箭头)，与记住的值保持一致 */
   renderCategoryFilter();
   renderBottomNav();
+  _liqBind(); /* ★R138 底部导航液态玻璃长按拖拽 */
   render();
   setInterval(function(){
     syncTimeProgressBars();
