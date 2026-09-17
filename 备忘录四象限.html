@@ -2429,7 +2429,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-sub{color:#fff;}
 }
 /* 编辑备忘录时隐藏切换视图导航(用户需求:输入时切换导航消失,避免遮挡);键盘弹起时聚焦备忘已被滚到键盘上方 */
 .kb-edit #bottomNav{display:none!important;}
-.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:10px;font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;}
+.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:10px;font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;}
 /* ===== 批量操作按钮（★R59 重新设计）=====
    批量操作并入底部导航槽位：复用同一固定条，零额外占用。
    设计要点（四主题统一自适应）：
@@ -2515,29 +2515,42 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
   transition:transform .42s cubic-bezier(.34,1.28,.5,1), width .42s cubic-bezier(.34,1.28,.5,1), opacity .26s ease;
 }
 .bottom-nav.batch-mode .nav-pill{opacity:0;}
-/* ===== ★R138 底部导航「液态玻璃」长按拖拽（参考酷安） =====
-   硬约束：backdrop-filter 只能挂在矩形元素上，浏览器不允许给「液体形状」直接做背景模糊。
-   所以真液态必须走遮罩：一块铺满可拖区域的玻璃面(backdrop-filter) + 由 SVG 遮罩定义的液体形状，
-   遮罩内 feGaussianBlur→feColorMatrix 做 metaball 融合（三个图形自然粘连/分离）→
-   得到的是「一整块连续玻璃面在流动」；若用多个玻璃元素叠加，重叠处会双重模糊、一眼脏。
-   三层共用同一套图形，只是 filter 不同：#lqMask 玻璃本体 / #lqRimMask 边缘高光 / #lqHaloMask 外发光。 */
+/* ===== ★R140 底部导航「液态玻璃」（参考酷安 / iOS 26 Liquid Glass） =====
+   ★与普通毛玻璃唯一的差别是「透镜折射」：毛玻璃是整片均匀模糊（中心=边缘一样）；
+     液态玻璃是中心透明清晰、边缘一圈把背后内容沿法线「挤弯」+ 一圈折射高光。
+   ★★这里**故意不加 blur()**：blur 是「整片均匀糊」，加多少都会把压在玻璃下的
+     tab 文字一起糊掉（R140 实测 blur(.8px) 就让 10px 的「月」比旁边标签明显发虚）。
+     真液态玻璃的中心本来就该是 1:1 清晰的 —— 通透感全靠「边缘折射 + 高光 + 极淡底色」。
+   实现：Chromium 支持 backdrop-filter 链式调用 SVG filter →
+       backdrop-filter:url(#lqRefract) saturate(180%);
+     url(#lqRefract) 把「背后内容」当作 filter 输入 → feImage 提供一张按圆角矩形 SDF
+     算出的位移图 → feDisplacementMap 按 R/G 通道（R-128=X 偏移、G-128=Y 偏移）
+     沿边界法线向外挤像素。
+   ★形状必须可预测（圆角矩形），位移图才能和玻璃边缘精确对齐 ——
+     所以不再用 metaball 融合形状（形状每帧在变 → 折射边对不上）。
+   降级：Safari / Firefox 尚不支持 backdrop-filter 里用 url() → @supports 退回纯模糊。 */
 .liquid-root{position:absolute;left:0;top:0;width:0;height:0;}
 .liquid-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;}
 .liquid-layer{position:fixed;z-index:132;pointer-events:none;}
-.liquid-glass,.liquid-rim,.liquid-halo{position:absolute;inset:0;opacity:var(--lq-o,1);}
-.liquid-glass{
-  -webkit-backdrop-filter:blur(14px) saturate(180%) brightness(1.06);
-  backdrop-filter:blur(14px) saturate(180%) brightness(1.06);
-  /* ★镜面高光：一层 46px 的柔和白斑，位置由 JS 每帧跟随 blob 中心偏左上 →
-     不用第四个遮罩就能把「玻璃有一个光源」这件事说清楚（没它就只是一块白雾） */
-  background-image:radial-gradient(closest-side,rgba(255,255,255,.62),rgba(255,255,255,0) 78%),
-    linear-gradient(150deg,rgba(255,255,255,.42),rgba(255,255,255,.17));
-  background-size:46px 46px,100% 100%;
-  background-repeat:no-repeat;
-  background-position:var(--lq-hx,0px) var(--lq-hy,0px),0 0;
-  -webkit-mask-image:url(#lqMask);mask-image:url(#lqMask);}
-.liquid-rim{background:rgba(255,255,255,.68);-webkit-mask-image:url(#lqRimMask);mask-image:url(#lqRimMask);}
-.liquid-halo{background:rgba(0,0,0,.34);-webkit-mask-image:url(#lqHaloMask);mask-image:url(#lqHaloMask);}
+.liquid-glass{position:absolute;left:0;top:0;box-sizing:border-box;border-radius:14px;opacity:0;
+  will-change:transform,opacity;
+  /* 几乎不叠白：通透感全靠折射 + backdrop-filter；叠色一多就成一团灰白雾 */
+  background:linear-gradient(160deg,rgba(255,255,255,.11),rgba(255,255,255,.035));
+  border:1px solid rgba(255,255,255,.42);
+  /* 折射边的光感：顶部最亮、其余三边逐次减弱 + 一层柔投影让玻璃「浮起来」 */
+  box-shadow:0 10px 24px rgba(0,0,0,.18),
+    inset 0 1px 1px rgba(255,255,255,.75),inset 0 -1px 1px rgba(255,255,255,.42),
+    inset 1px 0 1px rgba(255,255,255,.32),inset -1px 0 1px rgba(255,255,255,.32);}
+@supports (backdrop-filter:url(#lqRefract)) or (-webkit-backdrop-filter:url(#lqRefract)){
+  .liquid-glass{-webkit-backdrop-filter:url(#lqRefract) saturate(180%);
+                backdrop-filter:url(#lqRefract) saturate(180%);}
+}
+@supports not ((backdrop-filter:url(#lqRefract)) or (-webkit-backdrop-filter:url(#lqRefract))){
+  .liquid-glass{-webkit-backdrop-filter:blur(9px) saturate(170%);
+                backdrop-filter:blur(9px) saturate(170%);}
+}
+/* ★R139 鼠标拖动玻璃期间：整页禁选中文字 + 抓手光标（否则按住拖会顺手把 tab 文字刷蓝） */
+html.liq-grabbing,html.liq-grabbing *{-webkit-user-select:none!important;user-select:none!important;cursor:grabbing!important;}
 /* 拖动中手指下方的 tab 预览高亮（松手即切过去） */
 .nav-tab.lp-hover{color:var(--color-primary,#6366f1);transform:scale(1.08);}
 /* 桌面端(精确指针 + 支持 hover):为列表项与导航提供鼠标 hover 反馈,移动端不触发 */
@@ -12333,61 +12346,109 @@ function bindBatchNav(){
   var mm=nav.querySelector('#batch-merge-mode');if(mm)mm.onclick=function(){openGroupPicker();};
 }
 
-/* ===== \u2605R138 \u5e95\u90e8\u5bfc\u822a\u300c\u6db2\u6001\u73bb\u7483\u300d\u957f\u6309\u62d6\u62fd =====
-   \u4ea4\u4e92\uff1a\u957f\u6309\u5e95\u90e8\u6761 350ms \u2192 \u6d6e\u8d77\u4e00\u5757\u78e8\u7802\u73bb\u7483\uff08\u4e09\u56fe\u5f62 metaball \u878d\u5408\u6210\u4e00\u4f53\uff09\u2192
-        \u8ddf\u624b\u79fb\u52a8\u3001\u6309\u901f\u5ea6\u6cbf\u8fd0\u52a8\u65b9\u5411\u62c9\u4f38\uff08\u62d6\u5c3e/\u6d41\u52a8\u611f\uff09\u2192 \u624b\u6307\u4e0b\u65b9\u7684 tab \u9ad8\u4eae\u9884\u89c8 \u2192
-        \u677e\u624b\u843d\u5728 tab \u4e0a\u5c31\u5207\u8fc7\u53bb\uff0c\u6ca1\u843d\u5728 tab \u4e0a\u5219\u56de\u5f39\u5f52\u4f4d\u6d88\u5931\u3002
-   \u2605 \u4e3a\u4ec0\u4e48\u5fc5\u987b\u7528\u906e\u7f69\uff1a\u89c1\u6837\u5f0f\u533a\u540c\u540d\u6ce8\u91ca\u3002 */
-var LIQ_HOLD=350, LIQ_SLOP=8, LIQ_LERP=[0.62,0.30,0.14];
-var LIQ_MAXS=0.55, LIQ_SV=44;
-var liq={down:false,on:false,armed:false,pid:null,raf:0,last:0,holdTimer:0,mode:'drag',
+/* ===== ★R140 底部导航「液态玻璃」拖拽（真折射版 · 圆角矩形玻璃片） =====
+   交互：触摸/鼠标长按底栏 350ms（鼠标按下后一移动也立即触发）→ 浮起一块
+        圆角玻璃片 → 跟手拖动（限制在底栏区间内）、按速度沿运动方向拉伸 →
+        松手落在 tab 上就切过去，否则回弹到起始 tab 并收起。 */
+var LIQ_HOLD=350, LIQ_SLOP=8;
+var LIQ_MAXS=0.34, LIQ_SV=50;      /* 拉伸强度上限 / 速度标定(px per 16.7ms) */
+var LIQ_PADY=9, LIQ_GW=0.78, LIQ_BREATH=3; /* 上下留白(仅兜底路径用) / 宽 = tab 宽 × 此值 / 内容外额外余量(px) */
+var LIQ_BEZEL=0.22, LIQ_BEND=0.17; /* 折射带宽度占 min(半宽,半高) 的比例 / 最大位移比例。
+   ★这两个值决定「液体感 vs 可读性」的平衡：0.42/0.30 时折射带 8px（占玻璃高 21%）→ 连图标都被推糊；
+     0.15/0.12 又几乎看不出折射；0.22/0.17（带 4.2px、位移峰值 3.2px）实测最平衡 —— 图标清晰、边缘有弯折。 */
+var liq={down:false,on:false,armed:false,pid:null,pidType:'mouse',raf:0,last:0,holdTimer:0,mode:'drag',
          sx:0,sy:0,px:0,py:0,ox:0,oy:0,tx:0,ty:0,hit:null,noClick:0,hoverTab:null,
-         travel:0,ax:0,ay:0,lx:0,ly:0,
-         pts:[[0,0],[0,0],[0,0]],s:0,ang:0,g:0.62,o:0};
-var _liqLayer=null, _liqShapeEls=null;
-function _liqGoo(){ /* metaball\uff1a\u5148\u6a21\u7cca\u518d\u52a0\u9661\u7684 alpha \u659c\u5761 \u2192 \u56fe\u5f62\u9760\u8fd1\u65f6\u81ea\u52a8\u7c98\u8fde\u51fa\u6db2\u6865\u3001\u62c9\u5f00\u65f6\u81ea\u7136\u65ad\u5f00 */
-  return '<feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"></feGaussianBlur>'
-       + '<feColorMatrix in="b" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 18 -8" result="goo"></feColorMatrix>';
+         lx:0,ly:0,travel:0,ax:0,ay:0,
+         x:0,y:0,s:0,ang:0,o:0,gw:0,gh:0,gr:14,layW:0,layH:0};
+var _liqLayer=null, _liqGlass=null, _liqMapKey='';
+
+function _liqNav(){return document.getElementById('bottomNav');}
+function _liqTabs(){
+  var n=_liqNav();if(!n)return[];
+  var a=n.querySelectorAll('.nav-tab'),o=[],i;
+  for(i=0;i<a.length;i++){var r=a[i].getBoundingClientRect();
+    o.push({el:a[i],v:a[i].getAttribute('data-view'),cx:r.left+r.width/2,cy:r.top+r.height/2});}
+  return o;
 }
-function _liqShapeSvg(pre){
-  return '<rect id="'+pre+'0" x="-32" y="-32" width="64" height="64" rx="22"></rect>'
-       + '<rect id="'+pre+'1" x="-24" y="-24" width="48" height="48" rx="16"></rect>'
-       + '<circle id="'+pre+'2" r="16"></circle>';
+function _liqNN(v){v=Math.round(v);return v<0?0:(v>255?255:v);}
+/* tab 内「图标 + 文字」的合并高度（不含 flex 居中留白）—— 用来反推玻璃片高度，
+   保证上下两条折射带正好落在留白里、不会切进文字字形造成重影 */
+function _liqContentH(el){
+  if(!el||!el.children||!el.children.length)return 0;
+  var top=1e9,bot=-1e9,i,q;
+  for(i=0;i<el.children.length;i++){
+    q=el.children[i].getBoundingClientRect();
+    if(q.height<=0&&q.width<=0)continue;
+    if(q.top<top)top=q.top;
+    if(q.bottom>bot)bot=q.bottom;
+  }
+  return bot>top?bot-top:0;
+}
+/* 位移图：圆角矩形 SDF → 沿边界法线向外的位移（中心区 0、边缘一圈最强）
+   R-128 = X 偏移、G-128 = Y 偏移；乘 gain 提精度，再用 feDisplacementMap 的 scale 除回去 */
+function _liqMakeMap(w,h,r){
+  var W=Math.max(4,Math.round(w)),H=Math.max(4,Math.round(h));
+  var c=document.createElement('canvas');c.width=W;c.height=H;
+  var ctx=c.getContext('2d'),im=ctx.createImageData(W,H),D=im.data;
+  var hw=W/2,hh=H/2,mn=Math.min(hw,hh),B=LIQ_BEZEL*mn,AMP=LIQ_BEND*mn;
+  var gain=Math.min(14,118/Math.max(0.001,AMP));
+  for(var y=0;y<H;y++)for(var x=0;x<W;x++){
+    var px=x+0.5-hw,py=y+0.5-hh;
+    var qx=Math.abs(px)-hw+r,qy=Math.abs(py)-hh+r;
+    var ax=qx>0?qx:0,ay=qy>0?qy:0,d=Math.sqrt(ax*ax+ay*ay);
+    var mx=qx>qy?qx:qy;
+    var sd=d+(mx<0?mx:0)-r;
+    var nx=0,ny=0;
+    if(d>1e-6){nx=(px<0?-1:1)*ax/d;ny=(py<0?-1:1)*ay/d;}
+    else{var L=Math.sqrt(px*px+py*py);if(L>1e-6){nx=px/L;ny=py/L;}}
+    var t=-sd,m=0;
+    if(t>0&&t<B){var u=1-t/B;m=AMP*Math.pow(u,1.6);}
+    var i=(y*W+x)*4;
+    D[i]=_liqNN(128+nx*m*gain);D[i+1]=_liqNN(128+ny*m*gain);D[i+2]=128;D[i+3]=255;
+  }
+  ctx.putImageData(im,0,0);
+  return {url:c.toDataURL('image/png'),scale:255/gain};
 }
 function _liqBuild(){
-  if(_liqShapeEls)return;
+  if(_liqLayer)return;
   var wrap=document.createElement('div');
   wrap.className='liquid-root';
-  var FR='x="-100%" y="-100%" width="300%" height="300%" color-interpolation-filters="sRGB"';
-  var MK='maskUnits="userSpaceOnUse" x="-4000" y="-4000" width="9000" height="9000"';
   wrap.innerHTML='<svg class="liquid-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>'
-    + '<filter id="lqGoo" '+FR+'>'+_liqGoo()+'</filter>'
-    + '<filter id="lqRim" '+FR+'>'+_liqGoo()
-      + '<feMorphology in="goo" operator="erode" radius="2.0" result="core"></feMorphology>'
-      + '<feComposite in="goo" in2="core" operator="out"></feComposite></filter>'
-    + '<filter id="lqHalo" '+FR+'>'+_liqGoo()
-      + '<feMorphology in="goo" operator="dilate" radius="8" result="big"></feMorphology>'
-      + '<feComposite in="big" in2="goo" operator="out" result="halo"></feComposite>'
-      + '<feGaussianBlur in="halo" stdDeviation="5"></feGaussianBlur></filter>'
-    + '<mask id="lqMask" '+MK+'><g filter="url(#lqGoo)" fill="#fff">'+_liqShapeSvg('lqG')+'</g></mask>'
-    + '<mask id="lqRimMask" '+MK+'><g filter="url(#lqRim)" fill="#fff">'+_liqShapeSvg('lqR')+'</g></mask>'
-    + '<mask id="lqHaloMask" '+MK+'><g filter="url(#lqHalo)" fill="#fff">'+_liqShapeSvg('lqH')+'</g></mask>'
-    + '</defs></svg>'
-    + '<div class="liquid-layer" id="liquidLayer"><div class="liquid-halo"></div><div class="liquid-glass"></div><div class="liquid-rim"></div></div>';
+    +'<filter id="lqRefract" x="0" y="0" width="100%" height="100%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">'
+    +'<feImage id="lqMap" x="0" y="0" width="10" height="10" preserveAspectRatio="none" result="map"></feImage>'
+    +'<feDisplacementMap id="lqDisp" in="SourceGraphic" in2="map" scale="21" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>'
+    +'</filter></defs></svg>'
+    +'<div class="liquid-layer" id="liquidLayer"><div class="liquid-glass" id="liquidGlass"></div></div>';
   document.body.appendChild(wrap);
   _liqLayer=wrap.querySelector('#liquidLayer');
+  _liqGlass=wrap.querySelector('#liquidGlass');
   _liqLayer.style.display='none';
-  _liqShapeEls=[[],[],[]];
-  var pres=['lqG','lqR','lqH'];
-  for(var i=0;i<3;i++)for(var j=0;j<3;j++)_liqShapeEls[i][j]=wrap.querySelector('#'+pres[i]+j);
 }
-function _liqNav(){return document.getElementById('bottomNav');}
+/* 位移图只在玻璃片尺寸变化时重算（矩形尺寸固定 → 一般只算一次） */
+function _liqRefract(){
+  var im=document.getElementById('lqMap');
+  if(!im||!_liqGlass)return;
+  var key=liq.gw+'x'+liq.gh+'x'+liq.gr;
+  if(key===_liqMapKey)return;
+  _liqMapKey=key;
+  var m=_liqMakeMap(liq.gw,liq.gh,liq.gr);
+  im.setAttribute('href',m.url);
+  try{im.setAttributeNS('http://www.w3.org/1999/xlink','xlink:href',m.url);}catch(_){}
+  im.setAttribute('width',liq.gw);im.setAttribute('height',liq.gh);
+  var dm=document.getElementById('lqDisp');
+  if(dm)dm.setAttribute('scale',m.scale.toFixed(3));
+}
+/* ★R140 边界钳制：必须把「当前拉伸量」算进去 —— 高速拖动时玻璃片被 scale(1+s, 1-s*0.55)
+   横向拉长，若只按未拉伸的半宽钳制，拉到最右时视觉上仍会伸出底栏 ~7px。
+   s 可显式传 0（回弹落点用：那里要的是「未拉伸时的 tab 中心」）。 */
+function _liqClampX(x,s){if(s===undefined)s=liq.s;var h=(liq.gw/2)*(1+s),lo=h,hi=liq.layW-h;if(hi<lo)return liq.layW/2;return x<lo?lo:(x>hi?hi:x);}
+function _liqClampY(y,s){if(s===undefined)s=liq.s;var h=(liq.gh/2)*(1-s*0.55),lo=h,hi=liq.layH-h;if(hi<lo)return liq.layH/2;return y<lo?lo:(y>hi?hi:y);}
 function _liqBind(){
   var nav=_liqNav();
   if(!nav||nav._liqBound)return;
   nav._liqBound=true;
   nav.addEventListener('pointerdown',_liqDown);
-  /* \u957f\u6309\u62d6\u62fd\u540e\u7684 click \u5fc5\u987b\u5403\u6389\uff08\u5426\u5219\u677e\u624b\u53c8\u4f1a\u89e6\u53d1\u4e00\u6b21 tab \u70b9\u51fb\uff09\u2014\u2014 capture \u9636\u6bb5\u62e6\u622a */
+  /* 长按/拖拽后的 click 必须吃掉（否则松手又会触发一次 tab 点击）—— capture 阶段拦截 */
   nav.addEventListener('click',_liqClickGuard,true);
 }
 function _liqDown(e){
@@ -12396,7 +12457,7 @@ function _liqDown(e){
   if(e.pointerType==='mouse'&&e.button!==0)return;
   if(nav.classList.contains('batch-mode'))return;
   if(getComputedStyle(nav).display==='none')return;
-  liq.down=true;liq.armed=false;liq.pid=e.pointerId;
+  liq.down=true;liq.armed=false;liq.pid=e.pointerId;liq.pidType=e.pointerType||'mouse';
   liq.sx=e.clientX;liq.sy=e.clientY;
   window.addEventListener('pointermove',_liqPreMove,true);
   window.addEventListener('pointerup',_liqPreUp,true);
@@ -12405,8 +12466,14 @@ function _liqDown(e){
 }
 function _liqPreMove(e){
   if(!liq.down||liq.armed||e.pointerId!==liq.pid)return;
-  /* \u6309\u4f4f\u540e\u5148\u52a8\u4e86 \u2192 \u4e0d\u662f\u957f\u6309\uff0c\u653e\u5f03\uff08\u907f\u514d\u8bef\u89e6/\u5e72\u6270\u6b63\u5e38\u6ed1\u52a8\uff09 */
-  if(Math.abs(e.clientX-liq.sx)>LIQ_SLOP||Math.abs(e.clientY-liq.sy)>LIQ_SLOP)_liqPreEnd();
+  var dx=Math.abs(e.clientX-liq.sx), dy=Math.abs(e.clientY-liq.sy);
+  if(dx<=LIQ_SLOP&&dy<=LIQ_SLOP)return;
+  /* ★R139 鼠标没有「长按 vs 点击」的歧义：单击 = down-up 零位移、拖动 = down-move-up，
+     用位移就能天然分流，不必等 350ms 定时器。若照触摸那套「一移动就放弃」，
+     鼠标按住拖会永远走放弃分支 → 手感上等于「鼠标完全没效果」。 */
+  if(liq.pidType==='mouse'){clearTimeout(liq.holdTimer);liq.holdTimer=0;_liqArm(liq.sx,liq.sy);return;}
+  /* 触摸：按下后先移动 = 滚动意图 → 放弃（避免误触 / 干扰正常滑动） */
+  _liqPreEnd();
 }
 function _liqPreUp(e){
   if(!liq.down||liq.armed||e.pointerId!==liq.pid)return;
@@ -12429,20 +12496,44 @@ function _liqArm(cx,cy){
   var r=nav.getBoundingClientRect();
   if(r.width<24||r.height<8){liq.armed=false;liq.down=false;liq.pid=null;return;}
   _liqBuild();
-  var pad=16, H=Math.round(r.height+150);
-  _liqLayer.style.left=Math.round(r.left-pad)+'px';
-  _liqLayer.style.width=Math.round(r.width+pad*2)+'px';
-  _liqLayer.style.height=H+'px';
+  document.documentElement.classList.add('liq-grabbing');
+  try{var _sel=window.getSelection();if(_sel&&_sel.removeAllRanges)_sel.removeAllRanges();}catch(_){}
+
+  liq.layW=r.width;liq.layH=r.height;
+  var tabs=_liqTabs(),n=Math.max(1,tabs.length);
+  /* 先找离按下点最近的 tab，同时量出它「图标+文字」的实际占高 */
+  var best=1e9,hc=cx,ch=0;
+  for(var i=0;i<tabs.length;i++){var d=Math.abs(tabs[i].cx-cx);if(d<best){best=d;hc=tabs[i].cx;ch=_liqContentH(tabs[i].el);}}
+  liq.gw=Math.round((r.width/n)*LIQ_GW);
+  liq.gw=Math.max(48,Math.min(liq.gw,Math.round(r.height*2.4),Math.round(r.width-6)));
+  /* ★R140 高度按「内容高 + 上下各一条折射带」反推，而不是写死 nav 高 -18：
+     折射带 = LIQ_BEZEL × min(半宽,半高)，若玻璃只比内容高 2~3px，这条带就会切进文字字形
+     → 被压住的 tab 标签出现「重影」（R140 实测标签底边距玻璃底边仅 0.95px、带却有 4.29px）。
+     解 gh = 内容 / (1 - LIQ_BEZEL) + LIQ_BREATH → 两侧留白略大于带宽，带再也不会切到内容。
+     ⚠️ 量内容高必须在「.lp-hover 的 scale(1.08) 还没挂上」时量（本函数正是先量后 hover），
+     否则量到的是放大后的值（36.4 vs 真实 33.7），gh 会算大一截。 */
+  liq.gh=ch>10?Math.round(ch/(1-LIQ_BEZEL))+LIQ_BREATH:Math.max(28,Math.round(r.height-LIQ_PADY*2));
+  liq.gh=Math.max(28,Math.min(liq.gh,Math.round(r.height-2)));
+  liq.gr=Math.max(8,Math.round(Math.min(liq.gw,liq.gh)*0.32));
+  _liqRefract();
+
+  /* 活动区 = 底栏矩形本身（★R140：从「底栏 +150px」收紧到「只能在底栏内」） */
+  _liqLayer.style.left=Math.round(r.left)+'px';
+  _liqLayer.style.width=Math.round(r.width)+'px';
+  _liqLayer.style.height=Math.round(r.height)+'px';
   _liqLayer.style.top='auto';
   _liqLayer.style.bottom=Math.round(window.innerHeight-r.bottom)+'px';
   _liqLayer.style.display='block';
-  var lr=_liqLayer.getBoundingClientRect();
-  var lx=Math.max(38,Math.min(lr.width-38,cx-lr.left));
-  var ly=Math.max(38,Math.min(lr.height-38,cy-lr.top));
-  liq.px=lx;liq.py=ly;liq.ox=lx;liq.oy=ly;
-  liq.lx=lx;liq.ly=ly;liq.travel=0;liq.ax=0;liq.ay=0;
-  liq.pts=[[lx,ly],[lx,ly],[lx,ly]];
-  liq.s=0;liq.ang=0;liq.g=0.62;liq.o=0;liq.hit=null;liq.mode='drag';liq.last=0;
+  _liqGlass.style.width=liq.gw+'px';
+  _liqGlass.style.height=liq.gh+'px';
+  _liqGlass.style.borderRadius=liq.gr+'px';
+
+  /* 起始位 = 离按下点最近的 tab 中心（「回弹归位」就是回到这个 tab；hc 上面已一并算出） */
+  liq.ox=_liqClampX(hc-r.left);liq.oy=_liqClampY(r.height/2);
+  liq.x=liq.ox;liq.y=liq.oy;
+  liq.px=liq.ox;liq.py=liq.oy;
+  liq.lx=cx-r.left;liq.ly=cy-r.top;liq.travel=0;liq.ax=0;liq.ay=0;
+  liq.s=0;liq.ang=0;liq.o=0;liq.hit=null;liq.mode='drag';liq.last=0;
   liq.on=true;
   try{if(nav.setPointerCapture)nav.setPointerCapture(liq.pid);}catch(_){}
   window.addEventListener('pointermove',_liqMove,true);
@@ -12457,14 +12548,12 @@ function _liqMove(e){
   if(!liq.on||liq.mode!=='drag'||e.pointerId!==liq.pid)return;
   var lr=_liqLayer.getBoundingClientRect();
   var nx=e.clientX-lr.left, ny=e.clientY-lr.top;
-  /* ★拉伸强度改用「指针速度」而不是「leader 与指针的滞后量」：
-     滞后量随刷新率变化（120Hz 每帧位移小 → 形变几乎看不出来，实测峰值 1.065 vs 1.30），
-     而速度是物理量、与刷新率无关 →「速度快就像液体一样流动」才稳定成立。 */
+  /* ★拉伸强度用「指针速度」而不是「跟随者滞后量」：滞后量随刷新率变（R138 实测
+     120Hz 峰值仅 1.065 / 60Hz 1.30），而速度是物理量、与刷新率无关。 */
   liq.travel+=Math.hypot(nx-liq.lx,ny-liq.ly);
   liq.ax+=nx-liq.lx;liq.ay+=ny-liq.ly;
   liq.lx=nx;liq.ly=ny;
-  liq.px=Math.max(38,Math.min(lr.width-38,nx));
-  liq.py=Math.max(38,Math.min(lr.height-38,ny));
+  liq.px=_liqClampX(nx);liq.py=_liqClampY(ny);
   _liqHover(e.clientX,e.clientY);
 }
 function _liqHover(cx,cy){
@@ -12483,7 +12572,7 @@ function _liqUp(e){
   if(tab){
     liq.hit=tab.getAttribute('data-view');
     var lr=_liqLayer.getBoundingClientRect(),tr=tab.getBoundingClientRect();
-    liq.tx=tr.left-lr.left+tr.width/2;liq.ty=tr.top-lr.top+tr.height/2;
+    liq.tx=_liqClampX(tr.left-lr.left+tr.width/2,0);liq.ty=_liqClampY(tr.top-lr.top+tr.height/2,0);
   }else{
     liq.hit=null;liq.tx=liq.ox;liq.ty=liq.oy;
   }
@@ -12498,41 +12587,32 @@ function _liqAng(cur,tgt,k){
   return cur+d*k;
 }
 function _liqPaint(){
-  if(!_liqShapeEls||!_liqLayer)return;
-  var p=liq.pts,g=liq.g,deg=liq.ang*180/Math.PI;
-  var sc=[1,0.9,0.78], sf=[1,0.6,0.3];
-  for(var i=0;i<3;i++){
-    var st=liq.s*sf[i], s=g*sc[i];
-    var tf='translate('+p[i][0].toFixed(2)+' '+p[i][1].toFixed(2)+') rotate('+deg.toFixed(1)+') scale('
-         + (s*(1+st)).toFixed(3)+' '+(s*(1-st*0.72)).toFixed(3)+')';
-    for(var j=0;j<3;j++){var el=_liqShapeEls[j][i];if(el)el.setAttribute('transform',tf);}
-  }
-  _liqLayer.style.setProperty('--lq-o',liq.o.toFixed(3));
-  /* 高光偏左上 → 光源在左上方（符合页面其它高光的惯例） */
-  _liqLayer.style.setProperty('--lq-hx',(p[0][0]-35).toFixed(1)+'px');
-  _liqLayer.style.setProperty('--lq-hy',(p[0][1]-39).toFixed(1)+'px');
+  if(!_liqGlass)return;
+  var tf='translate3d('+(liq.x-liq.gw/2).toFixed(2)+'px,'+(liq.y-liq.gh/2).toFixed(2)+'px,0)';
+  if(liq.s>0.004)tf+=' rotate('+(liq.ang*180/Math.PI).toFixed(1)+'deg) scale('
+    +(1+liq.s).toFixed(4)+','+(1-liq.s*0.55).toFixed(4)+')';
+  _liqGlass.style.transform=tf;
+  _liqGlass.style.opacity=liq.o.toFixed(3);
 }
 function _liqTick(ts){
   if(!liq.on)return;
   var dt=liq.last?Math.min(50,ts-liq.last):16.7;liq.last=ts;
   var k=Math.max(0.25,Math.min(3,dt/16.7));
-  var p=liq.pts,i;
   if(liq.mode==='drag'){
-    /* \u4e09\u4e2a\u56fe\u5f62\u5404\u81ea\u4ee5\u4e0d\u540c\u7cfb\u6570\u8ddf\u624b \u2192 \u901f\u5ea6\u8d8a\u5feb\u62d6\u5c3e\u8d8a\u957f\uff08\u6db2\u4f53\u611f\u7684\u4e3b\u8981\u6765\u6e90\uff09 */
-    for(i=0;i<3;i++){var a=1-Math.pow(1-LIQ_LERP[i],k);p[i][0]+=(liq.px-p[i][0])*a;p[i][1]+=(liq.py-p[i][1])*a;}
-    /* 拉伸强度 = 指针速度（px/16.7ms）→ 与刷新率无关；方向取本帧累计位移的合矢量 */
-    liq.s+=(Math.min(LIQ_MAXS,(liq.travel/Math.max(1,dt)*16.7)/LIQ_SV)-liq.s)*Math.min(1,0.20*k);
+    var a=1-Math.pow(1-0.55,k);
+    liq.x+=(liq.px-liq.x)*a;liq.y+=(liq.py-liq.y)*a;
+    liq.s+=(Math.min(LIQ_MAXS,(liq.travel/Math.max(1,dt)*16.7)/LIQ_SV)-liq.s)*Math.min(1,0.22*k);
     liq.travel=0;
     if(Math.hypot(liq.ax,liq.ay)>1.2)liq.ang=_liqAng(liq.ang,Math.atan2(liq.ay,liq.ax),Math.min(1,0.30*k));
     liq.ax=0;liq.ay=0;
-    liq.g+=((liq.g<1?1.10:1)-liq.g)*Math.min(1,0.32*k); /* \u6d6e\u8d77\u65f6\u5e26\u4e00\u70b9\u5f39\u6027\u8fc7\u51b2 */
+    /* x/y 跟着拉伸量再钳一次：this 帧的 s 可能比上一次 pointermove 钳制时更大 */
+    liq.x=_liqClampX(liq.x);liq.y=_liqClampY(liq.y);
     liq.o+=(1-liq.o)*Math.min(1,0.30*k);
   }else{
-    var a2=Math.min(1,0.28*k);
-    for(i=0;i<3;i++){p[i][0]+=(liq.tx-p[i][0])*a2;p[i][1]+=(liq.ty-p[i][1])*a2;}
+    var a2=Math.min(1,0.26*k);
+    liq.x+=(liq.tx-liq.x)*a2;liq.y+=(liq.ty-liq.y)*a2;
     liq.s+=(0-liq.s)*Math.min(1,0.28*k);
-    liq.g+=(0.6-liq.g)*Math.min(1,0.32*k);
-    liq.o+=(0-liq.o)*Math.min(1,0.26*k);
+    liq.o+=(0-liq.o)*Math.min(1,0.24*k);
     if(liq.o<0.05){_liqPaint();_liqDone();return;}
   }
   _liqPaint();
@@ -12547,7 +12627,9 @@ function _liqDone(){
   window.removeEventListener('pointerup',_liqUp,true);
   window.removeEventListener('pointercancel',_liqUp,true);
   if(liq.hoverTab){liq.hoverTab.classList.remove('lp-hover');liq.hoverTab=null;}
+  if(_liqGlass){_liqGlass.style.opacity='0';_liqGlass.style.transform='translate3d(0,0,0)';}
   if(_liqLayer)_liqLayer.style.display='none';
+  document.documentElement.classList.remove('liq-grabbing');
   var hit=liq.hit;
   liq.on=false;liq.down=false;liq.armed=false;liq.pid=null;liq.last=0;liq.hit=null;
   if(hit&&typeof setView==='function'&&hit!==currentView)setView(hit);
