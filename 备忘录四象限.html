@@ -1706,11 +1706,11 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
 [data-theme="glass"] .nav-tab:hover{background:transparent;color:var(--text);}
 [data-theme="glass"] .nav-tab.active{color:var(--color-primary);}
 /* 毛玻璃主题：选中胶囊 = 液态玻璃透镜 —— 顶部高光渐变 + 更强模糊/饱和 + 玻璃边 + 沉浸光晕
-   ★R143 拖动泡 .liquid-glass 并入同一条规则（同源 → 不可能再走偏）：泡就是「会流动的选中胶囊」，
-   必须跟常态胶囊长得一模一样。此前 .liquid-glass 只吃通用 primary 渐变，glass 主题下
-   常态胶囊是白的、拖动时泡却「变蓝」（用户实测反馈）。并进来后 4 个主题 + glass-text-dark 全自动同源。 */
-[data-theme="glass"] .nav-pill,
-[data-theme="glass"] .liquid-glass{
+   ★R143 常把拖动泡 .liquid-glass 并进过这条规则（同源防「拖动时变蓝」）；
+   ★R146 拆开：泡要单独的「液态玻璃皮」（见 .liquid-glass 定义处）——半透明底 + 折射光环 +
+   双侧色散 + 动态镜面高光，比这颗静态胶囊更透更亮。色系仍同源（glass 主题下泡也是白玻璃，
+   见下方 [data-theme="glass"] .liquid-glass 那条），所以不会重现「拖起来换了个颜色」。 */
+[data-theme="glass"] .nav-pill{
   border-radius:22px;
   background:
     radial-gradient(130% 150% at 50% -32%, rgba(255,255,255,.80) 0%, rgba(255,255,255,.30) 46%, rgba(255,255,255,.08) 100%),
@@ -1727,9 +1727,8 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
     0 8px 22px rgba(31,38,135,.20),
     0 0 20px color-mix(in srgb, var(--color-primary) 34%, transparent);
 }
-/* 掠过玻璃表面的镜面高光，营造「液态」折射感（泡与胶囊共用，交接时零观感跳变） */
-[data-theme="glass"] .nav-pill::after,
-[data-theme="glass"] .liquid-glass::after{
+/* 掠过玻璃表面的镜面高光（常态胶囊用；★R146 拖动泡改用「跟手动态高光」，见 .liquid-glass::after） */
+[data-theme="glass"] .nav-pill::after{
   content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   background:linear-gradient(112deg, transparent 26%, rgba(255,255,255,.42) 44%, rgba(255,255,255,.06) 56%, transparent 70%);
   mix-blend-mode:screen;
@@ -2580,23 +2579,76 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    → 泡只在图标/文字「后面」流动，绝不盖住内容（用户：泡不该盖住导航栏的图标文字）。
    泡身后是 nav 的不透明 card-bg 底 → 边缘折射挤弯的是 nav 底色，图标不经过滤镜 */
 .liquid-layer{position:absolute;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;}
-/* ★R142 泡 = 「会流动的选中胶囊」：与 .nav-pill 同款 primary 渐变（用户定稿：保留原来的背景
-   效果 + 拖动的液体效果即可，不必透明玻璃）。边缘保留透镜折射的液态感（@supports url）。
-   ★R143 毛玻璃主题下由 [data-theme="glass"] 那条规则把本行全部覆盖成「与常态胶囊同款的白色玻璃」
-   （两处选择器已并在一起，见样式区 1703 行附近）——4 个主题里「泡」和「选中胶囊」永远同一张皮。 */
+/* ===== ★R146 「液态玻璃」拖动泡的皮 =====
+   用户：「拖动时加一个液体玻璃的效果，现在感觉没有什么质感」。
+   ★先搞清楚「为什么之前没质感」——旧皮是**不透明**的 primary 渐变
+     （color-mix(primary 20%, var(--card-bg))，card-bg 在 light/dark/green 主题下是 #fff / #1a1a2e /
+     #f3faf3 这种**纯不透明色**）：
+       ① backdrop-filter 里的 url(#lqRefract) 虽然真的生效了，但泡身后就是 nav 的一层纯色底
+          → 位移图挤的是「一片纯色」，挤完还是那片纯色 → **折射完全无从表现**；
+       ② blur/饱和同理，纯色糊了还是纯色；
+       ③ 表面只有一条 1px 顶光 + 一个柔投影 → 看上去就是「一块彩色塑料片」，不是玻璃。
+   ★所以质感必须**自绘**（不依赖 backdrop 能看到什么），四层叠出来：
+       ① 半透明主色 tint（★用 transparent 而不是 card-bg）：透出底栏底色 + 底栏边线，
+          这一层是「玻璃」与「实心色块」的分界 —— 能透，才叫玻璃；
+       ② 顶部弧形高光 + 乳白散射：光从上打下来 → 上半透亮、下半沉，玻璃的「厚」；
+       ③ 边缘折射光环（inset 内发光）+ 左右缘冷暖色散细边：沿轮廓一圈亮、中心通透 —— 折射体的观感；
+       ④ 外投影 + 主色辉光：浮起 + 沉浸发光。
+     再叠一层 ::after 的**跟手动态镜面高光**（见下），「液态」才成立。
+   ★glass 主题下底色是半透明玻璃（--glass-tint）→ ①②③ 之外还能让 ② 的真折射真正折射到页面内容，
+     所以那条 @supports 保留（其余主题它只是提亮底色，无害）。 */
 .liquid-glass{position:absolute;left:0;top:0;box-sizing:border-box;border-radius:14px;opacity:0;
-  will-change:transform,opacity;
-  background:linear-gradient(180deg,
-    color-mix(in srgb, var(--color-primary,#6366f1) 20%, var(--card-bg)) 0%,
-    color-mix(in srgb, var(--color-primary,#6366f1) 11%, var(--card-bg)) 100%);
-  border:1px solid color-mix(in srgb, var(--color-primary,#6366f1) 24%, transparent);
+  will-change:transform,opacity;isolation:isolate;   /* ★isolation：让 ::after 的 screen 混合只作用于泡自身（不外溢到底栏底色） */
+  background:
+    /* 弧顶高光收在上缘 1/3（铺满上半部会把主色冲成"一块白"，实测浅色主题下尤其明显） */
+    radial-gradient(128% 122% at 50% -34%, rgba(255,255,255,.50) 0%, rgba(255,255,255,.11) 42%, rgba(255,255,255,0) 68%),
+    linear-gradient(180deg, rgba(255,255,255,.11) 0%, rgba(255,255,255,.02) 100%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--color-primary,#6366f1) 38%, transparent) 0%,
+      color-mix(in srgb, var(--color-primary,#6366f1) 18%, transparent) 100%);
+  border:1px solid rgba(255,255,255,.44);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.55),
-    inset 0 -1px 0 color-mix(in srgb, var(--color-primary,#6366f1) 10%, transparent),
-    0 6px 18px color-mix(in srgb, var(--color-primary,#6366f1) 22%, transparent);}
+    inset 0 1px 1px rgba(255,255,255,.95),                              /* 顶缘亮线：玻璃最厚处的高光 */
+    inset 0 -1.5px 2px rgba(255,255,255,.38),                           /* 底缘回光：下缘的反射 */
+    inset 0 0 13px rgba(255,255,255,.26),                               /* 内发光：边缘一圈亮、中心通透 = 折射体 */
+    inset 2px 0 7px -2px color-mix(in srgb,#7dd3fc 55%,transparent),    /* 左缘冷色散（青） */
+    inset -2px 0 7px -2px color-mix(in srgb,#f0abfc 45%,transparent),   /* 右缘暖色散（品红） */
+    0 8px 20px rgba(31,38,135,.22),                                     /* 外投影：浮起 */
+    0 2px 5px rgba(31,38,135,.10),
+    0 0 22px color-mix(in srgb, var(--color-primary,#6366f1) 32%, transparent);}
+/* ★R146 表面的跟手镜面高光 = 「液态」的核心：
+   位置/形状/强度由 JS 每帧写 CSS 变量（--lq-hx 位置X / --lq-hy 位置Y / --lq-hs 扁长 / --lq-hi 强度）——
+   泡被拖着走时液体被甩向「来向」一侧、光在液面隆起处聚集；拖得越快反光越亮、光斑被拉得越扁长。
+   ★mix-blend-mode:screen 只提亮不压暗，浅色/深色主题都不会把泡弄脏（配 isolation 限制混合范围）。 */
+.liquid-glass::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(calc(38px * var(--lq-hs,1)) calc(26px / var(--lq-hs,1)) at var(--lq-hx,34%) var(--lq-hy,27%),
+    rgba(255,255,255,var(--lq-hi,.56)) 0%, rgba(255,255,255,.11) 50%, rgba(255,255,255,0) 74%);
+  mix-blend-mode:screen;}
+/* ★R146 glass 主题的泡 = 「白玻璃」（与常态胶囊同色系，不重现 R143 的「拖动时变蓝」）：
+   去掉主色 tint，换成纯白玻璃 + 白色边缘光；色散边保留（白玻璃的边缘色散最显「真玻璃」）。 */
+[data-theme="glass"] .liquid-glass{
+  background:
+    radial-gradient(128% 122% at 50% -34%, rgba(255,255,255,.78) 0%, rgba(255,255,255,.22) 44%, rgba(255,255,255,.03) 70%),
+    linear-gradient(180deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.17) 100%);
+  border-color:rgba(255,255,255,.80);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,1),
+    inset 0 -1.5px 2px rgba(255,255,255,.50),
+    inset 0 0 14px rgba(255,255,255,.36),
+    inset 2px 0 7px -2px color-mix(in srgb,#7dd3fc 54%,transparent),
+    inset -2px 0 7px -2px color-mix(in srgb,#f0abfc 46%,transparent),
+    /* ★glass 主题的底栏本身就是「半透明白玻璃」→ 白泡叠白底容易糊在一起：
+       外圈再补一道白描边 + 加深投影，把「浮起的那一片」从底栏上拎出来 */
+    0 0 0 1px rgba(255,255,255,.55),
+    0 9px 24px rgba(31,38,135,.26),
+    0 2px 6px rgba(31,38,135,.12),
+    0 0 20px rgba(255,255,255,.34);}
+/* ★R140/R146 真透镜折射：glass 主题（底栏为半透明玻璃）下能真正折射到页面内容；
+   light/dark/green 主题底栏是不透明纯色 → 它只剩「提亮/饱和底色」的作用（无害，也不白屏）。
+   降级同样安全：Safari/Firefox 不支持 backdrop-filter:url() → @supports 不命中 → 上面的自绘皮照常成立。 */
 @supports (backdrop-filter:url(#lqRefract)) or (-webkit-backdrop-filter:url(#lqRefract)){
-  .liquid-glass{-webkit-backdrop-filter:url(#lqRefract) saturate(180%);
-                backdrop-filter:url(#lqRefract) saturate(180%);}
+  .liquid-glass{-webkit-backdrop-filter:url(#lqRefract) saturate(180%) brightness(1.06);
+                backdrop-filter:url(#lqRefract) saturate(180%) brightness(1.06);}
 }
 /* ★R139 鼠标拖动玻璃期间：整页禁选中文字 + 抓手光标（否则按住拖会顺手把 tab 文字刷蓝） */
 html.liq-grabbing,html.liq-grabbing *{-webkit-user-select:none!important;user-select:none!important;cursor:grabbing!important;}
@@ -12456,6 +12508,9 @@ var liq={down:false,on:false,armed:false,pid:null,pidType:'mouse',raf:0,last:0,h
          cacheTabs:null,
          sx:0,sy:0,px:0,py:0,ox:0,oy:0,tx:0,ty:0,hit:null,noClick:0,hoverTab:null,
          lx:0,ly:0,travel:0,lastR:-1,
+         /* ★R146 跟手镜面高光的状态：pX=泡上一帧 x（判运动方向）/ hxd=液面隆起方向(-1..1,平滑值) /
+            lqHx/lqHs/lqHi = 上次写进 CSS 的量化值（去重，少写 style = 少一次样式重算） */
+         pX:0,hxd:0,lqHx:-1,lqHs:-1,lqHi:-1,
          x:0,y:0,s:0,o:0,gw:0,gh:0,gr:14,layW:0,layH:0};
 var _liqLayer=null, _liqGlass=null, _liqMapKey='';
 
@@ -12673,6 +12728,9 @@ function _liqArm(cx,cy){
   liq.px=liq.ox;liq.py=liq.oy;
   liq.lx=cx-r.left;liq.ly=cy-r.top;liq.travel=0;
   liq.s=0;liq.o=0;liq.hit=null;liq.mode='drag';liq.last=0;
+  /* ★R146 本轮拖动的镜面高光从「静止态」起步（清掉上一次拖动的残值，否则新一次浮起时
+     高光会从上一轮的方向偏位直接开始 → 闪一下） */
+  liq.pX=liq.ox;liq.hxd=0;liq.lqHx=-1;liq.lqHs=-1;liq.lqHi=-1;
   liq.on=true;
   try{if(nav.setPointerCapture)nav.setPointerCapture(liq.pid);}catch(_){}
   window.addEventListener('pointermove',_liqMove,true);
@@ -12766,6 +12824,18 @@ function _liqPaint(){
   if(liq.s>0.004)tf+=' scale('+(1+liq.s).toFixed(4)+','+(1-liq.s*0.55).toFixed(4)+')';
   _liqGlass.style.transform=tf;
   _liqGlass.style.opacity=liq.o.toFixed(3);
+  /* ★R146 跟手镜面高光（.liquid-glass::after 的三个 CSS 变量）—— 全部随「拖动实况」实时变：
+     位置 hx：基准偏左上（光源方向 34%/27%）+ 液面隆起侧偏移（hxd：液体被甩向「来向」一侧，
+              光就聚集到那一侧边缘）→ 泡横滑时高光沿液面「流」过去
+     扁长 hs：随拉伸量 s（横向拉伸时液面被拉平，反光斑跟着拉长/压扁）
+     强度 hi：随速度变亮（静静浮着的玻璃只有微弱反光，甩起来「刷」地亮起一道）
+     ★三个值都量化去重后再写：一次 style 写入 = 一次样式重算，60fps 下能省则省。 */
+  var hxq=Math.round((34+liq.hxd*26)/2)*2;
+  var hsq=Math.round((1+liq.s*2.6)*10)/10;
+  var hiq=Math.round((0.44+Math.min(1,liq.s/LIQ_MAXS)*0.38)*20)/20;
+  if(hxq!==liq.lqHx){liq.lqHx=hxq;_liqGlass.style.setProperty('--lq-hx',hxq+'%');}
+  if(hsq!==liq.lqHs){liq.lqHs=hsq;_liqGlass.style.setProperty('--lq-hs',hsq.toFixed(2));}
+  if(hiq!==liq.lqHi){liq.lqHi=hiq;_liqGlass.style.setProperty('--lq-hi',hiq.toFixed(2));}
   /* ★R142 圆角随速度变：拖得越快 s 越大 → 圆角向「全圆椭圆」逼近；
      ★R143 改为 sqrt 提前段 + 到点吃满（用户要「速度快时是椭圆」）：s⇒LIQ_RFULL 即 100% 全圆，
      之后 border-radius = min(gw,gh)/2（两端正圆）+ 横向拉伸 = 椭圆状；慢/静止回到基础圆角。
@@ -12787,6 +12857,12 @@ function _liqTick(ts){
     liq.travel=0;
     /* x/y 跟着拉伸量再钳一次：this 帧的 s 可能比上一次 pointermove 钳制时更大 */
     liq.x=_liqClampX(liq.x);liq.y=_liqClampY(liq.y);
+    /* ★R146 运动方向 → 液面隆起侧（驱动 ::after 的镜面高光）：用「泡位置」的帧间位移判定，
+       不依赖 pointermove 的触发频率；反向时靠 lerp 平滑 → 左右来回甩时高光像液体一样晃荡。
+       死区 0.4px 是必要的：钳在栏端点时 x 已经不动了，若还按亚像素抖动判方向，高光会左右乱颤。 */
+    var vx=liq.x-liq.pX;liq.pX=liq.x;
+    var want=(vx>0.4)?-1:((vx<-0.4)?1:0);
+    liq.hxd+=(want-liq.hxd)*Math.min(1,0.14*k);
     liq.o+=(1-liq.o)*Math.min(1,0.30*k);
   }else{
     /* ★R144 收敛略快（0.26 → 0.32）：旧值下 45px 的「归位」要 ~180ms 才落进 1.5px 内、尾巴拖得长，
@@ -12794,6 +12870,8 @@ function _liqTick(ts){
     var a2=Math.min(1,0.32*k);
     liq.x+=(liq.tx-liq.x)*a2;liq.y+=(liq.ty-liq.y)*a2;
     liq.s+=(0-liq.s)*Math.min(1,0.28*k);
+    /* ★R146 松手/归位期：液面静止下来 → 镜面高光平滑归回基准位（不再跟着回弹方向晃） */
+    liq.pX=liq.x;liq.hxd+=(0-liq.hxd)*Math.min(1,0.20*k);
     if(liq.mode==='settle'&&Math.abs(liq.tx-liq.x)<1.5&&Math.abs(liq.ty-liq.y)<1.5&&liq.s<0.015){
       /* ★R142 到位 → 摘 liq-drag 让真 pill 淡入，玻璃泡同步淡出交接（「选中的背景块」永远都在）
          ★R144 摘类前先把胶囊「摆正」：此刻 liq-drag 还在 → .nav-pill 是 transition:none → 瞬移到位，
@@ -12827,6 +12905,7 @@ function _liqDone(){
   /* ★R142 兜底：任何收场路径都要把「选中胶囊」还回来（正常交接在 _liqTick fade 转换处） */
   if(nav)nav.classList.remove('liq-drag');
   liq.on=false;liq.down=false;liq.armed=false;liq.pid=null;liq.last=0;liq.hit=null;liq.cacheTabs=null;
+  liq.hxd=0;liq.lqHx=-1;liq.lqHs=-1;liq.lqHi=-1;   /* ★R146 镜面高光状态一并清干净 */
 }
 function _liqClickGuard(e){
   if(Date.now()<liq.noClick){e.stopPropagation();e.preventDefault();}
