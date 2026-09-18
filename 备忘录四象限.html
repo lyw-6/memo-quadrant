@@ -2429,7 +2429,23 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-sub{color:#fff;}
 .app-sub{font-size:12px;font-weight:400;color:var(--text-tertiary);letter-spacing:0;}
 
 /* ===== 底部导航栏（图标 + 文字）===== */
-.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 10px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;overflow-x:hidden;/* ★R60: auto 会在切 tab 时被 nav-pill 滑动动画的 transform 外框撑出瞬时横向滚动条(闪条)，导航本不需横滚，直接裁掉 */-webkit-overflow-scrolling:touch;-webkit-tap-highlight-color:transparent;
+.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+  /* ★R151③ 底栏离屏距 10px → **22px**：泡要「大团」就必须向下溢出栏外，而泡中心恒在栏中线 →
+     旧值下「栏中线 → 视口底」只有 39.5px，泡高上限 = 79px（泡底几乎贴屏幕底、宽高比 2.0 仍偏扁）。
+     ★参考图实测：栏底距屏幕底 ≈21px（原始 63px / 3x）、泡底距屏幕底还有 14px —— 10px 本来就比参考更贴底，
+     所以这次上移既给泡腾出空间、也更贴参考。★同步点：`syncFloatingBars()` 里硬编码的 `gap=10` 必须一起改
+     （batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
+  /* ★R151③ 泡要「大团」= 上下溢出导航栏（参考图泡高 ≈1.20×栏高、以栏中线为中心对称溢出）→
+     底栏必须【纵向不裁、且不产生滚动条】。★这对组合必须是 clip 而不是 hidden：
+       overflow-x:hidden + overflow-y:visible **不是合法组合** —— 规范会把 visible 算成 auto
+       → 泡一超高就在底栏里冒出纵向滚动条（R142 实测过：拖动结束摘掉 liq-drag 的瞬间
+        overflow 从 visible 切回 auto，滚动条会闪一下，所以当时才把泡高钳在栏内）。
+       overflow:**clip** 则永不产生滚动条，且 clip 与 visible 是**合法组合**（实测 computed
+       仍是 clip/visible，泡上下溢出正常可见、滚动条零出现 —— 见 _r151_clip 探针）。
+     ★R60 的诉求（防 nav-pill 滑动动画的 transform 外框撑出横向滚动条）由 clip 一并满足，
+       clip 比 hidden 更彻底。overflow-clip-margin 只是横向留一点余量，避免圆角处切到描边。 */
+  overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;
+  -webkit-overflow-scrolling:touch;-webkit-tap-highlight-color:transparent;
   /* ★R145 触摸端「拖不动」的真凶：底栏此前没写 touch-action → 计算值是 auto（body 的 manipulation 允许 pan）
      → 手指在底栏上一移动就被浏览器判成「页面滚动」并派发 pointercancel，pointer 流当场中断。
      实测（CDP 真实触摸）：长按 500ms 泡已浮起（liq-drag=true/opacity .98），一横移立刻 pointercancel@1442
@@ -2602,7 +2618,15 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
   transform-origin:0 0;will-change:transform;
   z-index:auto!important;opacity:1!important;box-shadow:none!important;filter:none!important;
   overflow:visible!important;transition:none!important;animation:none!important;
-  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  /* ★R151② 副本必须**去掉卡片底**（只留内容：图标 / 文字）——
+     ★为什么：底栏是 `background:var(--card-bg)` 的**不透明白卡**，克隆体自带这张白卡。
+       而折射管线的染色掩码是「贴缘一圈」，白卡落进掩码区就被整片染成粉白 ——
+       实测泡里出现一大块粉色圆角矩形（就是这张白卡）。参考图里泡缘彩带只出现在
+       **图标内容**上（白底栏那一圈干干净净），所以副本里必须没有底。
+     ★副作用为零：泡本身半透明，泡下的**真实**底栏仍在，透过泡看得见它的白底 → 不会「缺一块底」。 */
+  background:transparent!important;border-color:transparent!important;
+  background-image:none!important;}
 /* ===== ★R146 「液态玻璃」拖动泡的皮 =====
    用户：「拖动时加一个液体玻璃的效果，现在感觉没有什么质感」。
    ★为什么旧皮没质感（R146 结论）——旧皮是**不透明**的 primary 渐变
@@ -2630,7 +2654,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      ③ 补厚度剖面：顶缘极亮 → 中段通透 → 底缘回光的垂直梯度 + 一圈硬细亮环（Edge），
         替换原先 13px 宽的 inset 软发光（那正是「发毛发软、缺硬度」的来源）。
      另：删掉主色辉光（0 0 22px primary 32%）—— 发光 ≠ 玻璃，iOS 的投影是中性灰蓝。 */
-  border:1px solid rgba(255,255,255,.62);
+  /* ★R151① 泡缘 = 「中性暗描边」而不是白描边 —— 参考图长按态实测泡缘最暗 #d2d2d2（栏底 #f9f9f9），
+     是一条**比周围暗 ~15% 的细灰线**（上下缘 #e2e2e3 略浅）。旧值 rgba(255,255,255,.62) 在浅色底栏
+     （#fff / #f3faf3）上直接隐身 → 用户看到的是「没有边界的一团雾」。
+     ★用 var(--text) 调色而不是写死灰：light/green 的 text 是深色 → 深灰描边；dark 的 text 是浅色
+       → 自动变浅描边（深底栏上的玻璃必须靠亮边立形）→ 一套规则跨 4 主题自洽。 */
+  border:1px solid color-mix(in srgb, var(--text,#1f2937) 14%, transparent);
   box-shadow:
     0 7px 18px rgba(31,38,135,.20),                                     /* 外投影：浮起（中性灰蓝，非彩色辉光） */
     0 1px 3px rgba(31,38,135,.10);}
@@ -2642,16 +2671,28 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.30) 3.5%, rgba(255,255,255,.05) 13%, rgba(255,255,255,0) 30%),
     radial-gradient(88% 64% at 50% 0%, rgba(255,255,255,.30) 0%, rgba(255,255,255,.07) 52%, rgba(255,255,255,0) 100%),
     linear-gradient(0deg, rgba(255,255,255,.26) 0%, rgba(255,255,255,.06) 8%, rgba(255,255,255,0) 22%),
+    /* ★R151① 泡体去色：参考图长按态泡体实测 #f1f1f1，而底栏 #f9f9f9 → 玻璃自身只贡献约 4% 的
+       **中性**明暗，颜色全部来自身后内容。旧值 color-mix(primary 9%) 在浅色主题下出「薰衣草紫」
+       = 用户一眼否掉的主因（他说「不是紫色的塑料片」）。
+       ★用 var(--text) 而不是写死深灰：light/green 的 text 是深色 → 泡比底栏暗一档（与参考一致）；
+         dark 的 text 是浅色 → 泡比底栏亮一档（深底栏上的玻璃必须比底色亮，否则「隐身」）。 */
     linear-gradient(180deg,
-      color-mix(in srgb, var(--color-primary,#6366f1) 9%, transparent) 0%,
-      color-mix(in srgb, var(--color-primary,#6366f1) 4%, transparent) 100%);
+      color-mix(in srgb, var(--text,#1f2937) 5.5%, transparent) 0%,
+      color-mix(in srgb, var(--text,#1f2937) 3.5%, transparent) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.98),                                /* 顶缘最亮的一条硬线（specular） */
-    inset 0 0 0 1px rgba(255,255,255,.22),                              /* 整圈细亮环 = 玻璃的 Edge */
-    inset 0 -1px 0 rgba(255,255,255,.34),                               /* 底缘回光（厚度剖面暗端） */
-    inset 2px 0 5px -3px color-mix(in srgb,#7dd3fc 62%,transparent),    /* 左缘冷色散（青） */
-    inset -2px 0 5px -3px color-mix(in srgb,#f0abfc 52%,transparent),   /* 右缘暖色散（品红） */
-    0 0 0 1px rgba(255,255,255,.18);}
+    inset 0 1px 0 rgba(255,255,255,.92),                                /* 顶缘最亮的一条硬线（specular） */
+    inset 0 0 0 1px rgba(255,255,255,.20),                              /* 整圈细亮环 = 玻璃内壁反光 */
+    inset 0 -1px 0 rgba(255,255,255,.30),                               /* 底缘回光（厚度剖面暗端） */
+    /* ★R151① 边缘「厚度弧带」：参考图泡缘内侧有一条 ~20px 宽的中性灰弧（左缘 #dddddd / 右缘 #d2d2d2，
+       比泡体再暗 6~10%），那是真玻璃把身后背景「压弯」后的暗带。
+       ★我们没有 backdrop 折射（R148 已证伪）→ 用一圈「贴边向内渐隐的中性 inset 阴影」代替：
+         形状自动跟随 border-radius，近缘最深、中心归零 —— 泡中心必须通透（R147 铁律），
+         所以只在最外圈 26px 内出现，且带负 spread 把内边界收干净。
+       ★**这里不放彩色**：参考图「长按态」实测饱和度 0~3%（完全没有虹彩）→ 色散只该在拖动时出现，
+         由 R150/R151② 的 filter 管线给。旧的青/品红静态色散边（#7dd3fc / #f0abfc）已删除。 */
+    inset 0 0 26px -8px color-mix(in srgb, var(--text,#1f2937) 17%, transparent),
+    inset 0 0 6px -2px color-mix(in srgb, var(--text,#1f2937) 9%, transparent),
+    0 0 0 1px rgba(255,255,255,.14);}
 /* ★R146 表面的跟手镜面高光 = 「液态」的核心：
    位置/形状/强度由 JS 每帧写 CSS 变量（--lq-hx 位置X / --lq-hy 位置Y / --lq-hs 扁长 / --lq-hi 强度）——
    泡被拖着走时液体被甩向「来向」一侧、光在液面隆起处聚集；拖得越快反光越亮、光斑被拉得越扁长。
@@ -2669,42 +2710,52 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     linear-gradient(180deg, rgba(255,255,255,.88) 0%, rgba(255,255,255,.28) 3.5%, rgba(255,255,255,.05) 13%, rgba(255,255,255,0) 30%),
     radial-gradient(88% 64% at 50% 0%, rgba(255,255,255,.32) 0%, rgba(255,255,255,.08) 52%, rgba(255,255,255,0) 100%),
     linear-gradient(0deg, rgba(255,255,255,.24) 0%, rgba(255,255,255,.05) 8%, rgba(255,255,255,0) 22%),
-    linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.04) 100%);
+    /* ★R151① 白玻璃也要「去色」：原来这层是纯白 12%/4%，白泡叠白底栏（glass 主题底栏本身就是半透明白）
+       → 泡体跟底栏同色、只剩描边能看。改成「中性深色 + 一点白」→ 泡比底栏略暗或略亮，
+       形体靠中性描边 + 厚度弧带立住，颜色仍旧由身后内容提供。 */
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--text,#1f2937) 4.5%, transparent) 0%,
+      color-mix(in srgb, var(--text,#1f2937) 2.5%, transparent) 100%),
+    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 100%);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,1),
     inset 0 0 0 1px rgba(255,255,255,.30),
     inset 0 -1px 0 rgba(255,255,255,.44),
-    inset 2px 0 5px -3px color-mix(in srgb,#7dd3fc 60%,transparent),
-    inset -2px 0 5px -3px color-mix(in srgb,#f0abfc 50%,transparent),
+    inset 0 0 26px -8px color-mix(in srgb, var(--text,#1f2937) 15%, transparent),
+    inset 0 0 6px -2px color-mix(in srgb, var(--text,#1f2937) 8%, transparent),
     0 0 0 1px rgba(255,255,255,.62);}
 [data-theme="glass"] .liquid-glass{
-  border-color:rgba(255,255,255,.86);
-  /* ★glass 主题的底栏本身就是「半透明白玻璃」→ 白泡叠白底容易糊在一起：
-     外圈再补一道白描边 + 加深投影，把「浮起的那一片」从底栏上拎出来 */
-  box-shadow:0 0 0 1px rgba(255,255,255,.62),0 8px 20px rgba(31,38,135,.24),0 1px 4px rgba(31,38,135,.12);}
-/* ★R147 浅底栏护栏（light / green）：这两套主题的底栏接近白色（#fff / #f3faf3）→
-   「白描边 + 白高光」在它上面直接隐身，而底色已脱到 9% 主色 → 泡会淡到看不见形体。
-   修法 = 把 tint 提回 16%/8% + 把 Edge 细环加浓到 26% + 底缘补一道冷色暗线：
-   仍旧是玻璃（远处看是通透的一层雾），但近看边界立得住。
-   ★关键：靠「Edge 环」而不是「加深主色」来立形体 —— 后者会重新变回 R147 正要修掉的「蓝色塑料片」。 */
+  /* ★glass 主题的底栏本身就是「半透明白玻璃」→ 白泡叠白底容易糊在一起，
+     原本靠「白描边 + 白外圈」把它拎出来。★R151① 改中性：白边在白玻璃底栏上本就很难看清，
+     而中性描边（跟 text 走）在亮底栏上永远是「暗一档」→ 边界确定性更好。 */
+  border-color:color-mix(in srgb, var(--text,#1f2937) 15%, transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--text,#1f2937) 9%, transparent),0 8px 20px rgba(31,38,135,.24),0 1px 4px rgba(31,38,135,.12);}
+/* ★R147 浅底栏护栏（light / green）→ **★R151① 口径更新：把「主色 tint」整个换成「中性色」**。
+   R147 当时的处境是「白描边在白底栏上隐身」→ 它的修法是「把主色 tint 提回 16%/8% 立形体」。
+   但参考图证明这条路走错了：真玻璃**自身无色**（泡体只比底栏暗 4%），形体是靠
+   「中性暗描边 + 边缘厚度弧带」立起来的 —— 提高主色 tint 只会让它变回「彩色塑料片」。
+   现在：tint 改中性（比底栏暗/亮一档）+ 描边与弧带都走 var(--text)（浅色主题自动得到深灰）。
+   ★唯一保留 R147 的判断：浅底栏上确实需要**更浓一点**的中性边界（16% vs 基础 14%）。 */
 [data-theme="light"] .liquid-sheen,
 [data-theme="green"] .liquid-sheen{
   background:
     linear-gradient(180deg, rgba(255,255,255,.94) 0%, rgba(255,255,255,.34) 3.5%, rgba(255,255,255,.06) 13%, rgba(255,255,255,0) 30%),
     radial-gradient(88% 64% at 50% 0%, rgba(255,255,255,.30) 0%, rgba(255,255,255,.07) 52%, rgba(255,255,255,0) 100%),
     linear-gradient(0deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 8%, rgba(255,255,255,0) 22%),
+    /* 白底栏上给到 6%/4% 中性深色 → 泡体 ≈ #f2f2f2（参考实测 #f1f1f1，栏 #f9f9f9） */
     linear-gradient(180deg,
-      color-mix(in srgb, var(--color-primary,#6366f1) 16%, transparent) 0%,
-      color-mix(in srgb, var(--color-primary,#6366f1) 8%, transparent) 100%);
+      color-mix(in srgb, var(--text,#1f2937) 6%, transparent) 0%,
+      color-mix(in srgb, var(--text,#1f2937) 4%, transparent) 100%);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,1),
-    inset 0 0 0 1px color-mix(in srgb, var(--color-primary,#6366f1) 26%, transparent),
-    inset 0 -1.5px 1px -0.5px color-mix(in srgb, #1f2687 20%, transparent),
-    inset 2px 0 5px -3px color-mix(in srgb,#7dd3fc 62%,transparent),
-    inset -2px 0 5px -3px color-mix(in srgb,#f0abfc 52%,transparent);}
+    inset 0 0 0 1px color-mix(in srgb, var(--text,#1f2937) 16%, transparent),
+    inset 0 -1.5px 1px -0.5px color-mix(in srgb, var(--text,#1f2937) 12%, transparent),
+    inset 0 0 26px -8px color-mix(in srgb, var(--text,#1f2937) 19%, transparent),
+    inset 0 0 6px -2px color-mix(in srgb, var(--text,#1f2937) 10%, transparent);}
 [data-theme="light"] .liquid-glass,
 [data-theme="green"] .liquid-glass{
-  border-color:rgba(255,255,255,.78);
+  /* ★R151① 白描边 → 中性暗描边（白底栏上白边等于没有边界） */
+  border-color:color-mix(in srgb, var(--text,#1f2937) 17%, transparent);
   box-shadow:0 8px 20px rgba(31,38,135,.20),0 2px 4px rgba(31,38,135,.12);}
 /* ★R148 删掉「真透镜折射」的整条管线（@supports backdrop-filter:url(#lqRefract) + feImage 位移图）：
    实测 backdrop-filter **不加载 feImage**（见上方 R148 三层结论）→ 那个滤镜在本项目里从未真正折射过。
@@ -2969,7 +3020,11 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
    本块置于样式表最末尾，级联必胜；断点提高到 560 覆盖 iQOO 等视口 480~560 的手机。 */
 @media (max-width:560px){
   /* 底部导航：与宽屏完全一致——常规高度、22px 图标、文字显示(覆盖 560/480 块的缩字/藏字) */
-  .bottom-nav{padding:6px 8px;gap:2px;overflow-x:hidden;width:calc(100% - 12px);}
+  /* ★R151③ overflow-x 必须与基础规则同源用 **clip**（这里原本写的是 hidden）：
+     本块在样式表最末尾、级联必胜 → 若留 hidden，手机端（≤560px）的底栏又会变回
+     「hidden + visible-y → visible-y 被算成 auto」→ 泡一溢出栏外就冒纵向滚动条。
+     clip 与 visible 是合法组合、永不产生滚动条，见基础 .bottom-nav 处的完整说明。 */
+  .bottom-nav{padding:6px 8px;gap:2px;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 12px);}
   .nav-tab{flex:1 1 0%;min-width:0;padding:6px 2px 4px;gap:2px;}
   .nav-tab svg{width:22px;height:22px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:10px;transform:scale(0.88);transform-origin:center top;line-height:1.1;}
@@ -12558,6 +12613,22 @@ var LIQ_MAXS=0.34, LIQ_SV=50;      /* 拉伸强度上限 / 速度标定(px per 1
    LIQ_S_SETTLE = 松手后形变收敛速率（0.14）：泡先滑到位、形变再慢慢摊平 = 一滴水被放下。 */
 var LIQ_FOLLOW=0.72, LIQ_S_UP=0.26, LIQ_S_DN=0.10, LIQ_S_SETTLE=0.14;
 var LIQ_GW=1.10;                    /* 泡宽 = tab 宽 × 此值（★R142 用户：拖动块要比选中背景「更大」→ 1.10 倍 tab 宽） */
+/* ★R151③ 「大团」：参考图长按态泡实测 ≈ 318×219 像素、栏高 182 →
+     泡高 ≈1.20×栏高、泡宽 ≈1.44×tab 间距，且以**栏中线为中心**上下对称溢出栏外各 ≈18px（≈10% 栏高）。
+   ★本 App 的底栏是「矮而宽」（栏高 59 / tab 宽 139；参考图 61 / 74）→ 两个比例不可能同时满足：
+     ① 泡宽的真实约束是 _gmax（端部 tab 中心必须落在 clamp 可覆盖范围内，R143 踩过「端部吸附偏了」）
+        = 2×(padding + tab/2) - 2 = 153 → 已取满（1.10×tab 宽），不可能再追参考的 1.44×间距；
+     ② 泡高若照搬「1.20×栏高」只有 71px（泡宽 153 → 宽高比 2.15，比现在还扁）→ 所以改成
+        「泡宽 × LIQ_GHK」求「大团」形状，再用「视口底」兜住：泡中心在栏中线，而栏底距视口底仅 10px
+        → 泡高一旦超过 2×45.5 就会把下缘裁在屏幕外（参考图泡底距屏幕底还有 43px，我们没这个余量）。
+     ③ LIQ_GHNAV = 泡高的**下限**比例（栏高 × 此值）→ 窄屏/小栏高时也保证「一定溢出栏外」。
+   ★所以最终 gh = clamp(max(泡宽×GHK, 栏高×GHNAV), 28, 视口底余量)。 */
+var LIQ_GHK=0.62;                   /* 泡高 = 泡宽 × 此值（近「高≈宽」的大团；会被视口底余量截短） */
+var LIQ_GHNAV=1.45;                 /* 泡高下限 = 导航栏高 × 此值（保证「上下都溢出栏外」） */
+var LIQ_GRK=0.44;                   /* 基础圆角 = min(泡宽,泡高) × 此值。
+   参考图长按态（静止）泡已经是「两端近半圆的胶囊/椭圆」→ 静止圆角就必须逼近 fullR（=min/2），
+   旧值 0.32 是「泡高=栏高」时代的（那时 gh 小、0.32 已接近全圆）；泡高变大后必须同步上调，
+   否则静止态是个「圆角矩形」而不是一滴摊开的水。拖动时 R143 那条 sqrt 曲线照旧吃到 fullR。 */
 var LIQ_PULL=0.62;                  /* ★R143 柔性磁吸最大拉力：指针正落在 tab 中心时最多把它拉到
    距中心 (1-LIQ_PULL) 的位置。用户口径「不要这么黏、拖一下就吸附」→ 只给柔性牵引（越近越强），
    全程保持连续流动；硬吸附（一颗一颗跳）在 R143 首版被用户退回。 */
@@ -12585,22 +12656,50 @@ var LIQ_EDGE=18;                    /* ★R144 「归属外扩」(px)：tab 半�
        <1 → 只是被拉长。取 0.53 档（0.13×1.3/0.32）→ 强拉长、无折叠伪影。
    ★★BAND / MAX 都按**泡宽的比例**给（不用固定 px）：泡宽随 tab 宽变（窄屏/宽屏差很多），
      固定 px 会让窄屏上「整块泡都被位移带吃掉」、宽屏上「带子够不到图标」。
-     实测口径（参考图 315px 泡）：折射带约占泡宽 19%、最大位移约 8% → 这里取得略大（32% / 13%），
-     因为本 App 的泡比参考图窄（135px）、图标相对更小，带子窄了就完全扫不到图标。
+     实测口径（参考图 315px 泡）：折射带约占泡宽 19%、最大位移约 8%。
+     ★R151② 重新定标：**带宽收窄到 20%、幅度加大到 22%**。上一版把带宽给到 40% 是错的 ——
+       带宽同时是「染色掩码」的宽度（见 _lqEdgeGet 的 alpha 通道），40% 意味着泡里近一半的面积
+       都被划进「缘带」→ 实测整片泡被染成粉白。参考图实测位移带只占泡宽 ≈19%、
+       且**泡中心的内容保持原色**（#cb2122）→ 所以「带要窄、幅度要大」（梯度陡 = 更像被缘黏住拽出去）。
+     ★幅度那一半才是解决「扫不到图标」的关键：位移 = 泡宽×MAXK×0.5 ≈ 17px（旧 0.13 只有 10px），
+       而色散三路的落点差 ∝ 位移 → 幅度不够时色带根本铺不开。
      ★再加一层：泡自身在拖动时本来就被 scale(1+s, 1−s·0.55) 横向拉长（峰值 1.34×）——
-       所以贴缘处的总拉伸 ≈ 1.34 × (1+0.53) ≈ 2.0×，这才是参考图里「图标被拽长一截」的量级。 */
-var LIQ_EDGE_BANDK=0.32; /* 折射带宽度 = 泡宽 × 此系数 */
+       所以贴缘处的总拉伸 ≈ 1.34 × (1+0.8) ≈ 2.4×，这才是参考图里「图标被拽长一截」的量级。 */
+var LIQ_EDGE_BANDK=0.20; /* 折射带宽度 = 泡宽 × 此系数（同时是染色掩码的宽度） */
 /* ★命名提醒：上面那个 R144 的 `LIQ_EDGE=18`（放手归属外扩 px）与下面这族 `LIQ_EDGE_*`
    只是恰好同前缀，**语义完全无关**（一个是落点归属判定、一个是折射参数）。
    改归属逻辑时别顺手改到这里；反之亦然。 */
-var LIQ_EDGE_MAXK=0.13;  /* 贴边处最大外推位移 = 泡宽 × 此系数 */
+var LIQ_EDGE_MAXK=0.22;  /* 贴边处最大外推位移 = 泡宽 × 此系数（R151② 0.13→0.22，见 BANDK 注释） */
 var LIQ_EDGE_P=1.3;      /* 剖面指数（见上） */
 var LIQ_EDGE_SREF=0.11;  /* 位移强度 = clamp(s/SREF)：s 是泡自身的拉伸量（自带黏滞回落）→ 静止时归零 */
-var LIQ_EDGE_CHR=1.4;    /* ★色散强度：R 通道位移 ×CHR、B 通道 ÷CHR。
-    ★为什么敢给到 1.4（真实玻璃色散只有 1~2%）：参考图里紧贴泡缘那圈是**一条彩色渐变的涂抹带**
-      （品红/黄/紫顺着泡的圆弧铺开几十像素），那是 R/G/B 三个副本落点被拉开才有的效果；
-     1.075 那种「物理正确」的值只会在图标边缘画出一圈细描边，看着像三色重影而不是玻璃。
-     配合泡自身的拉伸（_liqPaint 的 scale）一起看，就是「边缘扫过图标 → 把图标粘在缘上拖出彩带」。 */
+/* ★R151② 色散：**方向修正** + 强度加大。
+   ★★方向修正（这是上一版「蓝紫重影」的根因）：真实玻璃是**短波偏折更多** → 紫/蓝落在更外侧，
+     红落在更内侧。参考图实测完全吻合（移动态 y=220 右缘，从泡内到泡外）：
+        红 H=355 → 品红 314 → 紫 294 → 无色；左缘同向（暖白 12 → 紫 269 → 蓝紫 228）；
+        y=150 那条更能说明问题：紫 300 → 黄 47 → 橙 14 → 红 0（从外到内）。
+     即「**内暖外冷**」。R150 的实现是 R×CHR / B÷CHR（红在外、蓝在内）→ 色序整个反了，
+     所以看着像「青蓝色的错位重影」，而不是参考那圈橙粉紫的暖色彩带。
+     现在改成 **R 位移最小（=sc/CHR，落最内）、B 位移最大（=sc×CHR，落最外）**。
+   ★强度 1.4→1.9：三路的落点差 = sc×(CHR − 1/CHR)/2，1.4 只有 0.34×sc、1.9 有 0.69×sc（翻倍）
+     → 彩带宽度才够（参考实测彩带沿缘铺开 10~30px，色相跨度 180°+）。 */
+var LIQ_EDGE_CHR=1.9;
+/* ★R151② 三路**染色**：目标色相 + 源色保留 —— 两版踩坑后的定稿。
+   ★坑一「隔离 R/G/B 通道」：本项目内容是无彩深色（--text 图标/文字 R≈G≈B），隔离后三路
+     拿到同一个暗灰 → screen 叠加仍是灰，只有抗锯齿边缘透一丝彩 → 等于没效果。
+   ★坑二「纯亮度→目标色」（只取 L 再乘目标色）：与内容颜色**完全无关** →
+     三路必然输出固定的三个色 → screen 叠加成固定的粉白。实测整个泡的缘带变成一片粉色，
+     而参考图的暖色明显是「由内容颜色决定的」（红图标 → 红/黄/紫）。
+   ★定稿 = 「源色 (1−WT) + 亮度 × 目标色 × WT」的混合：
+       保留 25% 源色（内容特征 → 深色内容出深彩、亮色内容出亮彩、色相跟内容走）
+       混入 75% 目标色（保证无论内容是什么颜色，色序都是「暖→冷」）。
+   ★目标色按参考实测色序取（**从内到外**）：橙红(14°~25°) → 暖黄(47°) → 紫(294°~300°)。
+     刻意**不含绿色**（参考的色相直方在 60~180° 几乎为零）→ 观感是「暖色彩带」而非「彩虹霓虹」。 */
+var LIQ_EDGE_C1=[1.00,0.42,0.18];  /* 最内层（位移最小）：暖橙红 */
+var LIQ_EDGE_C2=[1.00,0.82,0.25];  /* 中层：暖黄 */
+var LIQ_EDGE_C3=[0.72,0.42,1.00];  /* 最外层（位移最大）：紫 */
+var LIQ_EDGE_WT=0.80;              /* 目标色混合权重（其余 1−WT 保留源色）。
+   ★0.80 是「色序统一」与「跟随内容色」的折中：太低（如 0.5）则左右缘颜色随内容乱跑、
+     一版暖一版冷；太高（如 0.95）就退回「纯目标色」→ 缘带永远是同三个色刷出来的死板粉白。 */
 var LIQ_EDGE_RSTEP=3;    /* 圆角分档数（位移图要按泡的圆角生成 → 分 3 档 + 静止档，全缓存） */
 var liq={down:false,on:false,armed:false,pid:null,pidType:'mouse',raf:0,last:0,holdTimer:0,mode:'drag',
          cacheTabs:null,
@@ -12711,7 +12810,13 @@ function _lqEdgeGet(gw,gh,r){
   var key=gw+'|'+gh+'|'+r,hit=_lqEdgeCache[key];
   if(hit)return hit;
   /* ---- ① 位移图：R=x 位移、G=128 恒定（垂直零位移，见上方 LIQ_EDGE_BANDK 注释），
-         「向外」侧由圆角矩形边界法线的 x 分量给出 ---- */
+         「向外」侧由圆角矩形边界法线的 x 分量给出；
+         ★R151② **alpha = 带内权重 m**（0 在带内缘、1 贴边）—— 它同时充当「染色掩码」：
+           滤镜里先按它把副本拆成「中心（原色不动）」+「缘带（位移+染色）」，最后相加。
+           ★为什么必须拆：染色矩阵对**整幅图**生效，若直接染整幅，泡中心的内容（位移为 0）
+             也会被染成三色叠加的粉白 —— 实测上一版整个泡变成一片粉色。
+             而参考图里泡内的图标**保持原色**（实测 #cb2122 正常红），只有贴缘那一圈才泛彩。
+           ★×1.6：让掩码提前饱和（m≥0.63 即满）→ 彩带更实、内边界更干净。 ---- */
   var cv=document.createElement('canvas');cv.width=gw;cv.height=gh;
   var cx=cv.getContext('2d'),img=cx.createImageData(gw,gh),dt=img.data;
   var hw=gw/2,hh=gh/2,rr=Math.max(1,Math.min(r,Math.min(hw,hh)));
@@ -12722,11 +12827,12 @@ function _lqEdgeGet(gw,gh,r){
     for(x=0;x<gw;x++){
       var qx,px=x+0.5-hw;qx=px<-chw?-chw:(px>chw?chw:px);
       var vx=px-qx,vy=py-qy,len=Math.sqrt(vx*vx+vy*vy),i=i0+x*4;
-      dt[i+3]=255;dt[i+1]=128;
+      dt[i+1]=128;dt[i+2]=128;
       var t=1+(len-rr)/B;                      /* len-rr = 有符号距离（<0 在内部）→ t=1 贴边 */
-      if(t<=0){dt[i]=128;dt[i+2]=128;continue;}
+      if(t<=0){dt[i]=128;dt[i+3]=0;continue;}  /* 带外（泡内深处）：零位移 + 掩码 0 = 原样保留 */
       if(t>1)t=1;
       var m=Math.pow(t,P);
+      dt[i+3]=Math.round(255*Math.min(1,m*1.6));
       /* 法线的 x 分量：贴左右缘时 ≈±1（足额外推）；贴上下缘时 ≈0（不动，保护图标/文字不被削顶）；
          圆角/胶囊端头是 45°→ 约 0.7 折减（自然过渡）。 */
       dt[i]=Math.round(128+127*m*(len>1e-6?vx/len:0));
@@ -12735,7 +12841,22 @@ function _lqEdgeGet(gw,gh,r){
   }
   cx.putImageData(img,0,0);
   var url=cv.toDataURL('image/png');
-  /* ---- ② 滤镜：feImage(位移图) → 三通道各差一点 scale 再 screen 合成（边缘色散） ---- */
+  /* ---- ② 滤镜管线（★R151② 全量重排）----
+     ★数据流（每一步的结果名就是 filter 里的 result，便于对着调试）：
+         map   = feImage(位移图)                       ← R/G 给位移方向，alpha = 带内掩码 m
+         mask  = alphaOf(map)                          ← 把 alpha 抄进 RGB，得到纯掩码
+         inv   = 1 - mask                              ← RGB 与 alpha 一起反相
+         cen   = SourceGraphic × inv                   ← 泡中心：原色、零位移
+         es    = SourceGraphic × mask                  ← 缘带：待位移 + 待染色
+         d0/d1/d2 = feDisplacementMap(es, scale_k)     ← 三路位移各不同（内暖外冷）
+         t0/t1/t2 = Luminance(d_k) → 目标色            ← 三路各染一个色相
+         edge  = screen(t0, t1, t2)
+         out   = cen + edge                            ← 相加：中心原色 + 缘带彩色
+     ★为什么非拆不可：染色矩阵对**整幅图**生效。若直接染整幅，位移为 0 的泡中心也会被
+       染成「三色 screen 叠加」→ 实测整个泡变成一片粉白；而参考图里泡内图标是**正常原色**
+       （实测 #cb2122），只有贴缘一圈泛彩。拆开后才对得上。
+     ★代价：primitive 从 9 个涨到 14 个 —— 但位移图按 (gw,gh,圆角) 缓存、每帧只改 3 个 scale，
+       位置/尺寸全不变 → 重绘成本仍集中在「3 次位移采样」上（泡只有 153×93）。 */
   var defs=_lqEdgeEnsure(),fid='lqEdgeF'+(++_lqEdgeSeq);
   var mk=function(n,at){var e=document.createElementNS(NS_SVG,n),k;for(k in at)e.setAttribute(k,at[k]);return e;};
   var f=mk('filter',{id:fid,x:'0',y:'0',width:'1',height:'1',filterUnits:'objectBoundingBox',
@@ -12743,31 +12864,64 @@ function _lqEdgeGet(gw,gh,r){
   var im=mk('feImage',{x:0,y:0,width:gw,height:gh,preserveAspectRatio:'none',result:'map'});
   im.setAttribute('href',url);im.setAttributeNS('http://www.w3.org/1999/xlink','xlink:href',url);
   f.appendChild(im);
-  var CH=LIQ_EDGE_CHR,disp=[],ch=['R','G','B'],k2;
+  /* 掩码提取 + 反相（feColorMatrix 的第 5 列 = offset，所以 1−x 只要写 -1 0 0 0 1） */
+  f.appendChild(mk('feColorMatrix',{in:'map',type:'matrix',
+    values:'0 0 0 1 0  0 0 0 1 0  0 0 0 1 0  0 0 0 1 0',result:'mask'}));
+  f.appendChild(mk('feColorMatrix',{in:'mask',type:'matrix',
+    values:'-1 0 0 0 1  -1 0 0 0 1  -1 0 0 0 1  0 0 0 -1 1',result:'inv'}));
+  /* ★feComposite operator="arithmetic" k1=1（其余 0）= 逐像素相乘（RGB 与 alpha 一起乘） */
+  f.appendChild(mk('feComposite',{in:'SourceGraphic',in2:'inv',operator:'arithmetic',
+    k1:'1',k2:'0',k3:'0',k4:'0',result:'cen'}));
+  f.appendChild(mk('feComposite',{in:'SourceGraphic',in2:'mask',operator:'arithmetic',
+    k1:'1',k2:'0',k3:'0',k4:'0',result:'es'}));
+  /* ★R151② 缘带内容先**提亮**再位移/染色：本 App 的 tab 图标/文字是深色（--text，亮度 ~0.1），
+     直接染色后是「暗彩」→ 实测彩带发灰发脏；而参考图的缘带是**饱和亮彩**（黄 S=88 / 橙 S=80）。
+     ★为什么用 gamma 而不是加常数 offset：offset 对**透明像素**也生效（会把泡内空白整片染上色）；
+       gamma 是 v^0.55 的形状，v=0 → 0 恒成立 → 只提亮「本来就有内容」的像素。
+     ★exponent<1 = 提亮暗部（0.1 → 0.28，约 2.8 倍），亮部（0.9 → 0.94）几乎不动 → 不会爆白。 */
+  var gam=mk('feComponentTransfer',{in:'es',result:'es2'}),gch=['R','G','B'],gi;
+  for(gi=0;gi<3;gi++)gam.appendChild(mk('feFunc'+gch[gi],{type:'gamma',amplitude:'1',exponent:'0.55',offset:'0'}));
+  gam.appendChild(mk('feFuncA',{type:'linear',slope:'1',intercept:'0'}));
+  f.appendChild(gam);
+  var CH=LIQ_EDGE_CHR,disp=[],k2;
   for(k2=0;k2<3;k2++){
-    var d=mk('feDisplacementMap',{in:'SourceGraphic',in2:'map',
-      scale:(k2===0?CH:(k2===2?1/CH:1)),xChannelSelector:'R',yChannelSelector:'G',result:'d'+ch[k2]});
+    /* ★R151② R 路位移最小、B 路最大（旧实现反了，见 LIQ_EDGE_CHR 注释） */
+    var d=mk('feDisplacementMap',{in:'es2',in2:'map',
+      scale:(k2===0?1/CH:(k2===2?CH:1)),xChannelSelector:'R',yChannelSelector:'G',result:'d'+k2});
     f.appendChild(d);disp.push(d);
   }
-  var mtx={R:'1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0',
-           G:'0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0',
-           B:'0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0'};
-  f.appendChild(mk('feColorMatrix',{in:'dR',type:'matrix',values:mtx.R,result:'cR'}));
-  f.appendChild(mk('feColorMatrix',{in:'dG',type:'matrix',values:mtx.G,result:'cG'}));
-  f.appendChild(mk('feColorMatrix',{in:'dB',type:'matrix',values:mtx.B,result:'cB'}));
-  f.appendChild(mk('feBlend',{in:'cR',in2:'cG',mode:'screen',result:'rg'}));
-  f.appendChild(mk('feBlend',{in:'rg',in2:'cB',mode:'screen'}));
+  /* ★R151② 染色矩阵 = 「源色 (1−WT) + 亮度 × 目标色 × WT」（理由见 LIQ_EDGE_C1 注释）。
+     矩阵按 4×5 行优先，展开「源色 (1−WT) + WT × 目标色 × Rec.709 亮度」：
+        第 i 个输出通道的第 j 个输入系数 = (1−WT)·δij + WT·c_i·lum_j
+     即：把源色按 (1−WT) 原样留一份，再把「亮度×目标色」按 WT 叠上去；第 4 行透传 alpha。 */
+  var tint=[LIQ_EDGE_C1,LIQ_EDGE_C2,LIQ_EDGE_C3],WT=LIQ_EDGE_WT,IV=1-WT,LUM=[0.2126,0.7152,0.0722];
+  for(k2=0;k2<3;k2++){
+    var c=tint[k2],row=[],ci;
+    for(ci=0;ci<3;ci++){var r3=[],cj;
+      for(cj=0;cj<3;cj++)r3.push((ci===cj?IV:0)+WT*c[ci]*LUM[cj]);
+      row.push(r3.join(' ')+' 0 0');}
+    f.appendChild(mk('feColorMatrix',{in:'d'+k2,type:'matrix',
+      values:row.join('  ')+'  0 0 0 1 0',result:'t'+k2}));
+  }
+  f.appendChild(mk('feBlend',{in:'t0',in2:'t1',mode:'screen',result:'b01'}));
+  f.appendChild(mk('feBlend',{in:'b01',in2:'t2',mode:'screen',result:'edge'}));
+  /* ★相加（k2=k3=1）：center 的 alpha = srcA×(1−m)、edge 的 alpha 由各 t 分别携带 m
+     → 相加后总 alpha = srcA×(1−m) + srcA×m ≈ srcA ✓（不会出现「缘带突然变透」） */
+  f.appendChild(mk('feComposite',{in:'cen',in2:'edge',operator:'arithmetic',
+    k1:'0',k2:'1',k3:'1',k4:'0'}));
   defs.appendChild(f);
   hit={id:fid,disp:disp,sc:-1,gw:gw,gh:gh};_lqEdgeCache[key]=hit;
   return hit;
 }
-/* 把位移强度写进当前滤镜的 3 个 feDisplacementMap（R/G/B 保持 CH 比例）。
+/* 把位移强度写进当前滤镜的 3 个 feDisplacementMap。
+   ★三路 ratio 必须与上面 _lqEdgeGet 里建滤镜时**完全一致**（1/CH、1、CH）——
+     两处不同步的话「首帧 scale 由这里写、之后由那里写」会出现色序跳变。
    ★量化为 0.5px 档位：一次属性写 = 一次滤镜重绘，60fps 下能省则省。 */
 function _lqEdgeScale(g,sc){
   if(g.sc===sc)return;
   g.sc=sc;
   var CH=LIQ_EDGE_CHR,i;
-  for(i=0;i<3;i++)g.disp[i].setAttribute('scale',(sc*(i===0?CH:(i===2?1/CH:1))).toFixed(2));
+  for(i=0;i<3;i++)g.disp[i].setAttribute('scale',(sc*(i===0?1/CH:(i===2?CH:1))).toFixed(2));
 }
 /* ★每帧调用：强度 = clamp(s/SREF) → 静止（s=0）时 filter:none，泡就是一块干干净净的玻璃
    （对应参考图「长按态」看不出任何形变）；拖起来 s 升 → 边缘开始「黏」住扫过的图标。 */
@@ -12901,13 +13055,10 @@ function _liqArm(cx,cy){
   var _npad=parseFloat(getComputedStyle(nav).paddingLeft)||0;
   var _gmax=Math.round(2*(_npad+tw/2)-2);
   liq.gw=Math.round(tw*LIQ_GW);
-  liq.gw=Math.max(48,Math.min(liq.gw,_gmax,Math.round(r.height*2.4),Math.round(r.width-6)));
-  /* ★R142 泡高贴满导航栏（上下各留 2px）。曾试过「超出栏高 12px」，但 liq-drag 摘除瞬间
-     overflow 从 visible 切回 auto，溢出的泡会闪一下 nav 内纵向滚动条（用户实测）→ 竖向也钳制。
-     【★R148 口径更新：R140 那套「按内容高 + 折射带反推 gh」已随真折射一起下线 ——
-       泡高不再由内容决定，所以也不必再量内容高，更不必挑「.lp-hover 还没挂上」的时机去量。】 */
-  liq.gh=Math.max(28,Math.round(r.height-4));
-  liq.gr=Math.max(8,Math.round(Math.min(liq.gw,liq.gh)*0.32));
+  /* 【★R151③ 口径更新：删掉 `Math.round(r.height*2.4)` 这条上限 —— 它是「泡高 = 栏高」时代的
+     「别让泡横向太扁」护栏（59×2.4 = 142）；现在泡高已放大到 ≈1.5×栏高，泡宽宽高比本就降到 1.7，
+     这条会白白把泡宽从 153 卡到 142。真正的硬约束只剩 _gmax 与「两端不出层」。】 */
+  liq.gw=Math.max(48,Math.min(liq.gw,_gmax,Math.round(r.width-6)));
 
   /* ★R142 层已挂在 nav 内铺满（absolute 100%），不再需要 fixed 定位换算；
      活动区天然 = 底栏矩形本身 */
@@ -12916,6 +13067,19 @@ function _liqArm(cx,cy){
      泡起步偏离栏中线 1px）；⚠️必须在 display='block' 之后量，none 状态 rect 全 0 */
   var lr0=_liqLayer.getBoundingClientRect();
   liq.layW=lr0.width;liq.layH=lr0.height;
+  /* ★R151③ 泡高「大团」+ 两个护栏（必须排在量完 lr0 之后：视口底余量要用层的真实位置算）。
+     ★护栏一：不超「栏中线 → 视口底」的两倍。泡中心 = 层的中线（liq.y 恒为 layH/2），
+       所以泡下缘落在视口底时的最大高度正好是 2×(视口底 − 层中线)。留 2px 余量。
+       （不变量：底栏 bottom:22px → 该余量 ≈ 51.5px → 泡高上限 ≈ 93px；再减 5px 视觉余量 →
+         泡底离屏幕底约 5px，不会「糊在屏幕底边上」。若哪天底栏位置再动，泡会自然跟着变大变小。）
+     ★护栏二：不超泡宽（否则变成竖椭圆）。 */
+  var _c2bot=((window.innerHeight||document.documentElement.clientHeight||0)-lr0.top)-liq.layH/2;
+  var _ghCap=_c2bot>12?Math.floor((_c2bot-5)*2):1e9;
+  liq.gh=Math.max(Math.round(liq.gw*LIQ_GHK),Math.round(r.height*LIQ_GHNAV));
+  if(liq.gh>_ghCap)liq.gh=_ghCap;
+  if(liq.gh>liq.gw)liq.gh=Math.round(liq.gw);
+  if(liq.gh<28)liq.gh=28;
+  liq.gr=Math.max(8,Math.round(Math.min(liq.gw,liq.gh)*LIQ_GRK));
   _liqGlass.style.width=liq.gw+'px';
   _liqGlass.style.height=liq.gh+'px';
   _liqGlass.style.borderRadius=liq.gr+'px';liq.lastR=liq.gr;
@@ -13296,7 +13460,9 @@ function setView(v){
     var nav=document.getElementById('bottomNav');
     var bar=document.getElementById('batchBar');
     var nabPx=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nab'))||0;
-    var gap=10;
+    /* ★R151③ 必须与 CSS `.bottom-nav` 的 `bottom:calc(var(--nab) + 22px + …)` 保持一致（同源口径）：
+       旧值 10 是「底栏贴底」时代的间距；泡放大成「大团」后底栏上移到 22px（给泡向下溢出的空间）。 */
+    var gap=22;
     var navFloat=nabPx+gap;
     var navVisible=(nav && getComputedStyle(nav).display!=='none');
     var navH=navVisible?nav.offsetHeight:0;
