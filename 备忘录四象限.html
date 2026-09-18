@@ -2560,43 +2560,66 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 /* ★R142 泡高不超导航栏（竖向钳制，曾试「超出栏高」会闪纵向滚动条 → 已回退）；
    clampY 本身就把泡上下边钳在栏内 —— 纵向横向都出不去 */
 /* ===== ★R140 底部导航「液态玻璃」（参考酷安 / iOS 26 Liquid Glass） =====
-   ★与普通毛玻璃唯一的差别是「透镜折射」：毛玻璃是整片均匀模糊（中心=边缘一样）；
-     液态玻璃是中心透明清晰、边缘一圈把背后内容沿法线「挤弯」+ 一圈折射高光。
-   ★★这里**故意不加 blur()**：blur 是「整片均匀糊」，加多少都会把压在玻璃下的
-     tab 文字一起糊掉（R140 实测 blur(.8px) 就让 10px 的「月」比旁边标签明显发虚）。
-     真液态玻璃的中心本来就该是 1:1 清晰的 —— 通透感全靠「边缘折射 + 高光 + 极淡底色」。
-   实现：Chromium 支持 backdrop-filter 链式调用 SVG filter →
-       backdrop-filter:url(#lqRefract) saturate(180%);
-     url(#lqRefract) 把「背后内容」当作 filter 输入 → feImage 提供一张按圆角矩形 SDF
-     算出的位移图 → feDisplacementMap 按 R/G 通道（R-128=X 偏移、G-128=Y 偏移）
-     沿边界法线向外挤像素。
-   ★形状必须可预测（圆角矩形），位移图才能和玻璃边缘精确对齐 ——
-     所以不再用 metaball 融合形状（形状每帧在变 → 折射边对不上）。
-   降级：Safari / Firefox 尚不支持 backdrop-filter 里用 url() → @supports 退回纯模糊。 */
-.liquid-root{position:absolute;left:0;top:0;width:0;height:0;}
-.liquid-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;}
-/* ★R142 层挂进 bottomNav 内部、z-index:0（与 nav-pill 同层、低于 .nav-tab 的 z1）
-   → 泡只在图标/文字「后面」流动，绝不盖住内容（用户：泡不该盖住导航栏的图标文字）。
-   泡身后是 nav 的不透明 card-bg 底 → 边缘折射挤弯的是 nav 底色，图标不经过滤镜 */
+   ★★R150 定稿口径（改正 R148 的「放大镜」读法，动这块前必读）：
+     ① 参考图（长按移动态）里的效果**不是放大**，而是**边缘折射**：玻璃片滑过图标时，
+        靠近玻璃边界的部分被沿**边界法线向外**推开/拉长、再被边界裁掉一截，同时泛出
+        冷暖色散（红焰边缘的黄/青、文字右侧的品红）—— 就是用户说的
+        「玻璃片边缘如果扫到按钮图标就会黏玻璃片边缘」。
+        ★佐证（逐列量参考图）：移动态里图标的**位置几乎没动**（发现 tab 图标 815..882，
+        常规态 817..883），变的是**轮廓**：朝向玻璃边界的一侧被拉长、被边界切断、边缘泛彩。
+        若是「窗口放大 1.24×」，图标位置会整体外移 ~20px —— 实测没有 → 排除放大。
+     ② `backdrop-filter` **不会加载 feImage**（R148 实测：内联 data-URI / canvas toDataURL
+        两种编码逐像素相同，内容只整体平移 −scale/2、尺寸不变）；同一个滤镜当 `filter:`
+        用却完全正常。→ 规律：**backdrop-filter 里「生成器」类（feTurbulence）能用、
+        「图像输入」类（feImage）不能用**。所以折射**不能作用在真实背景上**，
+        只能作用在**导航内容副本**上。
+     ③ 可行路线 = **泡内放一份 1:1 的导航内容副本**（cloneNode 整条底栏），给它套
+        `feImage(位移图) + feDisplacementMap` 的 `filter:`，再由泡的圆角裁切。
+        副本与真实底栏**同比例、坐标开窗对齐** → s=0 时逐像素相同（= 一块玻璃）；
+        只有拖动（s>0）位移强度才升起来 → 对应参考图「长按态」完全不变形。
+   ★R147 的「自绘玻璃皮」全部保留 —— 只是叠在这份副本之上（.liquid-sheen），
+     泡依旧是一块有厚度、有边缘色散、有跟手镜面高光的玻璃，副本只是它的「透镜芯」。 */
+/* ★R142 层挂进 bottomNav 内部；★R150 拖动期 z-index 抬到 tab 之上（z-index:9 > .nav-tab 的 z1）——
+   因为折射副本必须盖住真实图标，否则会看到「真图标 + 折射副本」双影。
+   ★用户口径：非拖动期仍保持 R142 的「泡绝不盖住图标」；只有拖动期（liq-drag）才放开。 */
 .liquid-layer{position:absolute;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+.bottom-nav.liq-drag .liquid-layer{z-index:9;}
+/* ★R150 折射芯三层（DOM 顺序 = 绘制顺序）：
+     .liquid-lens    裁切盒（overflow:hidden + border-radius:inherit）
+       .liquid-lens-in  ★滤镜宿主（filter:url(#lqEdge*) 挂在这里）
+         .liquid-lens-nav  副本（cloneNode 出来的 .bottom-nav，绝对定位 0,0，按窗口平移）
+   ★★为什么滤镜不直接挂在 .liquid-lens 上：必须保证**先位移、后被父级裁切**。
+     挂在裁切盒自身上时，浏览器把 overflow 裁切算进「元素自身的渲染」再过滤 → 等于
+     「先把边缘那圈内容切掉、再去位移」→ 向外的拉伸根本看不到（正是参考图里那圈拉长的
+     轮廓会消失）。多套一层不裁切的 .liquid-lens-in 就锁死顺序：父级裁切永远在滤镜之后。
+   ★位移图坐标空间 = .liquid-lens-in 的 border box = 泡的矩形 → feImage 落在
+     (0,0,gw,gh) 即可，**不需要每帧改 feImage 的 x/y**（改 primitive 属性有重新解码
+     data-URI 的风险）；每帧只改一个 feDisplacementMap 的 scale（还做了量化去重）。 */
+.liquid-lens{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;}
+.liquid-lens-in{position:absolute;inset:0;}
+.liquid-lens-nav{position:absolute!important;left:0!important;top:0!important;right:auto!important;bottom:auto!important;
+  max-width:none!important;margin:0!important;border-radius:0!important;
+  transform-origin:0 0;will-change:transform;
+  z-index:auto!important;opacity:1!important;box-shadow:none!important;filter:none!important;
+  overflow:visible!important;transition:none!important;animation:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
 /* ===== ★R146 「液态玻璃」拖动泡的皮 =====
    用户：「拖动时加一个液体玻璃的效果，现在感觉没有什么质感」。
-   ★先搞清楚「为什么之前没质感」——旧皮是**不透明**的 primary 渐变
-     （color-mix(primary 20%, var(--card-bg))，card-bg 在 light/dark/green 主题下是 #fff / #1a1a2e /
-     #f3faf3 这种**纯不透明色**）：
-       ① backdrop-filter 里的 url(#lqRefract) 虽然真的生效了，但泡身后就是 nav 的一层纯色底
-          → 位移图挤的是「一片纯色」，挤完还是那片纯色 → **折射完全无从表现**；
-       ② blur/饱和同理，纯色糊了还是纯色；
-       ③ 表面只有一条 1px 顶光 + 一个柔投影 → 看上去就是「一块彩色塑料片」，不是玻璃。
-   ★所以质感必须**自绘**（不依赖 backdrop 能看到什么），四层叠出来：
-       ① 半透明主色 tint（★用 transparent 而不是 card-bg）：透出底栏底色 + 底栏边线，
-          这一层是「玻璃」与「实心色块」的分界 —— 能透，才叫玻璃；
+   ★为什么旧皮没质感（R146 结论）——旧皮是**不透明**的 primary 渐变
+     （color-mix(primary 20%, var(--card-bg))，card-bg 在 light/dark/green 主题下是 #fff /
+     #1a1a2e / #f3faf3 这种**纯不透明色**）：backdrop-filter 无论怎么调，身后只有一层纯色
+     → 折射/模糊/饱和全都「生效但零效果」（R148 又补上第二层原因：feImage 压根没加载）。
+     ★R148/R150 更新：现在泡内是**不透明的导航副本** → 皮必须【叠在副本之上】，所以
+       「底色 + 内阴影」整体从 .liquid-glass 搬到子元素 **.liquid-sheen**（DOM 里排在 .liquid-lens
+       之后 → 后绘制的兄弟盖在前者之上）；.liquid-glass 只留【几何 + 边框 + 外投影】。
+       分工：.liquid-glass = 形体与浮起；.liquid-lens = 折射副本（裁切）；.liquid-sheen = 玻璃质感；
+             .liquid-glass::after = 跟手镜面高光（最后一个绘制 → 永远在最上）。
+   ★四层质感（自绘，不依赖 backdrop 能看到什么）：
+       ① 半透明主色 tint（★用 transparent 而不是 card-bg）——「能透」才是玻璃；
        ② 顶部弧形高光 + 乳白散射：光从上打下来 → 上半透亮、下半沉，玻璃的「厚」；
-       ③ 边缘折射光环（inset 内发光）+ 左右缘冷暖色散细边：沿轮廓一圈亮、中心通透 —— 折射体的观感；
-       ④ 外投影 + 主色辉光：浮起 + 沉浸发光。
-     再叠一层 ::after 的**跟手动态镜面高光**（见下），「液态」才成立。
-   ★glass 主题下底色是半透明玻璃（--glass-tint）→ ①②③ 之外还能让 ② 的真折射真正折射到页面内容，
-     所以那条 @supports 保留（其余主题它只是提亮底色，无害）。 */
+       ③ 边缘折射光环（inset 内发光）+ 左右缘冷暖色散细边：沿轮廓一圈亮、中心通透；
+       ④ 外投影（在 .liquid-glass 上）：浮起。
+     再叠 ::after 的**跟手动态镜面高光**（见下），「液态」才成立。 */
 .liquid-glass{position:absolute;left:0;top:0;box-sizing:border-box;border-radius:14px;opacity:0;
   will-change:transform,opacity;isolation:isolate;   /* ★isolation：让 ::after 的 screen 混合只作用于泡自身（不外溢到底栏底色） */
   /* ★R147「像 iOS」三刀（用户口径：和 iOS 液态玻璃视觉上差挺多）：
@@ -2607,6 +2630,14 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      ③ 补厚度剖面：顶缘极亮 → 中段通透 → 底缘回光的垂直梯度 + 一圈硬细亮环（Edge），
         替换原先 13px 宽的 inset 软发光（那正是「发毛发软、缺硬度」的来源）。
      另：删掉主色辉光（0 0 22px primary 32%）—— 发光 ≠ 玻璃，iOS 的投影是中性灰蓝。 */
+  border:1px solid rgba(255,255,255,.62);
+  box-shadow:
+    0 7px 18px rgba(31,38,135,.20),                                     /* 外投影：浮起（中性灰蓝，非彩色辉光） */
+    0 1px 3px rgba(31,38,135,.10);}
+/* ★R148 玻璃质感层（叠在折射副本之上）：R146/R147 的全部色值原样搬来，一处未改。
+   ★R147 浅色主题护栏：底色脱到 4~9% 后，白底栏（#fff）上的白描边/白高光会「消失」，
+     泡失去轮廓 → 补一道极淡的冷色内描边把形体界定出来（见下方 [data-theme="light"] 覆盖）。 */
+.liquid-sheen{position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   background:
     linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.30) 3.5%, rgba(255,255,255,.05) 13%, rgba(255,255,255,0) 30%),
     radial-gradient(88% 64% at 50% 0%, rgba(255,255,255,.30) 0%, rgba(255,255,255,.07) 52%, rgba(255,255,255,0) 100%),
@@ -2614,18 +2645,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     linear-gradient(180deg,
       color-mix(in srgb, var(--color-primary,#6366f1) 9%, transparent) 0%,
       color-mix(in srgb, var(--color-primary,#6366f1) 4%, transparent) 100%);
-  border:1px solid rgba(255,255,255,.62);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.98),                                /* 顶缘最亮的一条硬线（specular） */
     inset 0 0 0 1px rgba(255,255,255,.22),                              /* 整圈细亮环 = 玻璃的 Edge */
     inset 0 -1px 0 rgba(255,255,255,.34),                               /* 底缘回光（厚度剖面暗端） */
     inset 2px 0 5px -3px color-mix(in srgb,#7dd3fc 62%,transparent),    /* 左缘冷色散（青） */
     inset -2px 0 5px -3px color-mix(in srgb,#f0abfc 52%,transparent),   /* 右缘暖色散（品红） */
-    0 7px 18px rgba(31,38,135,.20),                                     /* 外投影：浮起（中性灰蓝，非彩色辉光） */
-    0 1px 3px rgba(31,38,135,.10);
-  /* ★R147 浅色主题护栏：底色脱到 4~9% 后，白底栏（#fff）上的白描边/白高光会「消失」，
-     泡失去轮廓 → 补一道极淡的冷色内描边把形体界定出来（仅在浅色主题生效，见下方 [data-theme="light"]） */
-  }
+    0 0 0 1px rgba(255,255,255,.18);}
 /* ★R146 表面的跟手镜面高光 = 「液态」的核心：
    位置/形状/强度由 JS 每帧写 CSS 变量（--lq-hx 位置X / --lq-hy 位置Y / --lq-hs 扁长 / --lq-hi 强度）——
    泡被拖着走时液体被甩向「来向」一侧、光在液面隆起处聚集；拖得越快反光越亮、光斑被拉得越扁长。
@@ -2638,31 +2664,31 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
   mix-blend-mode:screen;}
 /* ★R146 glass 主题的泡 = 「白玻璃」（与常态胶囊同色系，不重现 R143 的「拖动时变蓝」）：
    去掉主色 tint，换成纯白玻璃 + 白色边缘光；色散边保留（白玻璃的边缘色散最显「真玻璃」）。 */
-[data-theme="glass"] .liquid-glass{
+[data-theme="glass"] .liquid-sheen{
   background:
     linear-gradient(180deg, rgba(255,255,255,.88) 0%, rgba(255,255,255,.28) 3.5%, rgba(255,255,255,.05) 13%, rgba(255,255,255,0) 30%),
     radial-gradient(88% 64% at 50% 0%, rgba(255,255,255,.32) 0%, rgba(255,255,255,.08) 52%, rgba(255,255,255,0) 100%),
     linear-gradient(0deg, rgba(255,255,255,.24) 0%, rgba(255,255,255,.05) 8%, rgba(255,255,255,0) 22%),
     linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.04) 100%);
-  border-color:rgba(255,255,255,.86);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,1),
     inset 0 0 0 1px rgba(255,255,255,.30),
     inset 0 -1px 0 rgba(255,255,255,.44),
     inset 2px 0 5px -3px color-mix(in srgb,#7dd3fc 60%,transparent),
     inset -2px 0 5px -3px color-mix(in srgb,#f0abfc 50%,transparent),
-    /* ★glass 主题的底栏本身就是「半透明白玻璃」→ 白泡叠白底容易糊在一起：
-       外圈再补一道白描边 + 加深投影，把「浮起的那一片」从底栏上拎出来 */
-    0 0 0 1px rgba(255,255,255,.62),
-    0 8px 20px rgba(31,38,135,.24),
-    0 1px 4px rgba(31,38,135,.12);}
+    0 0 0 1px rgba(255,255,255,.62);}
+[data-theme="glass"] .liquid-glass{
+  border-color:rgba(255,255,255,.86);
+  /* ★glass 主题的底栏本身就是「半透明白玻璃」→ 白泡叠白底容易糊在一起：
+     外圈再补一道白描边 + 加深投影，把「浮起的那一片」从底栏上拎出来 */
+  box-shadow:0 0 0 1px rgba(255,255,255,.62),0 8px 20px rgba(31,38,135,.24),0 1px 4px rgba(31,38,135,.12);}
 /* ★R147 浅底栏护栏（light / green）：这两套主题的底栏接近白色（#fff / #f3faf3）→
    「白描边 + 白高光」在它上面直接隐身，而底色已脱到 9% 主色 → 泡会淡到看不见形体。
    修法 = 把 tint 提回 16%/8% + 把 Edge 细环加浓到 26% + 底缘补一道冷色暗线：
    仍旧是玻璃（远处看是通透的一层雾），但近看边界立得住。
    ★关键：靠「Edge 环」而不是「加深主色」来立形体 —— 后者会重新变回 R147 正要修掉的「蓝色塑料片」。 */
-[data-theme="light"] .liquid-glass,
-[data-theme="green"] .liquid-glass{
+[data-theme="light"] .liquid-sheen,
+[data-theme="green"] .liquid-sheen{
   background:
     linear-gradient(180deg, rgba(255,255,255,.94) 0%, rgba(255,255,255,.34) 3.5%, rgba(255,255,255,.06) 13%, rgba(255,255,255,0) 30%),
     radial-gradient(88% 64% at 50% 0%, rgba(255,255,255,.30) 0%, rgba(255,255,255,.07) 52%, rgba(255,255,255,0) 100%),
@@ -2670,22 +2696,20 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     linear-gradient(180deg,
       color-mix(in srgb, var(--color-primary,#6366f1) 16%, transparent) 0%,
       color-mix(in srgb, var(--color-primary,#6366f1) 8%, transparent) 100%);
-  border-color:rgba(255,255,255,.78);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,1),
     inset 0 0 0 1px color-mix(in srgb, var(--color-primary,#6366f1) 26%, transparent),
     inset 0 -1.5px 1px -0.5px color-mix(in srgb, #1f2687 20%, transparent),
     inset 2px 0 5px -3px color-mix(in srgb,#7dd3fc 62%,transparent),
-    inset -2px 0 5px -3px color-mix(in srgb,#f0abfc 52%,transparent),
-    0 8px 20px rgba(31,38,135,.20),
-    0 2px 4px rgba(31,38,135,.12);}
-/* ★R140/R146 真透镜折射：glass 主题（底栏为半透明玻璃）下能真正折射到页面内容；
-   light/dark/green 主题底栏是不透明纯色 → 它只剩「提亮/饱和底色」的作用（无害，也不白屏）。
-   降级同样安全：Safari/Firefox 不支持 backdrop-filter:url() → @supports 不命中 → 上面的自绘皮照常成立。 */
-@supports (backdrop-filter:url(#lqRefract)) or (-webkit-backdrop-filter:url(#lqRefract)){
-  .liquid-glass{-webkit-backdrop-filter:url(#lqRefract) saturate(180%) brightness(1.06);
-                backdrop-filter:url(#lqRefract) saturate(180%) brightness(1.06);}
-}
+    inset -2px 0 5px -3px color-mix(in srgb,#f0abfc 52%,transparent);}
+[data-theme="light"] .liquid-glass,
+[data-theme="green"] .liquid-glass{
+  border-color:rgba(255,255,255,.78);
+  box-shadow:0 8px 20px rgba(31,38,135,.20),0 2px 4px rgba(31,38,135,.12);}
+/* ★R148 删掉「真透镜折射」的整条管线（@supports backdrop-filter:url(#lqRefract) + feImage 位移图）：
+   实测 backdrop-filter **不加载 feImage**（见上方 R148 三层结论）→ 那个滤镜在本项目里从未真正折射过。
+   ★R150 出路：把 feImage 位移图改挂到**普通元素的 filter** 上（filter 支持 feImage）→ 边缘折射成立；
+   折射芯是 1:1 开窗的副本，与 backdrop-filter 完全无关，任何浏览器观感一致。 */
 /* ★R139 鼠标拖动玻璃期间：整页禁选中文字 + 抓手光标（否则按住拖会顺手把 tab 文字刷蓝） */
 html.liq-grabbing,html.liq-grabbing *{-webkit-user-select:none!important;user-select:none!important;cursor:grabbing!important;}
 /* 拖动中玻璃泡压住的 tab = 选中样式（★R142 与 .nav-tab.active 完全同款：主色 + 图标投影；其他 tab 保持常规样式） */
@@ -12523,7 +12547,17 @@ function bindBatchNav(){
         松手落在 tab 上就切过去，否则回弹到起始 tab 并收起。 */
 var LIQ_HOLD=350, LIQ_SLOP=8;
 var LIQ_MAXS=0.34, LIQ_SV=50;      /* 拉伸强度上限 / 速度标定(px per 16.7ms) */
-var LIQ_PADY=9, LIQ_GW=1.10, LIQ_BREATH=3; /* 上下留白(仅兜底路径用) / 宽 = tab 宽 × 此值（★R142 用户：拖动块要比选中背景「更大」→ 1.10 倍 tab 宽） / 内容外额外余量(px) */
+/* ★R149 手感四参数（全部先用 node 仿真标定，再上真浏览器验证，不靠"感觉调"）：
+   LIQ_FOLLOW = 一阶系数（16.7ms 一帧）。**两级级联 ⇒ 临界阻尼二阶（ζ=1，过冲恒 0）**：
+     匀速靶的稳态滞后 = Δ(1−a)/a 每级 → 两级合计实测 13.0px @ 指针 1px/ms，
+     与原一阶 0.55 的 13.7px 基本持平 → 「跟手」不退化；
+     但高频抑制更好（同等滞后下指针抖动残余 −15%）、响应形状是「起步沉、后段收」的双极点衰减
+     = 用户要的「柔柔的、带点黏」。★绝不用 ζ<1：那会过冲/震荡（用户明确讨厌 jitter 类动效）。
+   LIQ_S_UP / LIQ_S_DN = 形变「起形 / 收形」速率（0.26 / 0.10）：收形明显慢于起形 ⇒ 形变有记忆，
+     手指停下后泡像糖浆一样慢慢流回原形（峰值不变 —— 持续速度下照样收敛到 sTgt，只改进出的快慢）。
+   LIQ_S_SETTLE = 松手后形变收敛速率（0.14）：泡先滑到位、形变再慢慢摊平 = 一滴水被放下。 */
+var LIQ_FOLLOW=0.72, LIQ_S_UP=0.26, LIQ_S_DN=0.10, LIQ_S_SETTLE=0.14;
+var LIQ_GW=1.10;                    /* 泡宽 = tab 宽 × 此值（★R142 用户：拖动块要比选中背景「更大」→ 1.10 倍 tab 宽） */
 var LIQ_PULL=0.62;                  /* ★R143 柔性磁吸最大拉力：指针正落在 tab 中心时最多把它拉到
    距中心 (1-LIQ_PULL) 的位置。用户口径「不要这么黏、拖一下就吸附」→ 只给柔性牵引（越近越强），
    全程保持连续流动；硬吸附（一颗一颗跳）在 R143 首版被用户退回。 */
@@ -12537,18 +12571,52 @@ var LIQ_EDGE=18;                    /* ★R144 「归属外扩」(px)：tab 半�
      一旦拖到栏最右端（想选最后一颗）落在留白里放手，泡就会横穿整条栏飞回去 —— 实测 273px（用户口径
      「放手后这么大的回弹」）。外扩 18px 后死区全部归属最近 tab，配合下面的「就近归属」彻底消除飞回。
      只作用于「高亮 + 落点归属」，不改拉伸/跟手手感（_liqPullX 仍按半宽算 q，边界处拉力照旧归零）。 */
-var LIQ_BEZEL=0.22, LIQ_BEND=0.17; /* 折射带宽度占 min(半宽,半高) 的比例 / 最大位移比例。
-   ★这两个值决定「液体感 vs 可读性」的平衡：0.42/0.30 时折射带 8px（占玻璃高 21%）→ 连图标都被推糊；
-     0.15/0.12 又几乎看不出折射；0.22/0.17（带 4.2px、位移峰值 3.2px）实测最平衡 —— 图标清晰、边缘有弯折。 */
+/* ★R150 玻璃边缘「吸附折射」= 参考图里的核心效果（**不是放大**，见 CSS 里的 R150 结论）。
+   位移剖面：t = 1 + d/BAND（d = 到泡边界的有符号距离，<0 表示在泡内；t=1 贴边、t=0 到带内缘）
+             位移量 m = MAX × t^P。
+   ★★只做**水平**位移（G 通道恒 128 = 垂直零位移），原因有两条：
+     ① 参考图里图标是**横向**被拉长/被边界切掉、边缘泛彩，竖向没有被切（图标的顶没缺角）；
+     ② 本 App 的 tab 是「图标 + 文字」竖排、正好塞满泡高（上下各只剩 3~4px）→ 只要给一点
+        垂直位移，图标的顶 / 文字的下缘立刻被推出泡外裁掉，看上去是「图标被削了一刀」。
+     水平位移则天然只在「泡左右两缘扫过图标」时生效 —— 正是用户要的那个瞬间。
+   ★P 决定「黏不黏」：贴边处的视位移梯度 ≈ MAX×P/BAND。
+       >1 → 内容在边界附近被折叠（镜像/重复），看上去是「被吸进去」；
+       ≈1 → 恰好「黏住」：那圈内容在玻璃滑过时几乎不动，像被边缘粘住拖着；
+       <1 → 只是被拉长。取 0.53 档（0.13×1.3/0.32）→ 强拉长、无折叠伪影。
+   ★★BAND / MAX 都按**泡宽的比例**给（不用固定 px）：泡宽随 tab 宽变（窄屏/宽屏差很多），
+     固定 px 会让窄屏上「整块泡都被位移带吃掉」、宽屏上「带子够不到图标」。
+     实测口径（参考图 315px 泡）：折射带约占泡宽 19%、最大位移约 8% → 这里取得略大（32% / 13%），
+     因为本 App 的泡比参考图窄（135px）、图标相对更小，带子窄了就完全扫不到图标。
+     ★再加一层：泡自身在拖动时本来就被 scale(1+s, 1−s·0.55) 横向拉长（峰值 1.34×）——
+       所以贴缘处的总拉伸 ≈ 1.34 × (1+0.53) ≈ 2.0×，这才是参考图里「图标被拽长一截」的量级。 */
+var LIQ_EDGE_BANDK=0.32; /* 折射带宽度 = 泡宽 × 此系数 */
+/* ★命名提醒：上面那个 R144 的 `LIQ_EDGE=18`（放手归属外扩 px）与下面这族 `LIQ_EDGE_*`
+   只是恰好同前缀，**语义完全无关**（一个是落点归属判定、一个是折射参数）。
+   改归属逻辑时别顺手改到这里；反之亦然。 */
+var LIQ_EDGE_MAXK=0.13;  /* 贴边处最大外推位移 = 泡宽 × 此系数 */
+var LIQ_EDGE_P=1.3;      /* 剖面指数（见上） */
+var LIQ_EDGE_SREF=0.11;  /* 位移强度 = clamp(s/SREF)：s 是泡自身的拉伸量（自带黏滞回落）→ 静止时归零 */
+var LIQ_EDGE_CHR=1.4;    /* ★色散强度：R 通道位移 ×CHR、B 通道 ÷CHR。
+    ★为什么敢给到 1.4（真实玻璃色散只有 1~2%）：参考图里紧贴泡缘那圈是**一条彩色渐变的涂抹带**
+      （品红/黄/紫顺着泡的圆弧铺开几十像素），那是 R/G/B 三个副本落点被拉开才有的效果；
+     1.075 那种「物理正确」的值只会在图标边缘画出一圈细描边，看着像三色重影而不是玻璃。
+     配合泡自身的拉伸（_liqPaint 的 scale）一起看，就是「边缘扫过图标 → 把图标粘在缘上拖出彩带」。 */
+var LIQ_EDGE_RSTEP=3;    /* 圆角分档数（位移图要按泡的圆角生成 → 分 3 档 + 静止档，全缓存） */
 var liq={down:false,on:false,armed:false,pid:null,pidType:'mouse',raf:0,last:0,holdTimer:0,mode:'drag',
          cacheTabs:null,
          sx:0,sy:0,px:0,py:0,ox:0,oy:0,tx:0,ty:0,hit:null,noClick:0,hoverTab:null,
-         lx:0,ly:0,travel:0,lastR:-1,
+         lx:0,lastR:-1,
+         /* ★R149 跟手二阶滤波的第一级状态（fx/fy = 指针的一级滤波结果，x/y 是它的二级结果）：
+            两级级联 = 临界阻尼二阶 → 柔、带黏，且不过冲。 */
+         fx:0,fy:0,
          /* ★R146 跟手镜面高光的状态：pX=泡上一帧 x（判运动方向）/ hxd=液面隆起方向(-1..1,平滑值) /
             lqHx/lqHs/lqHi = 上次写进 CSS 的量化值（去重，少写 style = 少一次样式重算） */
          pX:0,hxd:0,lqHx:-1,lqHs:-1,lqHi:-1,
+         /* ★R150 折射的状态：lensTf=上次写进副本的 transform（去重）/ ef=当前挂的滤镜 url /
+            es=上次写进 feDisplacementMap 的 scale（0.5px 量化去重 → 一次属性写=一次滤镜重绘） */
+         lensTf:'',ef:'',es:-1,
          x:0,y:0,s:0,o:0,gw:0,gh:0,gr:14,layW:0,layH:0};
-var _liqLayer=null, _liqGlass=null, _liqMapKey='';
+var _liqLayer=null, _liqGlass=null, _liqLens=null, _liqLensIn=null, _liqLensNav=null, _liqLensTabs=null;
 
 function _liqNav(){return document.getElementById('bottomNav');}
 function _liqTabs(){
@@ -12558,70 +12626,34 @@ function _liqTabs(){
     o.push({el:a[i],v:a[i].getAttribute('data-view'),cx:r.left+r.width/2,cy:r.top+r.height/2,w:r.width});}
   return o;
 }
-function _liqNN(v){v=Math.round(v);return v<0?0:(v>255?255:v);}
-/* tab 内「图标 + 文字」的合并高度（不含 flex 居中留白）—— 用来反推玻璃片高度，
-   保证上下两条折射带正好落在留白里、不会切进文字字形造成重影 */
-function _liqContentH(el){
-  if(!el||!el.children||!el.children.length)return 0;
-  var top=1e9,bot=-1e9,i,q;
-  for(i=0;i<el.children.length;i++){
-    q=el.children[i].getBoundingClientRect();
-    if(q.height<=0&&q.width<=0)continue;
-    if(q.top<top)top=q.top;
-    if(q.bottom>bot)bot=q.bottom;
-  }
-  return bot>top?bot-top:0;
-}
-/* 位移图：圆角矩形 SDF → 沿边界法线向外的位移（中心区 0、边缘一圈最强）
-   R-128 = X 偏移、G-128 = Y 偏移；乘 gain 提精度，再用 feDisplacementMap 的 scale 除回去 */
-function _liqMakeMap(w,h,r){
-  var W=Math.max(4,Math.round(w)),H=Math.max(4,Math.round(h));
-  var c=document.createElement('canvas');c.width=W;c.height=H;
-  var ctx=c.getContext('2d'),im=ctx.createImageData(W,H),D=im.data;
-  var hw=W/2,hh=H/2,mn=Math.min(hw,hh),B=LIQ_BEZEL*mn,AMP=LIQ_BEND*mn;
-  var gain=Math.min(14,118/Math.max(0.001,AMP));
-  for(var y=0;y<H;y++)for(var x=0;x<W;x++){
-    var px=x+0.5-hw,py=y+0.5-hh;
-    var qx=Math.abs(px)-hw+r,qy=Math.abs(py)-hh+r;
-    var ax=qx>0?qx:0,ay=qy>0?qy:0,d=Math.sqrt(ax*ax+ay*ay);
-    var mx=qx>qy?qx:qy;
-    var sd=d+(mx<0?mx:0)-r;
-    var nx=0,ny=0;
-    if(d>1e-6){nx=(px<0?-1:1)*ax/d;ny=(py<0?-1:1)*ay/d;}
-    else{var L=Math.sqrt(px*px+py*py);if(L>1e-6){nx=px/L;ny=py/L;}}
-    var t=-sd,m=0;
-    if(t>0&&t<B){var u=1-t/B;m=AMP*Math.pow(u,1.6);}
-    var i=(y*W+x)*4;
-    D[i]=_liqNN(128+nx*m*gain);D[i+1]=_liqNN(128+ny*m*gain);D[i+2]=128;D[i+3]=255;
-  }
-  ctx.putImageData(im,0,0);
-  return {url:c.toDataURL('image/png'),scale:255/gain};
-}
-/* ★R142 defs 独立构建：与 _liqBuild 解耦（换主题/重渲染时机更稳），拖动层折射共用同一滤镜 */
-function _liqEnsureDefs(){
-  if(document.getElementById('lqRefract'))return;
-  var wrap=document.createElement('div');
-  wrap.className='liquid-root';
-  wrap.innerHTML='<svg class="liquid-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>'
-    +'<filter id="lqRefract" x="0" y="0" width="100%" height="100%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">'
-    +'<feImage id="lqMap" x="0" y="0" width="10" height="10" preserveAspectRatio="none" result="map"></feImage>'
-    +'<feDisplacementMap id="lqDisp" in="SourceGraphic" in2="map" scale="21" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>'
-    +'</filter>'
-    +'</defs></svg>';
-  document.body.appendChild(wrap);
-}
+/* ★R148 删掉 _liqContentH（量 tab 内容高）、_liqEnsureDefs / _liqRefract
+   （**挂在 backdrop-filter 上的**那条 feImage + feDisplacementMap 真折射管线）、_liqNN（位移图用的数值钳制）、
+   以及 LIQ_BEZEL / LIQ_BEND / LIQ_PADY / LIQ_BREATH 四个只剩注释引用的常量：
+   R142 起泡高已改成「贴满导航栏 = nav 高 -4」，量出的内容高只写进一个没人读的变量；
+   而「backdrop-filter 折射」在 R148 被证伪（backdrop-filter 不加载 feImage）→ 那条管线整体下线。
+   ★R150 复活：同样的 feImage 位移图改挂到**普通元素的 filter:** 上（filter 支持 feImage）→ 边缘折射成立。
+   新的管线是 _lqEdgeEnsure / _lqEdgeR / _lqEdgeGet / _lqEdgeScale / _lqEdgeApply（见下方）。 */
+/* ★R150 透镜壳的四层结构（DOM 顺序 = 绘制顺序）：
+   .liquid-glass（形体/边框/外投影）→ .liquid-lens（裁切盒）→ .liquid-lens-in（★滤镜宿主，内放副本）
+   → .liquid-sheen（玻璃质感，叠在副本之上）→ .liquid-glass::after（跟手镜面高光，永远最上）。 */
 function _liqBuild(){
-  _liqEnsureDefs();
   var nav=_liqNav();if(!nav)return;
   if(_liqLayer&&_liqLayer.parentNode===nav)return;
-  /* ★R142 层挂在 bottomNav 内部（z0，在 tab 图标之下）：挂 body 上无论 z 多小都会被
-     nav 自身的 z130 堆叠上下文整个压住；挂进去才能实现「泡在图标后面流动」 */
+  /* ★R142 层挂在 bottomNav 内部（非拖动期 z0，在 tab 图标之下）：挂 body 上无论 z 多小都会被
+     nav 自身的 z130 堆叠上下文整个压住；挂进去才能实现「泡在图标后面流动」。
+     ★R150 拖动期由 .bottom-nav.liq-drag .liquid-layer 抬到 z9（折射副本必须盖住真实图标）。 */
   if(_liqLayer&&_liqLayer.parentNode)_liqLayer.parentNode.removeChild(_liqLayer);
   var d=document.createElement('div');
   d.className='liquid-layer';d.id='liquidLayer';
-  d.innerHTML='<div class="liquid-glass" id="liquidGlass"></div>';
+  d.innerHTML='<div class="liquid-glass" id="liquidGlass">'
+    +'<div class="liquid-lens" id="liquidLens"><div class="liquid-lens-in" id="liquidLensIn"></div></div>'
+    +'<div class="liquid-sheen" id="liquidSheen"></div>'
+    +'</div>';
   nav.appendChild(d);
   _liqLayer=d;_liqGlass=d.firstChild;
+  _liqLens=d.querySelector('#liquidLens');
+  _liqLensIn=d.querySelector('#liquidLensIn');
+  _liqLensNav=null;_liqLensTabs=null;
   _liqLayer.style.display='none';
 }
 /* ★R142 renderBottomNav 用 innerHTML 重建 tabs 会把挂进 nav 的拖动层一起删掉
@@ -12631,21 +12663,159 @@ function _liqReattach(){
   if(_liqLayer&&_liqLayer.parentNode===nav)return;
   if(_liqLayer){if(_liqLayer.parentNode)_liqLayer.parentNode.removeChild(_liqLayer);nav.appendChild(_liqLayer);}
 }
-/* 位移图只在玻璃片尺寸变化时重算（矩形尺寸固定 → 一般只算一次） */
-/* rq=动态圆角（★R142 拖动中圆角随速度变 → 位移图按当前圆角重建；缺省用基础 gr） */
-function _liqRefract(rq){
-  var gr=rq||liq.gr;
-  var im=document.getElementById('lqMap');
-  if(!im||!_liqGlass)return;
-  var key=liq.gw+'x'+liq.gh+'x'+gr;
-  if(key===_liqMapKey)return;
-  _liqMapKey=key;
-  var m=_liqMakeMap(liq.gw,liq.gh,gr);
-  im.setAttribute('href',m.url);
-  try{im.setAttributeNS('http://www.w3.org/1999/xlink','xlink:href',m.url);}catch(_){}
-  im.setAttribute('width',liq.gw);im.setAttribute('height',liq.gh);
-  var dm=document.getElementById('lqDisp');
-  if(dm)dm.setAttribute('scale',m.scale.toFixed(3));
+/* ★R150 折射芯：把「整条底栏的副本」按**开窗**摆到泡的位置（1:1，**不缩放**）。
+   ★核心几何：副本 = 整条底栏（layW × layH），泡在层坐标里的左上角是 (liq.x − gw/2, liq.y − gh/2)，
+     所以把副本平移 −该偏移，泡里看到的就是「手指下方那一段底栏」，与真实底栏逐像素重合。
+   ★水滴前倾 lead（_liqPaint 算的）也要带上 —— 玻璃片重心前移时，泡内画面必须同步前移，
+     否则「泡到了、折射芯慢半拍」会看出两层。
+   ★只改 transform 且量化去重：一次 style 写入 = 一次样式重算（按住不动时零写入）。 */
+function _liqLensPaint(lead){
+  if(!_liqLensNav)return;
+  var gx=liq.x-liq.gw/2+lead, gy=liq.y-liq.gh/2;
+  var t='translate3d('+(-gx).toFixed(2)+'px,'+(-gy).toFixed(2)+'px,0)';
+  if(t===liq.lensTf)return;
+  liq.lensTf=t;
+  _liqLensNav.style.transform=t;
+}
+/* ===== ★R150 边缘折射管线（位移图 + feDisplacementMap） =====
+   ★为什么用 canvas 预生成位移图而不是 SVG 图元：位移是「圆角矩形有符号距离场」的
+     逐像素函数，用 SVG 的线性/径向渐变只能拼出直角版（速度一快泡变成胶囊/椭圆，边上
+     的带子就对不上了）。canvas 一次算完 → PNG data-URI → feImage，任意形状都准。
+   ★成本：位移图按 (gw,gh,圆角档) 缓存，一次会话最多 4 张（约 100×60px）；
+     之后每次拖动**零重算**（只写一个 scale 属性）。 */
+var _lqEdgeSvg=null,_lqEdgeDefsEl=null,_lqEdgeCache={},_lqEdgeSeq=0;
+var NS_SVG='http://www.w3.org/2000/svg';
+/* 滤镜宿主 <svg><defs> 建一次并挂在 body 上：同文档内联的 id 才能被 CSS 的 url(#id) 引用 */
+function _lqEdgeEnsure(){
+  if(_lqEdgeSvg&&_lqEdgeSvg.parentNode)return _lqEdgeDefsEl;
+  var s=document.createElementNS(NS_SVG,'svg');
+  s.setAttribute('id','lqEdgeDefs');s.setAttribute('aria-hidden','true');
+  s.setAttribute('width','0');s.setAttribute('height','0');
+  s.style.cssText='position:absolute;left:-9999px;top:0;width:0;height:0;overflow:hidden;pointer-events:none';
+  var defs=document.createElementNS(NS_SVG,'defs');
+  s.appendChild(defs);document.body.appendChild(s);
+  _lqEdgeSvg=s;_lqEdgeDefsEl=defs;
+  return defs;
+}
+/* 圆角分档：位移带贴着泡的圆角走，圆角变了图就必须重生成。dynR 在拖动中连续变 →
+   按 LIQ_EDGE_RSTEP 档量化（+ 静止档），把「每帧重算」压成「一次拖动最多 3 张、之后全命中缓存」。 */
+function _lqEdgeR(dynR){
+  var fullR=Math.floor(Math.min(liq.gw,liq.gh)/2)-1;
+  var span=Math.max(1,fullR-liq.gr);
+  var k=Math.round((dynR-liq.gr)/span*LIQ_EDGE_RSTEP);
+  if(k<0)k=0;if(k>LIQ_EDGE_RSTEP)k=LIQ_EDGE_RSTEP;
+  return Math.round(liq.gr+span*k/LIQ_EDGE_RSTEP);
+}
+/* 取（或生成）某个 (gw,gh,圆角) 的滤镜。返回 {id, disp(scale 载体), sc(上次写的 scale)} */
+function _lqEdgeGet(gw,gh,r){
+  var key=gw+'|'+gh+'|'+r,hit=_lqEdgeCache[key];
+  if(hit)return hit;
+  /* ---- ① 位移图：R=x 位移、G=128 恒定（垂直零位移，见上方 LIQ_EDGE_BANDK 注释），
+         「向外」侧由圆角矩形边界法线的 x 分量给出 ---- */
+  var cv=document.createElement('canvas');cv.width=gw;cv.height=gh;
+  var cx=cv.getContext('2d'),img=cx.createImageData(gw,gh),dt=img.data;
+  var hw=gw/2,hh=gh/2,rr=Math.max(1,Math.min(r,Math.min(hw,hh)));
+  var chw=Math.max(0,hw-rr),chh=Math.max(0,hh-rr);   /* 圆角矩形退化成「内缩矩形 + 半径 rr」 */
+  var B=Math.max(10,Math.round(gw*LIQ_EDGE_BANDK)),P=LIQ_EDGE_P,y,x;
+  for(y=0;y<gh;y++){
+    var py=y+0.5-hh,qy=py<-chh?-chh:(py>chh?chh:py),i0=y*gw*4;
+    for(x=0;x<gw;x++){
+      var qx,px=x+0.5-hw;qx=px<-chw?-chw:(px>chw?chw:px);
+      var vx=px-qx,vy=py-qy,len=Math.sqrt(vx*vx+vy*vy),i=i0+x*4;
+      dt[i+3]=255;dt[i+1]=128;
+      var t=1+(len-rr)/B;                      /* len-rr = 有符号距离（<0 在内部）→ t=1 贴边 */
+      if(t<=0){dt[i]=128;dt[i+2]=128;continue;}
+      if(t>1)t=1;
+      var m=Math.pow(t,P);
+      /* 法线的 x 分量：贴左右缘时 ≈±1（足额外推）；贴上下缘时 ≈0（不动，保护图标/文字不被削顶）；
+         圆角/胶囊端头是 45°→ 约 0.7 折减（自然过渡）。 */
+      dt[i]=Math.round(128+127*m*(len>1e-6?vx/len:0));
+      dt[i+2]=128;
+    }
+  }
+  cx.putImageData(img,0,0);
+  var url=cv.toDataURL('image/png');
+  /* ---- ② 滤镜：feImage(位移图) → 三通道各差一点 scale 再 screen 合成（边缘色散） ---- */
+  var defs=_lqEdgeEnsure(),fid='lqEdgeF'+(++_lqEdgeSeq);
+  var mk=function(n,at){var e=document.createElementNS(NS_SVG,n),k;for(k in at)e.setAttribute(k,at[k]);return e;};
+  var f=mk('filter',{id:fid,x:'0',y:'0',width:'1',height:'1',filterUnits:'objectBoundingBox',
+                     primitiveUnits:'userSpaceOnUse','color-interpolation-filters':'sRGB'});
+  var im=mk('feImage',{x:0,y:0,width:gw,height:gh,preserveAspectRatio:'none',result:'map'});
+  im.setAttribute('href',url);im.setAttributeNS('http://www.w3.org/1999/xlink','xlink:href',url);
+  f.appendChild(im);
+  var CH=LIQ_EDGE_CHR,disp=[],ch=['R','G','B'],k2;
+  for(k2=0;k2<3;k2++){
+    var d=mk('feDisplacementMap',{in:'SourceGraphic',in2:'map',
+      scale:(k2===0?CH:(k2===2?1/CH:1)),xChannelSelector:'R',yChannelSelector:'G',result:'d'+ch[k2]});
+    f.appendChild(d);disp.push(d);
+  }
+  var mtx={R:'1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0',
+           G:'0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0',
+           B:'0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0'};
+  f.appendChild(mk('feColorMatrix',{in:'dR',type:'matrix',values:mtx.R,result:'cR'}));
+  f.appendChild(mk('feColorMatrix',{in:'dG',type:'matrix',values:mtx.G,result:'cG'}));
+  f.appendChild(mk('feColorMatrix',{in:'dB',type:'matrix',values:mtx.B,result:'cB'}));
+  f.appendChild(mk('feBlend',{in:'cR',in2:'cG',mode:'screen',result:'rg'}));
+  f.appendChild(mk('feBlend',{in:'rg',in2:'cB',mode:'screen'}));
+  defs.appendChild(f);
+  hit={id:fid,disp:disp,sc:-1,gw:gw,gh:gh};_lqEdgeCache[key]=hit;
+  return hit;
+}
+/* 把位移强度写进当前滤镜的 3 个 feDisplacementMap（R/G/B 保持 CH 比例）。
+   ★量化为 0.5px 档位：一次属性写 = 一次滤镜重绘，60fps 下能省则省。 */
+function _lqEdgeScale(g,sc){
+  if(g.sc===sc)return;
+  g.sc=sc;
+  var CH=LIQ_EDGE_CHR,i;
+  for(i=0;i<3;i++)g.disp[i].setAttribute('scale',(sc*(i===0?CH:(i===2?1/CH:1))).toFixed(2));
+}
+/* ★每帧调用：强度 = clamp(s/SREF) → 静止（s=0）时 filter:none，泡就是一块干干净净的玻璃
+   （对应参考图「长按态」看不出任何形变）；拖起来 s 升 → 边缘开始「黏」住扫过的图标。 */
+function _lqEdgeApply(dynR){
+  if(!_liqLensIn)return;
+  var e=liq.s/LIQ_EDGE_SREF;if(e>1)e=1;
+  var maxD=Math.max(6,Math.round(liq.gw*LIQ_EDGE_MAXK));
+  var sc=Math.round(maxD*e*2)/2;               /* 位移上限(px)，0.5px 量化去重 */
+  if(sc<0.5){                                  /* 位移太小 → 直接摘掉滤镜（省一次滤镜重绘） */
+    if(liq.ef){liq.ef='';liq.es=-1;_liqLensIn.style.filter='none';}
+    return;
+  }
+  var id=_lqEdgeR(dynR),g=_lqEdgeGet(liq.gw,liq.gh,id);
+  if(liq.ef!==g.id){liq.ef=g.id;liq.es=-1;_liqLensIn.style.filter='url(#'+g.id+')';}
+  _lqEdgeScale(g,sc);liq.es=g.sc;
+}
+/* 每次拖动重新克隆一份底栏（视图 / 可见 tab 都可能变过）→ 透镜里显示的永远是最新底栏。
+   ★克隆整条 .bottom-nav，而不是「手抄一份 flex 样式」：背景 / 内边距 / 间距 / 主题令牌全部自带，
+     以后改底栏样式透镜不会漂移；只把定位 / 过渡 / 阴影 / backdrop 这类不该带进来的中和掉
+     （见 CSS .liquid-lens-nav）。 */
+function _liqLensBuild(){
+  if(!_liqLensIn)return;
+  var nav=_liqNav();if(!nav)return;
+  var c=nav.cloneNode(true);
+  c.removeAttribute('id');
+  /* ★必须摘掉 #navPill 与 .liquid-layer：前者是常驻胶囊（副本里由自己的 .nav-tab.active 承担），
+     后者会把整条拖动层（含本折射芯）整套克隆进来 → 每拖一次克隆体翻一倍 */
+  var junk=c.querySelectorAll('#navPill,.liquid-layer');
+  for(var i=0;i<junk.length;i++)junk[i].parentNode.removeChild(junk[i]);
+  c.className='bottom-nav liquid-lens-nav'+(nav.classList.contains('liq-drag')?' liq-drag':'');
+  c.style.width=liq.layW+'px';c.style.height=liq.layH+'px';
+  c.setAttribute('aria-hidden','true');
+  _liqLensIn.innerHTML='';_liqLensIn.appendChild(c);
+  _liqLensNav=c;_liqLensTabs={};
+  var ts=c.querySelectorAll('.nav-tab');
+  for(var j=0;j<ts.length;j++)_liqLensTabs[ts[j].getAttribute('data-view')]=ts[j];
+  liq.lensTf='';
+  _lqEdgeEnsure();                 /* 滤镜宿主（body 上的 <svg><defs>）确保就位 */
+}
+/* ★R148 折射芯里的高亮同步：副本画面里的「亮谁」必须与真实底栏完全一致 ——
+   否则会出现「真底栏亮 B、副本还亮着 A」的错位（边缘一拉开就看得出来）。 */
+function _liqLensHover(v){
+  if(!_liqLensTabs)return;
+  for(var k in _liqLensTabs){
+    if(!_liqLensTabs.hasOwnProperty(k))continue;
+    if(k===v)_liqLensTabs[k].classList.add('lp-hover');
+    else _liqLensTabs[k].classList.remove('lp-hover');
+  }
 }
 /* ★R140 边界钳制：必须把「当前拉伸量」算进去 —— 高速拖动时玻璃片被 scale(1+s, 1-s*0.55)
    横向拉长，若只按未拉伸的半宽钳制，拉到最右时视觉上仍会伸出底栏 ~7px。
@@ -12720,9 +12890,9 @@ function _liqArm(cx,cy){
      泡起步偏离栏中线 1px，Y 锁断言会抓到） */
   var tabs=_liqTabs();
   liq.cacheTabs=tabs; /* ★R141 拖动期间 hover 判定用（泡中心 X vs tab 中心距离），缓存避免每帧重排 rect */
-  /* 先找离按下点最近的 tab，同时量出它「图标+文字」的实际占高 + 它的真实宽度 */
-  var best=1e9,hc=cx,ch=0,tw=0;
-  for(var i=0;i<tabs.length;i++){var d=Math.abs(tabs[i].cx-cx);if(d<best){best=d;hc=tabs[i].cx;ch=_liqContentH(tabs[i].el);tw=tabs[i].w;}}
+  /* 先找离按下点最近的 tab，同时量出它的真实宽度 */
+  var best=1e9,hc=cx,tw=0;
+  for(var i=0;i<tabs.length;i++){var d=Math.abs(tabs[i].cx-cx);if(d<best){best=d;hc=tabs[i].cx;tw=tabs[i].w;}}
   /* ★R143 泡宽改用「实测 tab 宽 × LIQ_GW」：旧写法 nav 的 border-box 宽 / n 会把两侧内边距一起
      摊进每格 → 泡比 tab 系统性偏宽（窄屏上「泡比选中背景宽出一圈」更明显）。
      再收一条「两端 tab 中心必须落在 clamp 可覆盖范围内」的硬上限：泡宽 = 1.1×tab 宽时，
@@ -12732,17 +12902,12 @@ function _liqArm(cx,cy){
   var _gmax=Math.round(2*(_npad+tw/2)-2);
   liq.gw=Math.round(tw*LIQ_GW);
   liq.gw=Math.max(48,Math.min(liq.gw,_gmax,Math.round(r.height*2.4),Math.round(r.width-6)));
-  /* ★R140 高度按「内容高 + 上下各一条折射带」反推，而不是写死 nav 高 -18：
-     折射带 = LIQ_BEZEL × min(半宽,半高)，若玻璃只比内容高 2~3px，这条带就会切进文字字形
-     → 被压住的 tab 标签出现「重影」（R140 实测标签底边距玻璃底边仅 0.95px、带却有 4.29px）。
-     解 gh = 内容 / (1 - LIQ_BEZEL) + LIQ_BREATH → 两侧留白略大于带宽，带再也不会切到内容。
-     ⚠️ 量内容高必须在「.lp-hover 的 scale(1.08) 还没挂上」时量（本函数正是先量后 hover），
-     否则量到的是放大后的值（36.4 vs 真实 33.7），gh 会算大一截。 */
   /* ★R142 泡高贴满导航栏（上下各留 2px）。曾试过「超出栏高 12px」，但 liq-drag 摘除瞬间
-     overflow 从 visible 切回 auto，溢出的泡会闪一下 nav 内纵向滚动条（用户实测）→ 竖向也钳制 */
+     overflow 从 visible 切回 auto，溢出的泡会闪一下 nav 内纵向滚动条（用户实测）→ 竖向也钳制。
+     【★R148 口径更新：R140 那套「按内容高 + 折射带反推 gh」已随真折射一起下线 ——
+       泡高不再由内容决定，所以也不必再量内容高，更不必挑「.lp-hover 还没挂上」的时机去量。】 */
   liq.gh=Math.max(28,Math.round(r.height-4));
   liq.gr=Math.max(8,Math.round(Math.min(liq.gw,liq.gh)*0.32));
-  _liqRefract();
 
   /* ★R142 层已挂在 nav 内铺满（absolute 100%），不再需要 fixed 定位换算；
      活动区天然 = 底栏矩形本身 */
@@ -12754,19 +12919,25 @@ function _liqArm(cx,cy){
   _liqGlass.style.width=liq.gw+'px';
   _liqGlass.style.height=liq.gh+'px';
   _liqGlass.style.borderRadius=liq.gr+'px';liq.lastR=liq.gr;
-  _liqRefract();
-
+  /* ★R148 透镜副本要用 layW/layH 定尺寸 → 必须排在「量完活动区」之后 */
+  _liqLensBuild();
   /* 起始位 = 离按下点最近的 tab 中心（★R141 玻璃泡原地出现；落空松手就原地淡出，不再飞回这里）
      ★oy 用层高（=nav 内容盒）的一半 = 真正的栏中线；r.height 是 border box（多 2px border），
        用它会让泡起步偏离中线 1px、前几帧被 Y 锁断言抓到 */
   liq.ox=_liqClampX(hc-r.left);liq.oy=_liqClampY(liq.layH/2);
   liq.x=liq.ox;liq.y=liq.oy;
+  /* ★R149 二阶滤波的两级都从「静止于起点」开始 → 浮起瞬间不会先被"空推"一下 */
+  liq.fx=liq.ox;liq.fy=liq.oy;
   liq.px=liq.ox;liq.py=liq.oy;
-  liq.lx=cx-r.left;liq.ly=cy-r.top;liq.travel=0;
+  liq.lx=cx-r.left;   /* ★R139 指针在本层坐标的 x（落点就近归属用） */
   liq.s=0;liq.o=0;liq.hit=null;liq.mode='drag';liq.last=0;
   /* ★R146 本轮拖动的镜面高光从「静止态」起步（清掉上一次拖动的残值，否则新一次浮起时
      高光会从上一轮的方向偏位直接开始 → 闪一下） */
   liq.pX=liq.ox;liq.hxd=0;liq.lqHx=-1;liq.lqHs=-1;liq.lqHi=-1;
+  /* ★R150 本轮拖动从「零位移」起步：s=0 → _lqEdgeApply 直接摘掉滤镜，泡就是一块干净的玻璃
+     （对应参考图「长按态」看不出任何形变）；只有拖起来 s 升起来，边缘才开始「黏」图标。 */
+  liq.lensTf='';liq.ef='';liq.es=-1;
+  if(_liqLensIn)_liqLensIn.style.filter='none';
   liq.on=true;
   try{if(nav.setPointerCapture)nav.setPointerCapture(liq.pid);}catch(_){}
   window.addEventListener('pointermove',_liqMove,true);
@@ -12780,18 +12951,22 @@ function _liqArm(cx,cy){
 function _liqMove(e){
   if(!liq.on||liq.mode!=='drag'||e.pointerId!==liq.pid)return;
   var lr=_liqLayer.getBoundingClientRect();
-  var nx=e.clientX-lr.left, ny=e.clientY-lr.top;
-  /* ★拉伸强度用「指针速度」而不是「跟随者滞后量」：滞后量随刷新率变（R138 实测
-     120Hz 峰值仅 1.065 / 60Hz 1.30），而速度是物理量、与刷新率无关。 */
-  liq.travel+=Math.hypot(nx-liq.lx,ny-liq.ly);
-  liq.lx=nx;liq.ly=ny;
+  var nx=e.clientX-lr.left;
+  /* ★R139 记下「指针在本层坐标下的 x」：落点的就近归属（_liqUp）要用它。
+     【★R149 口径更新：这里**不再**累加 travel 当速度源 —— 速度改在 _liqTick 里用
+       「泡自身的帧间位移（已按 dt 归一化）」算（见 _liqTick），好处有三：
+       ① 与 pointermove 的触发频率/事件粗细解耦（60/120Hz、鼠标 125~1000Hz 手感一致）；
+       ② 拿到的是已滤波的速度 → 拉伸与镜面高光连续，不会随事件抖动一抽一抽；
+       ③ 变形由「液体的运动」驱动，而不是由手指的事件驱动 —— 这才是水滴的因果。 */
+  liq.lx=nx;
   /* ★R141 仿酷安液态玻璃：Y 轴锁死在导航条中线、只横向流动 —— 用户反馈「上下左右乱飞」，
      参考实现（Qwen_html_20260918）正是 targetX 仅 X 轴、y 恒 centerY。
      ★R143 横向 = 跟手 + 「柔性磁吸」：泡就是「会流动的选中胶囊」，靠近某颗 tab 时被它轻轻拉过去，
      但**不是硬吸附**（用户实测口径：「不要这么黏、拖一下就吸过去，要有中间的过渡显示」）。
      磁吸权重 pull = LIQ_PULL × (1-距离/半宽)^1.4 → 越接近 tab 中心拉力越强（中心处 100% 对齐、
      tab 边界处拉力归零 = 完全跟手）→ 拖动全程是连续的流动过渡，泡在边界附近自然落在两颗 tab 之间。
-     高亮判定同样用指针 nx → 「亮谁」与「泡偏向谁」永远同一个答案；拉伸强度仍取指针速度 liq.travel。 */
+     高亮判定同样用指针 nx → 「亮谁」与「泡偏向谁」永远同一个答案。
+     拉伸强度【★R149 口径更新】不再取指针速度，改取「泡自身的帧间位移」（见 _liqTick）。 */
   liq.px=_liqClampX(_liqPullX(nx));liq.py=liq.layH/2;
   _liqHoverX(nx);
 }
@@ -12826,6 +13001,8 @@ function _liqHoverX(x0){
   if(liq.hoverTab)liq.hoverTab.classList.remove('lp-hover');
   liq.hoverTab=tab;
   if(tab)tab.classList.add('lp-hover');
+  /* ★R148 同一时刻，折射副本里的那颗也要亮（否则副本画面与真实底栏「亮谁」错位） */
+  _liqLensHover(tab?tab.getAttribute('data-view'):null);
 }
 function _liqUp(e){
   if(!liq.on||liq.mode!=='drag')return;
@@ -12850,6 +13027,7 @@ function _liqUp(e){
     liq.tx=ac?_liqClampX(ac.cx-_liqLayer.getBoundingClientRect().left,0):liq.ox;liq.ty=liq.layH/2;
   }
   if(liq.hoverTab){liq.hoverTab.classList.remove('lp-hover');liq.hoverTab=null;}
+  _liqLensHover(null);
   liq.mode='settle';
   liq.noClick=Date.now()+500;
 }
@@ -12864,6 +13042,9 @@ function _liqPaint(){
   if(liq.s>0.004)tf+=' scale('+(1+liq.s).toFixed(4)+','+(1-liq.s*0.55).toFixed(4)+')';
   _liqGlass.style.transform=tf;
   _liqGlass.style.opacity=liq.o.toFixed(3);
+  /* ★R150 折射芯跟着走：副本的开窗由同一个 (liq.x,liq.y,lead) 算出 → 泡与副本画面永远锁死，
+     不会出现「泡到了、副本慢半拍」的撕裂感。 */
+  _liqLensPaint(lead);
   /* ★R146 跟手镜面高光（.liquid-glass::after 的三个 CSS 变量）—— 全部随「拖动实况」实时变：
      位置 hx：基准偏左上（光源方向 34%/27%）+ 液面隆起侧偏移（hxd：液体被甩向「来向」一侧，
               光就聚集到那一侧边缘）→ 泡横滑时高光沿液面「流」过去
@@ -12879,32 +13060,51 @@ function _liqPaint(){
   /* ★R142 圆角随速度变：拖得越快 s 越大 → 圆角向「全圆椭圆」逼近；
      ★R143 改为 sqrt 提前段 + 到点吃满（用户要「速度快时是椭圆」）：s⇒LIQ_RFULL 即 100% 全圆，
      之后 border-radius = min(gw,gh)/2（两端正圆）+ 横向拉伸 = 椭圆状；慢/静止回到基础圆角。
-     半径变化 → 位移图按新圆角重算；★2px 量化档位：既省 SDF 重算次数，视觉上又看不出跳档 */
+     ★2px 量化档位：省一次样式重算，视觉上也看不出跳档。
+     【★R150 口径更新：圆角除了「泡自己的形状」，还是**折射位移图的生成参数**（位移带贴着
+       圆角走）→ 每帧顺手把 dynR 交给 _lqEdgeApply，由它按档位取/生成对应位移图。】 */
   var fullR=Math.floor(Math.min(liq.gw,liq.gh)/2)-1;
   var rq=liq.s/LIQ_RFULL;if(rq>1)rq=1;rq=Math.sqrt(rq);
   var dynR=Math.round((liq.gr+(fullR-liq.gr)*rq)/2)*2;
   if(dynR>fullR)dynR=fullR;if(dynR<2)dynR=2;
-  if(dynR!==liq.lastR){liq.lastR=dynR;_liqGlass.style.borderRadius=dynR+'px';_liqRefract(dynR);}
+  if(dynR!==liq.lastR){liq.lastR=dynR;_liqGlass.style.borderRadius=dynR+'px';}
+  /* ★R150 边缘折射：强度跟着 s 走（s 带黏滞回落 → 位移也是「流走」的，不是弹回） */
+  _lqEdgeApply(dynR);
 }
 function _liqTick(ts){
   if(!liq.on)return;
   var dt=liq.last?Math.min(50,ts-liq.last):16.7;liq.last=ts;
   var k=Math.max(0.25,Math.min(3,dt/16.7));
   if(liq.mode==='drag'){
-    var a=1-Math.pow(1-0.55,k);
-    liq.x+=(liq.px-liq.x)*a;liq.y+=(liq.py-liq.y)*a;
-    /* ★R147 黏滞（「液态」补完之二）：起形快 0.30 / 收形慢 0.13 —— 手指停下或减速时，泡不会
-       立刻「弹回原形」，而是像糖浆一样慢慢流回去；对称速率看起来像橡皮筋。
-       ★刻意不用「过冲/震荡」做弹性：用户明确讨厌 jitter 类动效，靠涨落速率差就足够有黏滞感。 */
-    var sTgt=Math.min(LIQ_MAXS,(liq.travel/Math.max(1,dt)*16.7)/LIQ_SV);
-    liq.s+=(sTgt-liq.s)*Math.min(1,(sTgt>liq.s?0.30:0.13)*k);
-    liq.travel=0;
+    /* ★R149 跟手物理 = 「临界阻尼二阶」（两级一阶级联 → 双极点，ζ=1）：
+       ★为什么换掉一阶 lerp：一阶的响应形状是「贴上去就停」的指数衰减，手感偏生硬；
+         两级级联在**同样的稳态滞后**下（仿真实测 13.0px vs 原 13.7px @ 指针 1px/ms →
+         「跟手」不退化），对指针抖动的高频抑制更好（残余抖动 −15%），且响应是
+         「起步沉、后段收」的双极点衰减 —— 就是用户要的「柔柔的、带点黏」。
+       ★ζ 必须取 1（两级系数相同）：过冲 = 0。用户明确讨厌 jitter 类动效，
+         靠「形状比位置更黏」+ 双极点形状本身就够「流动」，绝不引入震荡/过冲。 */
+    var a=1-Math.pow(1-LIQ_FOLLOW,k);
+    liq.fx+=(liq.px-liq.fx)*a;liq.fy+=(liq.py-liq.fy)*a;
+    liq.x+=(liq.fx-liq.x)*a;liq.y+=(liq.fy-liq.y)*a;
     /* x/y 跟着拉伸量再钳一次：this 帧的 s 可能比上一次 pointermove 钳制时更大 */
     liq.x=_liqClampX(liq.x);liq.y=_liqClampY(liq.y);
+    /* ★R149 速度源换成「泡自身的帧间位移（按 dt 归一化）」：
+       ① 不再依赖 pointermove 的触发频率与事件粗细（手机 60/120Hz、鼠标 125~1000Hz 手感一致）；
+       ② 拿到的是**已经过滤过的**速度 → 拉伸量与镜面高光天然连续，不会随指针事件抖动「一抽一抽」；
+       ③ 泡自身的运动即「液体的运动」—— 变形由液体的运动驱动，才是水滴该有的因果。 */
+    var vx=liq.x-liq.pX;liq.pX=liq.x;
+    /* ★R147 黏滞（「液态」补完之二）：起形慢 / 收形更慢 —— 手指停下或减速时，泡不会立刻
+       「弹回原形」，而是像糖浆一样慢慢流回去；对称速率看起来像橡皮筋。
+       【★R149 口径更新：起形 0.30→0.26、收形 0.13→0.10（更黏）。峰值不变（持续速度下 s 照样收敛到 sTgt），
+         改的只是「形变进出的快慢」= 更柔。】 */
+    var sTgt=Math.min(LIQ_MAXS,(Math.abs(vx)/Math.max(1,dt)*16.7)/LIQ_SV);
+    liq.s+=(sTgt-liq.s)*Math.min(1,(sTgt>liq.s?LIQ_S_UP:LIQ_S_DN)*k);
+    /* 【★R150：R148 的「放大倍数」已删除 —— 参考图的边缘折射强度直接复用 s（见 _lqEdgeApply），
+       不再有独立的 mag 状态需要缓动。】 */
     /* ★R146 运动方向 → 液面隆起侧（驱动 ::after 的镜面高光）：用「泡位置」的帧间位移判定，
        不依赖 pointermove 的触发频率；反向时靠 lerp 平滑 → 左右来回甩时高光像液体一样晃荡。
-       死区 0.4px 是必要的：钳在栏端点时 x 已经不动了，若还按亚像素抖动判方向，高光会左右乱颤。 */
-    var vx=liq.x-liq.pX;liq.pX=liq.x;
+       死区 0.4px 是必要的：钳在栏端点时 x 已经不动了，若还按亚像素抖动判方向，高光会左右乱颤。
+       【★R149：vx/pX 已提到钳制之后统一算（同一份「泡的帧间位移」同时喂速度与方向），此处只消费。 */
     var want=(vx>0.4)?-1:((vx<-0.4)?1:0);
     liq.hxd+=(want-liq.hxd)*Math.min(1,0.14*k);
     liq.o+=(1-liq.o)*Math.min(1,0.30*k);
@@ -12913,9 +13113,10 @@ function _liqTick(ts){
        看上去像慢慢飘回去；加快后是干脆到位，配合交接瞬移 → 放手后没有任何多余位移。 */
     var a2=Math.min(1,0.32*k);
     liq.x+=(liq.tx-liq.x)*a2;liq.y+=(liq.ty-liq.y)*a2;
-    /* ★R147 松手后「形变比位置收得慢」（0.28 → 0.17）：泡先滑到位、形变再慢慢流平 ——
-       看起来像一滴液体被放下后「摊平」，而不是一块橡皮弹回原形。 */
-    liq.s+=(0-liq.s)*Math.min(1,0.17*k);
+    /* ★R147 松手后「形变比位置收得慢」：泡先滑到位、形变再慢慢流平 ——
+       看起来像一滴液体被放下后「摊平」，而不是一块橡皮弹回原形。
+       【★R149 口径更新：0.17→0.14（更黏）→ 放下的那滴水摊平得更慢、更「重」。】 */
+    liq.s+=(0-liq.s)*Math.min(1,LIQ_S_SETTLE*k);
     /* ★R146 松手/归位期：液面静止下来 → 镜面高光平滑归回基准位（不再跟着回弹方向晃） */
     liq.pX=liq.x;liq.hxd+=(0-liq.hxd)*Math.min(1,0.20*k);
     if(liq.mode==='settle'&&Math.abs(liq.tx-liq.x)<1.5&&Math.abs(liq.ty-liq.y)<1.5&&liq.s<0.015){
@@ -12945,13 +13146,18 @@ function _liqDone(){
   window.removeEventListener('pointerup',_liqUp,true);
   window.removeEventListener('pointercancel',_liqUp,true);
   if(liq.hoverTab){liq.hoverTab.classList.remove('lp-hover');liq.hoverTab=null;}
+  _liqLensHover(null);
   if(_liqGlass){_liqGlass.style.opacity='0';_liqGlass.style.transform='translate3d(0,0,0)';}
+  /* ★R150 折射芯的 transform 归位 + 摘掉滤镜（层马上 display:none，不会有「未折射的一帧」被看到） */
+  if(_liqLensNav)_liqLensNav.style.transform='';
+  if(_liqLensIn)_liqLensIn.style.filter='none';
   if(_liqLayer)_liqLayer.style.display='none';
   document.documentElement.classList.remove('liq-grabbing');
   /* ★R142 兜底：任何收场路径都要把「选中胶囊」还回来（正常交接在 _liqTick fade 转换处） */
   if(nav)nav.classList.remove('liq-drag');
   liq.on=false;liq.down=false;liq.armed=false;liq.pid=null;liq.last=0;liq.hit=null;liq.cacheTabs=null;
   liq.hxd=0;liq.lqHx=-1;liq.lqHs=-1;liq.lqHi=-1;   /* ★R146 镜面高光状态一并清干净 */
+  liq.lensTf='';liq.ef='';liq.es=-1;   /* ★R150 折射芯状态一并清干净 */
 }
 function _liqClickGuard(e){
   if(Date.now()<liq.noClick){e.stopPropagation();e.preventDefault();}
