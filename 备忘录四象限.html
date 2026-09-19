@@ -586,9 +586,17 @@ body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50
    恢复 8px 不破坏文字对齐：正文文字与分类标签文字都从 .memo-body 起始线 + 各自 6px padding 推算，gap 同时平移两者。 */
 /* 裁剪容器：与 memo 卡片同尺寸、overflow:hidden，把收起态(translateX(100%))在卡片右侧外的菜单裁掉，
    解决「宽屏菜单从备忘录外面出现且有残留」；菜单在其中做滑入覆盖，窄屏网格也自然生效
-   ★Issue1修复：swipe-clip z-index:2 在 swipe-actions(z-index:3)下方，避免移动端 pointer-events:none 不可靠导致点击被吞 */
+   ★Issue1修复：swipe-clip z-index:2 在 swipe-actions(z-index:3)下方，避免移动端 pointer-events:none 不可靠导致点击被吞
+   ★R166 修「菜单盖不全卡片、左侧色条漏 1px」：绝对定位元素的包含块是 **padding box**（被 1px 边框内缩），
+   而左侧色条 ::before 为了与卡片外缘齐平特意向左出血 1px（见 .memo-item.qb::before 的 R89 注释）→
+   菜单打开时 `inset:0` 的菜单只铺满 padding box，色条那条 1px 仍露在外（实测左/上/右各漏 1.00px）。
+   改为 `inset:calc(-1*var(--card-bw))` 向四周各外扩一个边框宽 = 恰好覆盖整个 border box、与卡片外缘严格重合；
+   border-radius 仍取 --radius-card（卡片自身外圆角也是它，两轮廓完全一致）。
+   ★必须同时 width/height:auto —— 原来写死 100% 是「padding box 的 100%」，会把右侧又缩回 1px。
+   ⚠️compact 布局下 .memo-item 是 overflow:hidden!important（裁在 padding box），外扩会被裁回、
+   等效保持原样；好在那种模式下色条同样被裁在 padding box 内、本来就不出血，所以不漏。 */
 .memo-item .swipe-clip{
-  position:absolute;inset:0;width:100%;height:100%;
+  position:absolute;inset:calc(-1 * var(--card-bw));width:auto;height:auto;
   overflow:hidden;border-radius:var(--radius-card);z-index:2;pointer-events:none;
   clip-path:inset(0 round var(--radius-card));  /* 裁住毛玻璃 backdrop-filter，防止滑入时模糊溢出卡片右缘 */
 }
@@ -666,6 +674,13 @@ body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50
 .memo-item.swipe-open .swipe-actions{opacity:1;visibility:visible;pointer-events:auto;}
 /* 收起淡出:保留可见态但 opacity 渐变到 0,由 JS 在延迟后才真正移除 swipe-open 复位 */}
 .memo-item.swipe-closing .swipe-actions{opacity:0;visibility:visible;pointer-events:none;transition:transform .22s ease,opacity .22s ease,visibility 0s linear .22s;}
+/* ★R166 菜单打开时淡出左侧色条：色条语义 =「卡片的一条边」，被菜单盖住后不该再露脸。
+   纯色主题靠 .swipe-clip 外扩（inset:-1*--card-bw）就能完全盖住；但玻璃主题的菜单是**半透磨砂面板**
+   （backdrop-filter），身后饱和度高的色条会透过面板显出一道橙带（实测打开态左缘仍是柔橙渐变、肉眼可见）
+   → 干脆在打开态把色条淡出。.22s 与面板滑入/滑出同拍（swipe-open 由 openSwipe 立即加、
+   closeSwipe 在滑出结束的 240ms 后才摘，所以淡出淡回都与面板同步）。 */
+.memo-item.qb::before{transition:opacity .22s ease;}
+.memo-item.qb.swipe-open::before{opacity:0;}   /* ★注意：qb/swipe-open 同挂在一个元素上，必须是复合选择器，不能写成 `.swipe-open .qb` */
 .memo-item.locked .memo-content.locked-content{display:flex;align-items:center;gap:6px;color:var(--text-tertiary);font-style:italic;}
 .memo-item.locked .memo-content.locked-content svg{width:16px;height:16px;flex:none;}
 /* 锁标记：加锁后常驻显示，提供即时可见反馈（即使左滑菜单已收起） */
@@ -2204,8 +2219,9 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
      不再用 grid 高度 hack(那是错乱根源：与 JS 内联 translateX 冲突 + grid 过渡在 WebView 抖动)。
      窄屏同样「菜单盖住备忘正文」，靠 .swipe-clip overflow:hidden 裁剪，单行 7 个按钮 flex 均分。 */
   .memo-item{display:block;}             /* fore 与 clip 上下堆叠(flex 兼容)，clip 仍绝对覆盖 */
-  .memo-item .swipe-clip{                 /* 维持 absolute inset:0 裁剪，与桌面端同语义 */
-    position:absolute;inset:0;width:100%;height:100%;overflow:hidden;border-radius:var(--radius-card);z-index:2;
+  .memo-item .swipe-clip{                 /* ★R166 与桌面端同语义：外扩一个边框宽铺满整个 border box
+                                             （原 inset:0 只铺 padding box → 左侧色条出血的 1px 会漏出来） */
+    position:absolute;inset:calc(-1 * var(--card-bw));width:auto;height:auto;overflow:hidden;border-radius:var(--radius-card);z-index:2;
   }
   .memo-item .swipe-actions{
     position:absolute;inset:0;width:100%;height:100%;
