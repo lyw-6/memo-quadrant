@@ -2748,9 +2748,19 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        得到泡心 244 vs 底栏 255 → 一整块 11 档的灰，用户看到的「灰扑扑的塑料片」就是这个。
        ★压暗全部交给下面那两条「贴边渐隐」的 inset 弧带（近缘最深、中心归零），
          均匀 tint 只留 1.2%/0.9% 当「玻璃自身的一点中性灰」。 */
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--text,#1f2937) 1.2%, transparent) 0%,
-      color-mix(in srgb, var(--text,#1f2937) .9%, transparent) 100%);
+    /* ★★R158「泡心不许比底栏暗」—— 用户口径：「玻璃质感也不一样」。
+       实测（`_r157_light_hold.png` 360×800@3.5 逐像素）：
+         · 本实现泡心 **252**、泡外底栏 **255** → 泡比周围**暗 3 档**（一块微微发灰的板）；
+         · 参考长按泡心 **251~255**、紧邻的卡面 **239~249** → 泡比周围**亮 6~11 档**（在发光）。
+       根因 = 这一层：旧值用 `var(--text)` 贴一档中性灰。
+         深色主题里 --text 是浅色 → 它是「提亮」（对）；
+         但 light/green 的 --text 是深色 → 它把白玻璃压成灰板（错）。
+       改法 = 换成**白 lift**：深色主题照样提亮，浅色主题封顶在 255（永不压暗）。
+       ★为什么浅色下「亮」只能靠白 lift + 外柔晕、不能靠内暗弧：参考的亮是相对**周围**
+         （卡面 239~249）的，我方底栏本身已是纯白 255，没有余量 → 对比只能由
+         「泡外一圈柔晕把周围压下去」提供（见 .liquid-glass 的 box-shadow），
+         这正是 R153 那两道「inset 内暗弧」被否掉的原因：压的是泡**内**，方向反了。 */
+    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.04) 100%);
   box-shadow:
     /* ★R153 顶缘 specular .92 → .45：参考「静置态」整屏实测里，泡的上下缘**没有任何比栏底更亮的一线**
        （泡心柱上侧：245 242 238 237 208 183 238 239 240 —— 从页底到最暗再回来，全程无亮点；
@@ -2785,9 +2795,9 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     /* ★R151① 白玻璃也要「去色」：原来这层是纯白 12%/4%，白泡叠白底栏（glass 主题底栏本身就是半透明白）
        → 泡体跟底栏同色、只剩描边能看。改成「中性深色 + 一点白」→ 泡比底栏略暗或略亮，
        形体靠中性描边 + 厚度弧带立住，颜色仍旧由身后内容提供。 */
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--text,#1f2937) 1.0%, transparent) 0%,
-      color-mix(in srgb, var(--text,#1f2937) .8%, transparent) 100%),
+    /* ★★R158 同基础 .liquid-sheen：把「var(--text) 中性灰」换成白 lift —— glass 主题底栏本身
+       是半透明白玻璃，再压一档灰会得到「灰白板」（glass 主题实测泡心比底栏暗 2~3 档）。 */
+    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.04) 100%),
     linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 100%);
   /* ★★R157 同基础泡：删掉「内白环 + 22px/6px 中性内暗弧 + 外白圈」，只留 1px 顶缘 specular +
      底缘一线回光；形体交给 .liquid-glass 的泡外柔晕。理由见基础 .liquid-sheen 处的 R157 注释。 */
@@ -2810,11 +2820,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 [data-theme="green"] .liquid-sheen{
   background:
     linear-gradient(180deg, rgba(255,255,255,.52) 0%, rgba(255,255,255,.06) 2.2%, rgba(255,255,255,0) 7%),
-    /* ★R152 同基础：均匀 tint 1.3%/1.0%（原来 6%/4% → 泡心比白底栏暗 15 档，一眼灰块）。
-       白底栏上要立形体**只靠边缘**：弧带比基础再浓一档（参考图浅底栏上近缘压暗确实更明显）。 */
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--text,#1f2937) 1.3%, transparent) 0%,
-      color-mix(in srgb, var(--text,#1f2937) 1.0%, transparent) 100%);
+    /* ★R152 同基础：均匀 tint 从 6%/4% 收到 1.3%/1.0%（原来泡心比白底栏暗 15 档，一眼灰块）。
+       ★★R158 再收到 **0**（换成白 lift）：白底栏（#fff=255）上「压一档灰」的净效果就是
+         泡心 252 vs 底栏 255 = **一块发灰的板**。参考长按泡心 251~255 是**不小于**周围的亮面，
+         所以浅色主题里这一层只能提亮不能压暗；形体全部交给泡外柔晕（box-shadow）。
+         ★green 底栏 #f3faf3=250 同理：泡心也从 247 抬到 250（= 底栏色）。 */
+    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.04) 100%);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.42),
     inset 0 -1px 0 rgba(255,255,255,.18);}
