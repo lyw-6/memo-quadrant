@@ -2572,7 +2572,15 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .bottom-nav.liq-drag .nav-tab.active svg{filter:none;}
 /* 泡压住的原 active tab 也要亮（lp-hover 优先级高于上面的压制规则） */
 .bottom-nav.liq-drag .nav-tab.lp-hover{color:var(--color-primary,#6366f1)!important;}
-.bottom-nav.liq-drag .nav-tab.lp-hover svg{filter:drop-shadow(0 1px 2px rgba(99,102,241,.4))!important;}
+/* ★★R157 长按态**一律摘掉图标投影**——用户口径：「人家的图标都不会发光」。
+   ▲原因链：`.nav-tab.active svg` / `.nav-tab.lp-hover svg` 都挂着
+     `filter:drop-shadow(0 1px 2px rgba(99,102,241,.4))`；长按期真实 tab 与**泡内副本 tab**
+     同时拿到同一个类 → **两枚图标、两层投影**叠在一起，再加上副本与真实内容原本错开 2.13px
+     （R157 已修），观感就是「图标在发光 + 发糊」。
+   ▲参考图逐像素看：长按泡内的图标/文字是**完全干净的原图案**（无投影、无发光、无描边光），
+     所以长按期整条底栏统一 `filter:none`（真实 tab 与副本 tab 都不发光）。
+   ▲非长按期的 `.nav-tab.active` 投影**保持不动**（那是常态 UI 的高亮语言，用户这轮没提）。 */
+.bottom-nav.liq-drag .nav-tab svg{filter:none!important;}
 /* ★★R155 长按/拖动期整条底栏「微放大」——用户口径：「长按导航栏时，玻璃块出现时，
    它的导航栏也跟着放大一点点」（对照酷安长按态：整条栏连图标一起变大）。
    ★幅度取自参考图实测：长按态底栏顶边比常态**高 3px / 栏高 200px ≈ 1.5%**
@@ -2683,7 +2691,15 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      （#fff / #f3faf3）上直接隐身 → 用户看到的是「没有边界的一团雾」。
      ★用 var(--text) 调色而不是写死灰：light/green 的 text 是深色 → 深灰描边；dark 的 text 是浅色
        → 自动变浅描边（深底栏上的玻璃必须靠亮边立形）→ 一套规则跨 4 主题自洽。 */
-  border:1px solid color-mix(in srgb, var(--text,#1f2937) 30%, transparent);
+  /* ★★R157 **删掉 1px 描边** —— 用户口径：「一点都不像…玻璃质感也不一样」。
+     实测（`Downloads/长按我的.jpg` 360×800@3.5 逐像素采样）参考长按泡的真实剖面：
+       · 泡体 252~255 **≥ 底栏 252**（泡身就是一块白玻璃砖，不比底栏暗）；
+       · 泡缘**没有任何描边线**：沿缘向外 247 → 245 …（只 Δ-5~-17）柔和过渡约 **10 css px** 再回 252。
+     → 形体完全靠「泡外一圈柔和中性暗晕」立起来（明暗对比让泡看着发亮），不是靠线。
+     ★R151 当年量到的「Δ-66 硬暗线」其实是**常态下灰色选中块的边界**（实测 226 vs 底栏 252），
+       被误当成长按泡的边缘 → 于是给泡描了 30% 中性边，在浅色底栏上得到一条清晰灰线
+       = 用户说的「描了个圈」。★外阴影走 var(--text)：light/green 得深灰暗晕、dark 得亮晕，跨主题自洽。 */
+  border:none;
   /* ★★R152 泡体 = 「底栏同色的近不透明板」—— 参考图整屏截图逐像素实测的铁证：
        · 柱 x=980 从上缘往下：页底 245 → 泡内 **249（= 底栏色，一分不差）** 一路到 y2712 → 底缘暗带 → 页底 245；
        · 同图泡下半（在页面底上）内部同样是 249，而页面底是 245。
@@ -2693,16 +2709,19 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        ★用 var(--card-bg) 而不是写死白：它就是 .bottom-nav 自己的 background（light #fff / dark #1a1a2e /
          green #f3faf3 / glass 玻璃色）→ 泡与底栏天然同材质、跨 4 主题自洽。
        ★88% 而不是 100%：参考实测泡内 249 vs 页底 245（+4）——留一点透，别做成实心白卡片。 */
-  background:color-mix(in srgb, var(--card-bg,#fff) 93%, transparent);
-  /* ★★R153 外投影「归零」—— 参考整屏截图逐行实测（泡心柱 x=961，1px 步长）：
-       上侧 245 245 245 245 245 245 245 245 245 245 245 245 245 242 238 237 [208 183] 238 …
-       下侧 … 242 245 245 245 245 245 245 245 245 245 245 245 245 245
-       → 泡外**只有 3px 的过渡就回到页底色**（无论上面还是下面），**完全没有模糊投影**。
-       而我们旧值 0 5px 14px 会在泡外拖出 ~14px 的灰晕（同一柱实测：244 244 244 243 243 242 242 242 240 …），
-       页底被整体压暗 10 档 → 泡看着「像贴了一张灰纸」。
-       ★形体改由「1px 硬暗环（border，Δ-66）」承担（见上），这才是参考的分离方式。
-       只留 1px 接触线（Δ≈-3），去掉全部模糊半径。 */
-  box-shadow:0 1px 2px rgba(31,38,135,.06);}
+  background:color-mix(in srgb, var(--card-bg,#fff) 96%, transparent);
+  /* ★★R157 外投影「从 0 改回柔晕」——与上一条 border 的删除是**同一件事的两半**：
+     R153 当年用「1px 硬暗环」代替投影（理由是「参考泡外只有 3px 过渡」），那条读数来自旧的
+     `长按态.jpg`（不同批次/不同分辨率）；本批 4 张 1260×2800 图的逐像素采样给出的是：
+       泡缘向外 → 247 → 245 → …（Δ-5~-17）→ 252，**跨度约 10 css px**，是**柔和**过渡而不是 3px 硬跳。
+     → 所以形体交回「柔晕」承担：无 spread（四处均匀）、两条叠出「近缘深、外圈浅」的落雪形剖面。
+       ★α 反算（同 R153 的 2× 规律）：spread:0 时元素边界处恰是 blur 的 50% 点
+       → 边界 Δ ≈ 0.5×(7%+6%)×255 ≈ 16.6（参考实测贴缘最深 Δ-17）✓；
+       衰减跨度 ≈ blur/2 ≈ 11 css px（参考实测柔过渡 ≈10 css px）✓。
+       ★标定方法：同一构建注入三档（5/16、6/26、8/38）渲染后与参考同裁剪并排比 → 取中间档。 */
+  box-shadow:
+    0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 7%, transparent),
+    0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 6%, transparent);}
 /* ★R148 玻璃质感层（叠在折射副本之上）：R146/R147 的全部色值原样搬来，一处未改。
    ★R147 浅色主题护栏：底色脱到 4~9% 后，白底栏（#fff）上的白描边/白高光会「消失」，
      泡失去轮廓 → 补一道极淡的冷色内描边把形体界定出来（见下方 [data-theme="light"] 覆盖）。 */
@@ -2737,42 +2756,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        （泡心柱上侧：245 242 238 237 208 183 238 239 240 —— 从页底到最暗再回来，全程无亮点；
         下侧同理）。旧值 .92 在近白泡体上会抬起约 +5 档（实测 255 vs 泡体 250）→ 泡缘出现一条
        「白亮线」，与参考的「纯暗缘」冲突。降到 .45 后仅 +2 档（肉眼不可见），保留玻璃的一点顶缘感。 */
-    inset 0 1px 0 rgba(255,255,255,.45),                                /* 顶缘极淡 specular（★R153 已大幅收敛） */
-    inset 0 0 0 1px rgba(255,255,255,.20),                              /* 整圈细亮环 = 玻璃内壁反光 */
-    inset 0 -1px 0 rgba(255,255,255,.30),                               /* 底缘回光（厚度剖面暗端） */
-    /* ★R151① 边缘「厚度弧带」：参考图泡缘内侧有一条 ~20px 宽的中性灰弧（左缘 #dddddd / 右缘 #d2d2d2，
-       比泡体再暗 6~10%），那是真玻璃把身后背景「压弯」后的暗带。
-       ★我们没有 backdrop 折射（R148 已证伪）→ 用一圈「贴边向内渐隐的中性 inset 阴影」代替：
-         形状自动跟随 border-radius，近缘最深、中心归零 —— 泡中心必须通透（R147 铁律），
-         所以只在最外圈 26px 内出现，且带负 spread 把内边界收干净。
-       ★**这里不放彩色**：参考图「长按态」实测饱和度 0~3%（完全没有虹彩）→ 色散只该在拖动时出现，
-         由 R150/R151② 的 filter 管线给。旧的青/品红静态色散边（#7dd3fc / #f0abfc）已删除。 */
-    /* ★R152 视在压暗的主力：均匀 tint 降到 1.2% 后，形体的「厚度」全靠这两条弧带
-       （近缘最深 → 中心归零）。★实测标定：参考图近缘 236~243（栏底 249 → Δ-6~-13），
-       折算到本主题（白底栏 255）就是 242~249；21%/11% 会压到 233~238（Δ-17~-22、深了一倍）→ 收敛到 14%/7%。
-       ★★R153 第三次标定（整屏截图 1px 步长实测，方向：从栏色往缘外走）：
-         · 参考的「厚度带」整体深度只有 **Δ-6 ~ -17**（栏底 249 → 243/241/239/238/236，两次小凹 232/236），
-           跨度约 **55px = 18 css px**，中心（平台段）严格归零；
-         · R152 的 14%/30px 实测近缘压到 240（Δ-15）且跨度只 ~10px —— 深度偏过头、跨度又太短；
-         · R153 改成「宽而浅」：34px 主轴（跨度 ~18px、峰值 Δ-12 落在贴缘 5px 处）+ 10px 近缘补充带。
-       ★★R153 第三次标定（整屏截图 1px 步长实测）：参考的厚度带 = **两条分量**：
-         · 宽而浅的一条：Δ-4 ~ -10，跨度 ~55px（18 css），一直铺到平台段才归零；
-         · 窄而深的一条：Δ-11 ~ -17，只占贴缘 ~15px（5 css）。
-       合计贴缘最深 Δ-17（栏底 249→232），中心严格归零。
-       ★★负 spread 是上一版的错误：`inset 0 0 34px -5px` 会把阴影轮廓推到元素**外面**，
-         模糊再把它拽回来一点 → 内侧只剩 2~3px 的微光（实测 250，Δ-2，等于没画）。
-       ★★第二个坑（R153 实测踩到）：**inset 阴影在元素边缘处的强度只有 α 的一半**
-         （spread:0 时轮廓线正好落在元素边界上 → 边界处恰是 feather 的 50% 点），
-         到 blur/2 处衰减为 0。所以「贴缘 Δ-17」需要 α ≈ 2×17/249 ≈ 14%（不是 5%）。
-         上一版写着 3%/4.5%，实测边缘只有 Δ-2 → 等于没画。现在按 2× 反算：
-         主带 10% + 近缘 4% → 边缘合成 6.9% → Δ-17 ✓，跨度 = blur/2 = 18px ✓（与参考 55px@3x 吻合）。
-       ★分工：**「外缘硬暗线」交给 border（1px、Δ-66），这两条只做内侧渐隐**。 */
-    /* ★★R155 收窄（36px→22px）：36px 的软黑圈在白底栏上会形成一圈「发毛的暗环」，
-       正是用户说的「近视感」；参考图的厚度带更短更脆。深度同步 10%→7%（贴边仍达 Δ-12）。 */
-    inset 0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 7%, transparent),
-    inset 0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 3%, transparent),
-    /* ★R153 外圈白环 .14 → .05：参考泡的最外一像素是**暗**的（183），这一圈白会把它顶亮。 */
-    0 0 0 1px rgba(255,255,255,.05);}
+    inset 0 1px 0 rgba(255,255,255,.40),                                /* 顶缘极淡 specular（★R153 已大幅收敛） */
+    /* ★★R157 删掉三条「往内压暗」的弧/环 —— 参考泡内是**均匀的白**，压暗全在泡**外**（见 .liquid-glass
+       的柔晕投影）。旧值是「inset 0 0 0 1px 白环 + 22px 中性暗弧 + 6px 近缘暗弧」，在浅色底栏上
+       叠出「一圈内环 + 一圈内阴影」＝用户看到的「描了个圈 / 厚玻璃杯」；参考泡心 252~255 一分不暗。
+       ★保留底缘那一线白回光（1px、不可见）只为让泡在深色主题上不「平得像纸」。 */
+    inset 0 -1px 0 rgba(255,255,255,.22);}
 /* ★R146 表面的跟手镜面高光 = 「液态」的核心：
    位置/形状/强度由 JS 每帧写 CSS 变量（--lq-hx 位置X / --lq-hy 位置Y / --lq-hs 扁长 / --lq-hi 强度）——
    泡被拖着走时液体被甩向「来向」一侧、光在液面隆起处聚集；拖得越快反光越亮、光斑被拉得越扁长。
@@ -2800,20 +2789,17 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       color-mix(in srgb, var(--text,#1f2937) 1.0%, transparent) 0%,
       color-mix(in srgb, var(--text,#1f2937) .8%, transparent) 100%),
     linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 100%);
+  /* ★★R157 同基础泡：删掉「内白环 + 22px/6px 中性内暗弧 + 外白圈」，只留 1px 顶缘 specular +
+     底缘一线回光；形体交给 .liquid-glass 的泡外柔晕。理由见基础 .liquid-sheen 处的 R157 注释。 */
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.50),
-    inset 0 0 0 1px rgba(255,255,255,.30),
-    inset 0 -1px 0 rgba(255,255,255,.44),
-    inset 0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 6.8%, transparent),
-    inset 0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 2.8%, transparent),
-    0 0 0 1px rgba(255,255,255,.10);}
+    inset 0 1px 0 rgba(255,255,255,.46),
+    inset 0 -1px 0 rgba(255,255,255,.34);}
 [data-theme="glass"] .liquid-glass{
-  /* ★glass 主题的底栏本身就是「半透明白玻璃」→ 白泡叠白底容易糊在一起，
-     原本靠「白描边 + 白外圈」把它拎出来。★R151① 改中性：白边在白玻璃底栏上本就很难看清，
-     而中性描边（跟 text 走）在亮底栏上永远是「暗一档」→ 边界确定性更好。
-     ★R153 描边 15% → 26%（与基础同口径：参考外缘硬线 Δ-66）；外投影去掉模糊半径只留 1px 接触线。 */
-  border-color:color-mix(in srgb, var(--text,#1f2937) 30%, transparent);
-  box-shadow:0 0 0 1px color-mix(in srgb, var(--text,#1f2937) 9%, transparent),0 1px 2px rgba(31,38,135,.06);}
+  /* ★★R157 同基础：不再描边，改用泡外柔晕立形体（glass 主题底栏本身是半透明白玻璃，
+     泡体走 card-bg 96% 已能与底栏拉开一档；外面这圈中性柔晕负责界定轮廓）。 */
+  box-shadow:
+    0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 7%, transparent),
+    0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 6%, transparent);}
 /* ★R147 浅底栏护栏（light / green）→ **★R151① 口径更新：把「主色 tint」整个换成「中性色」**。
    R147 当时的处境是「白描边在白底栏上隐身」→ 它的修法是「把主色 tint 提回 16%/8% 立形体」。
    但参考图证明这条路走错了：真玻璃**自身无色**（泡体只比底栏暗 4%），形体是靠
@@ -2830,20 +2816,17 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       color-mix(in srgb, var(--text,#1f2937) 1.3%, transparent) 0%,
       color-mix(in srgb, var(--text,#1f2937) 1.0%, transparent) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.48),
-    inset 0 0 0 1px color-mix(in srgb, var(--text,#1f2937) 16%, transparent),
-    inset 0 -1.5px 1px -0.5px color-mix(in srgb, var(--text,#1f2937) 12%, transparent),
-    inset 0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 7.6%, transparent),
-    inset 0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 3.2%, transparent);}
+    inset 0 1px 0 rgba(255,255,255,.42),
+    inset 0 -1px 0 rgba(255,255,255,.18);}
 [data-theme="light"] .liquid-glass,
 [data-theme="green"] .liquid-glass{
-  /* ★R151① 白描边 → 中性暗描边（白底栏上白边等于没有边界）
-     ★R152 外投影第一次收敛：18px/20% → 14px/14%
-     ★R153 第二次收敛（**归零模糊**）：参考静置态泡外只有 3px 过渡就回到页底色，
-     完全没有模糊投影；14px 的模糊仍会在泡外拖出约 10 档的灰晕 → 只留 1px 接触线。
-     描边 17% → 26%（对齐参考外缘硬线 Δ-66 的反算值）。 */
-  border-color:color-mix(in srgb, var(--text,#1f2937) 30%, transparent);
-  box-shadow:0 1px 2px rgba(31,38,135,.06);}
+  /* ★★R157 这一条是「泡看着像描了个圈」的**主犯**：旧值 `inset 0 0 0 1px 中性 16%` 是一条**整圈内描边**，
+     叠上 .liquid-glass 那圈 30% 的 border，就成了**两道灰环**（外一道硬线 + 内一道细环）。
+     参考泡（实测）泡内 252~255 与底栏同色、**零内环**，形体全在泡外 → 两条一起删。
+     ★外投影改柔晕：无 spread、6px + 22px 两条。α 反算见基础 .liquid-glass 注释（边界 Δ≈16.6）。 */
+  box-shadow:
+    0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 7%, transparent),
+    0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 6%, transparent);}
 /* ★R148 删掉「真透镜折射」的整条管线（@supports backdrop-filter:url(#lqRefract) + feImage 位移图）：
    实测 backdrop-filter **不加载 feImage**（见上方 R148 三层结论）→ 那个滤镜在本项目里从未真正折射过。
    ★R150 出路：把 feImage 位移图改挂到**普通元素的 filter** 上（filter 支持 feImage）→ 边缘折射成立；
@@ -12834,7 +12817,15 @@ var liq={down:false,on:false,armed:false,pid:null,pidType:'mouse',raf:0,last:0,h
          /* ★R150 折射的状态：lensTf=上次写进副本的 transform（去重）/ ef=当前挂的滤镜 url /
             es=上次写进 feDisplacementMap 的 scale（0.5px 量化去重 → 一次属性写=一次滤镜重绘） */
          lensTf:'',ef:'',es:-1,
-         x:0,y:0,s:0,o:0,gw:0,gh:0,gr:14,layW:0,layH:0};
+         /* ★★R157 副本对齐用的「底栏 border box 尺寸 + 边框偏移」。
+            为什么另存一套：`layW/layH` 是 `.liquid-layer` 的 client box（= 底栏的 **padding box**，
+            实测 346×57），而副本 `.liquid-lens-nav` 自己也带 1px 边框 + `box-sizing:border-box`
+            → 若把它设成 346×57，它的**内容盒**只剩 344×55，比真实底栏的内容盒（346×57）小 2px。
+            后果：副本里 `.nav-tab` 矮 2px（45→43）+ 整体下移 2.13px，而 `.nav-tab{overflow:hidden}`
+            会把 11px 行高的**文字底部裁掉 2px** —— 用户看到的「玻璃块把字下方吞掉」就是它。
+            nbl/nbt = 边框宽（= `clientLeft/clientTop`）：层原点在 padding box，副本想对齐真实内容
+            必须整体往左上再挪一个边框宽。 */
+         x:0,y:0,s:0,o:0,gw:0,gh:0,gr:14,layW:0,layH:0,nw:0,nh:0,nbl:0,nbt:0};
 var _liqLayer=null, _liqGlass=null, _liqLens=null, _liqLensIn=null, _liqLensNav=null, _liqLensTabs=null;
 
 function _liqNav(){return document.getElementById('bottomNav');}
@@ -12904,7 +12895,10 @@ function _liqReattach(){
 function _liqLensPaint(lead){
   if(!_liqLensNav)return;
   var gx=liq.x-liq.gw/2+lead, gy=liq.y-liq.gh/2;
-  var t='translate3d('+(-gx).toFixed(2)+'px,'+(-gy).toFixed(2)+'px,0)';
+  /* ★★R157 再减一个边框宽：层原点 = 底栏 padding box，而副本的 border box 落在层原点上
+     → 副本内容 = 边框(1) + 内边距(8/6)，真实底栏内容 = 内边距(8/6) 距 padding box
+     → 差一个边框宽（nbl/nbt）。不减就是「真图标 + 副本图标」错开 1px 的双影。 */
+  var t='translate3d('+(-gx-liq.nbl).toFixed(2)+'px,'+(-gy-liq.nbt).toFixed(2)+'px,0)';
   if(t===liq.lensTf)return;
   liq.lensTf=t;
   _liqLensNav.style.transform=t;
@@ -13085,7 +13079,10 @@ function _liqLensBuild(){
   var junk=c.querySelectorAll('#navPill,.liquid-layer');
   for(var i=0;i<junk.length;i++)junk[i].parentNode.removeChild(junk[i]);
   c.className='bottom-nav liquid-lens-nav'+(nav.classList.contains('liq-drag')?' liq-drag':'');
-  c.style.width=liq.layW+'px';c.style.height=liq.layH+'px';
+/* ★★R157 副本尺寸改用**底栏 border box**（liq.nw/nh），不是层的 padding box（liq.layW/layH）：
+   副本自带 1px 边框且 `box-sizing:border-box`，给 padding box 尺寸会让它的内容盒缩水 2px
+   → 副本 tab 矮 2px → `overflow:hidden` 把文字底部裁掉（"玻璃块吞字"）。回落到 layW/layH 只是兜底。 */
+  c.style.width=(liq.nw||liq.layW)+'px';c.style.height=(liq.nh||liq.layH)+'px';
   c.setAttribute('aria-hidden','true');
   _liqLensIn.innerHTML='';_liqLensIn.appendChild(c);
   _liqLensNav=c;_liqLensTabs={};
@@ -13190,6 +13187,10 @@ function _liqArm(cx,cy){
        （实测「按日历却在四象限浮起」）。所以：先 display:block → 量 layW/layH → 再换算落点。 */
   _liqLayer.style.display='block';
   liq.layW=_liqLayer.clientWidth||_nw;liq.layH=_liqLayer.clientHeight||_nh;
+  /* ★★R157 副本对齐基准：副本必须按**底栏 border box**（_nw×_nh）建，并整体再挪一个边框宽
+     （nbl/nbt），这样副本的**内容盒**才能与真实底栏的内容盒逐像素重合。
+     旧写法把副本设成 layW×layH（padding box）→ 内容盒小 2px → 副本 tab 矮 2px → 文字被裁。 */
+  liq.nw=_nw;liq.nh=_nh;liq.nbl=nav.clientLeft||0;liq.nbt=nav.clientTop||0;
 
   /* ★R142 活动区 = nav 的内容盒（不是 border box：差 2px border → 泡起步偏离栏中线 1px） */
   var tabs=_liqTabs();
