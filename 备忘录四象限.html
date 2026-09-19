@@ -2659,10 +2659,26 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      （#fff / #f3faf3）上直接隐身 → 用户看到的是「没有边界的一团雾」。
      ★用 var(--text) 调色而不是写死灰：light/green 的 text 是深色 → 深灰描边；dark 的 text 是浅色
        → 自动变浅描边（深底栏上的玻璃必须靠亮边立形）→ 一套规则跨 4 主题自洽。 */
-  border:1px solid color-mix(in srgb, var(--text,#1f2937) 14%, transparent);
-  box-shadow:
-    0 7px 18px rgba(31,38,135,.20),                                     /* 外投影：浮起（中性灰蓝，非彩色辉光） */
-    0 1px 3px rgba(31,38,135,.10);}
+  border:1px solid color-mix(in srgb, var(--text,#1f2937) 30%, transparent);
+  /* ★★R152 泡体 = 「底栏同色的近不透明板」—— 参考图整屏截图逐像素实测的铁证：
+       · 柱 x=980 从上缘往下：页底 245 → 泡内 **249（= 底栏色，一分不差）** 一路到 y2712 → 底缘暗带 → 页底 245；
+       · 同图泡下半（在页面底上）内部同样是 249，而页面底是 245。
+       → 泡**不是**「透出身后」的空心透镜（那会是 245），而是**一块自带肉身的玻璃板**，颜色恰好 = 底栏材质色。
+       ★旧实现（tint 走 transparent + 只留弧带）在浅色主题下得到「空心的一圈渐晕」——这正是用户说的
+         「还差点意思」：参考是一块**有厚度的白玻璃砖**，我方是一个**灰圈**。
+       ★用 var(--card-bg) 而不是写死白：它就是 .bottom-nav 自己的 background（light #fff / dark #1a1a2e /
+         green #f3faf3 / glass 玻璃色）→ 泡与底栏天然同材质、跨 4 主题自洽。
+       ★88% 而不是 100%：参考实测泡内 249 vs 页底 245（+4）——留一点透，别做成实心白卡片。 */
+  background:color-mix(in srgb, var(--card-bg,#fff) 93%, transparent);
+  /* ★★R153 外投影「归零」—— 参考整屏截图逐行实测（泡心柱 x=961，1px 步长）：
+       上侧 245 245 245 245 245 245 245 245 245 245 245 245 245 242 238 237 [208 183] 238 …
+       下侧 … 242 245 245 245 245 245 245 245 245 245 245 245 245 245
+       → 泡外**只有 3px 的过渡就回到页底色**（无论上面还是下面），**完全没有模糊投影**。
+       而我们旧值 0 5px 14px 会在泡外拖出 ~14px 的灰晕（同一柱实测：244 244 244 243 243 242 242 242 240 …），
+       页底被整体压暗 10 档 → 泡看着「像贴了一张灰纸」。
+       ★形体改由「1px 硬暗环（border，Δ-66）」承担（见上），这才是参考的分离方式。
+       只留 1px 接触线（Δ≈-3），去掉全部模糊半径。 */
+  box-shadow:0 1px 2px rgba(31,38,135,.06);}
 /* ★R148 玻璃质感层（叠在折射副本之上）：R146/R147 的全部色值原样搬来，一处未改。
    ★R147 浅色主题护栏：底色脱到 4~9% 后，白底栏（#fff）上的白描边/白高光会「消失」，
      泡失去轮廓 → 补一道极淡的冷色内描边把形体界定出来（见下方 [data-theme="light"] 覆盖）。 */
@@ -2676,11 +2692,21 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        = 用户一眼否掉的主因（他说「不是紫色的塑料片」）。
        ★用 var(--text) 而不是写死深灰：light/green 的 text 是深色 → 泡比底栏暗一档（与参考一致）；
          dark 的 text 是浅色 → 泡比底栏亮一档（深底栏上的玻璃必须比底色亮，否则「隐身」）。 */
+    /* ★R152 泡心必须「和底栏同色」而不是「比底栏暗一档」——
+       参考图整屏截图逐像素实测：泡心 (249,249,249) == 底栏 (249,249,249)，**零压暗**；
+       近缘向内才慢慢压到 236~243（-6~-13）。而旧值「整幅均匀压 5.5%/3.5%」在白底栏上
+       得到泡心 244 vs 底栏 255 → 一整块 11 档的灰，用户看到的「灰扑扑的塑料片」就是这个。
+       ★压暗全部交给下面那两条「贴边渐隐」的 inset 弧带（近缘最深、中心归零），
+         均匀 tint 只留 1.2%/0.9% 当「玻璃自身的一点中性灰」。 */
     linear-gradient(180deg,
-      color-mix(in srgb, var(--text,#1f2937) 5.5%, transparent) 0%,
-      color-mix(in srgb, var(--text,#1f2937) 3.5%, transparent) 100%);
+      color-mix(in srgb, var(--text,#1f2937) 1.2%, transparent) 0%,
+      color-mix(in srgb, var(--text,#1f2937) .9%, transparent) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.92),                                /* 顶缘最亮的一条硬线（specular） */
+    /* ★R153 顶缘 specular .92 → .45：参考「静置态」整屏实测里，泡的上下缘**没有任何比栏底更亮的一线**
+       （泡心柱上侧：245 242 238 237 208 183 238 239 240 —— 从页底到最暗再回来，全程无亮点；
+        下侧同理）。旧值 .92 在近白泡体上会抬起约 +5 档（实测 255 vs 泡体 250）→ 泡缘出现一条
+       「白亮线」，与参考的「纯暗缘」冲突。降到 .45 后仅 +2 档（肉眼不可见），保留玻璃的一点顶缘感。 */
+    inset 0 1px 0 rgba(255,255,255,.45),                                /* 顶缘极淡 specular（★R153 已大幅收敛） */
     inset 0 0 0 1px rgba(255,255,255,.20),                              /* 整圈细亮环 = 玻璃内壁反光 */
     inset 0 -1px 0 rgba(255,255,255,.30),                               /* 底缘回光（厚度剖面暗端） */
     /* ★R151① 边缘「厚度弧带」：参考图泡缘内侧有一条 ~20px 宽的中性灰弧（左缘 #dddddd / 右缘 #d2d2d2，
@@ -2690,9 +2716,30 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
          所以只在最外圈 26px 内出现，且带负 spread 把内边界收干净。
        ★**这里不放彩色**：参考图「长按态」实测饱和度 0~3%（完全没有虹彩）→ 色散只该在拖动时出现，
          由 R150/R151② 的 filter 管线给。旧的青/品红静态色散边（#7dd3fc / #f0abfc）已删除。 */
-    inset 0 0 26px -8px color-mix(in srgb, var(--text,#1f2937) 17%, transparent),
-    inset 0 0 6px -2px color-mix(in srgb, var(--text,#1f2937) 9%, transparent),
-    0 0 0 1px rgba(255,255,255,.14);}
+    /* ★R152 视在压暗的主力：均匀 tint 降到 1.2% 后，形体的「厚度」全靠这两条弧带
+       （近缘最深 → 中心归零）。★实测标定：参考图近缘 236~243（栏底 249 → Δ-6~-13），
+       折算到本主题（白底栏 255）就是 242~249；21%/11% 会压到 233~238（Δ-17~-22、深了一倍）→ 收敛到 14%/7%。
+       ★★R153 第三次标定（整屏截图 1px 步长实测，方向：从栏色往缘外走）：
+         · 参考的「厚度带」整体深度只有 **Δ-6 ~ -17**（栏底 249 → 243/241/239/238/236，两次小凹 232/236），
+           跨度约 **55px = 18 css px**，中心（平台段）严格归零；
+         · R152 的 14%/30px 实测近缘压到 240（Δ-15）且跨度只 ~10px —— 深度偏过头、跨度又太短；
+         · R153 改成「宽而浅」：34px 主轴（跨度 ~18px、峰值 Δ-12 落在贴缘 5px 处）+ 10px 近缘补充带。
+       ★★R153 第三次标定（整屏截图 1px 步长实测）：参考的厚度带 = **两条分量**：
+         · 宽而浅的一条：Δ-4 ~ -10，跨度 ~55px（18 css），一直铺到平台段才归零；
+         · 窄而深的一条：Δ-11 ~ -17，只占贴缘 ~15px（5 css）。
+       合计贴缘最深 Δ-17（栏底 249→232），中心严格归零。
+       ★★负 spread 是上一版的错误：`inset 0 0 34px -5px` 会把阴影轮廓推到元素**外面**，
+         模糊再把它拽回来一点 → 内侧只剩 2~3px 的微光（实测 250，Δ-2，等于没画）。
+       ★★第二个坑（R153 实测踩到）：**inset 阴影在元素边缘处的强度只有 α 的一半**
+         （spread:0 时轮廓线正好落在元素边界上 → 边界处恰是 feather 的 50% 点），
+         到 blur/2 处衰减为 0。所以「贴缘 Δ-17」需要 α ≈ 2×17/249 ≈ 14%（不是 5%）。
+         上一版写着 3%/4.5%，实测边缘只有 Δ-2 → 等于没画。现在按 2× 反算：
+         主带 10% + 近缘 4% → 边缘合成 6.9% → Δ-17 ✓，跨度 = blur/2 = 18px ✓（与参考 55px@3x 吻合）。
+       ★分工：**「外缘硬暗线」交给 border（1px、Δ-66），这两条只做内侧渐隐**。 */
+    inset 0 0 36px 0 color-mix(in srgb, var(--text,#1f2937) 10%, transparent),
+    inset 0 0 12px 0 color-mix(in srgb, var(--text,#1f2937) 4%, transparent),
+    /* ★R153 外圈白环 .14 → .05：参考泡的最外一像素是**暗**的（183），这一圈白会把它顶亮。 */
+    0 0 0 1px rgba(255,255,255,.05);}
 /* ★R146 表面的跟手镜面高光 = 「液态」的核心：
    位置/形状/强度由 JS 每帧写 CSS 变量（--lq-hx 位置X / --lq-hy 位置Y / --lq-hs 扁长 / --lq-hi 强度）——
    泡被拖着走时液体被甩向「来向」一侧、光在液面隆起处聚集；拖得越快反光越亮、光斑被拉得越扁长。
@@ -2714,22 +2761,23 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        → 泡体跟底栏同色、只剩描边能看。改成「中性深色 + 一点白」→ 泡比底栏略暗或略亮，
        形体靠中性描边 + 厚度弧带立住，颜色仍旧由身后内容提供。 */
     linear-gradient(180deg,
-      color-mix(in srgb, var(--text,#1f2937) 4.5%, transparent) 0%,
-      color-mix(in srgb, var(--text,#1f2937) 2.5%, transparent) 100%),
+      color-mix(in srgb, var(--text,#1f2937) 1.0%, transparent) 0%,
+      color-mix(in srgb, var(--text,#1f2937) .8%, transparent) 100%),
     linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 1px 0 rgba(255,255,255,.50),
     inset 0 0 0 1px rgba(255,255,255,.30),
     inset 0 -1px 0 rgba(255,255,255,.44),
-    inset 0 0 26px -8px color-mix(in srgb, var(--text,#1f2937) 15%, transparent),
-    inset 0 0 6px -2px color-mix(in srgb, var(--text,#1f2937) 8%, transparent),
-    0 0 0 1px rgba(255,255,255,.62);}
+    inset 0 0 36px 0 color-mix(in srgb, var(--text,#1f2937) 9.5%, transparent),
+    inset 0 0 12px 0 color-mix(in srgb, var(--text,#1f2937) 3.8%, transparent),
+    0 0 0 1px rgba(255,255,255,.10);}
 [data-theme="glass"] .liquid-glass{
   /* ★glass 主题的底栏本身就是「半透明白玻璃」→ 白泡叠白底容易糊在一起，
      原本靠「白描边 + 白外圈」把它拎出来。★R151① 改中性：白边在白玻璃底栏上本就很难看清，
-     而中性描边（跟 text 走）在亮底栏上永远是「暗一档」→ 边界确定性更好。 */
-  border-color:color-mix(in srgb, var(--text,#1f2937) 15%, transparent);
-  box-shadow:0 0 0 1px color-mix(in srgb, var(--text,#1f2937) 9%, transparent),0 8px 20px rgba(31,38,135,.24),0 1px 4px rgba(31,38,135,.12);}
+     而中性描边（跟 text 走）在亮底栏上永远是「暗一档」→ 边界确定性更好。
+     ★R153 描边 15% → 26%（与基础同口径：参考外缘硬线 Δ-66）；外投影去掉模糊半径只留 1px 接触线。 */
+  border-color:color-mix(in srgb, var(--text,#1f2937) 30%, transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--text,#1f2937) 9%, transparent),0 1px 2px rgba(31,38,135,.06);}
 /* ★R147 浅底栏护栏（light / green）→ **★R151① 口径更新：把「主色 tint」整个换成「中性色」**。
    R147 当时的处境是「白描边在白底栏上隐身」→ 它的修法是「把主色 tint 提回 16%/8% 立形体」。
    但参考图证明这条路走错了：真玻璃**自身无色**（泡体只比底栏暗 4%），形体是靠
@@ -2742,21 +2790,26 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     linear-gradient(180deg, rgba(255,255,255,.94) 0%, rgba(255,255,255,.34) 3.5%, rgba(255,255,255,.06) 13%, rgba(255,255,255,0) 30%),
     radial-gradient(88% 64% at 50% 0%, rgba(255,255,255,.30) 0%, rgba(255,255,255,.07) 52%, rgba(255,255,255,0) 100%),
     linear-gradient(0deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 8%, rgba(255,255,255,0) 22%),
-    /* 白底栏上给到 6%/4% 中性深色 → 泡体 ≈ #f2f2f2（参考实测 #f1f1f1，栏 #f9f9f9） */
+    /* ★R152 同基础：均匀 tint 1.3%/1.0%（原来 6%/4% → 泡心比白底栏暗 15 档，一眼灰块）。
+       白底栏上要立形体**只靠边缘**：弧带比基础再浓一档（参考图浅底栏上近缘压暗确实更明显）。 */
     linear-gradient(180deg,
-      color-mix(in srgb, var(--text,#1f2937) 6%, transparent) 0%,
-      color-mix(in srgb, var(--text,#1f2937) 4%, transparent) 100%);
+      color-mix(in srgb, var(--text,#1f2937) 1.3%, transparent) 0%,
+      color-mix(in srgb, var(--text,#1f2937) 1.0%, transparent) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 1px 0 rgba(255,255,255,.48),
     inset 0 0 0 1px color-mix(in srgb, var(--text,#1f2937) 16%, transparent),
     inset 0 -1.5px 1px -0.5px color-mix(in srgb, var(--text,#1f2937) 12%, transparent),
-    inset 0 0 26px -8px color-mix(in srgb, var(--text,#1f2937) 19%, transparent),
-    inset 0 0 6px -2px color-mix(in srgb, var(--text,#1f2937) 10%, transparent);}
+    inset 0 0 36px 0 color-mix(in srgb, var(--text,#1f2937) 11%, transparent),
+    inset 0 0 12px 0 color-mix(in srgb, var(--text,#1f2937) 4.5%, transparent);}
 [data-theme="light"] .liquid-glass,
 [data-theme="green"] .liquid-glass{
-  /* ★R151① 白描边 → 中性暗描边（白底栏上白边等于没有边界） */
-  border-color:color-mix(in srgb, var(--text,#1f2937) 17%, transparent);
-  box-shadow:0 8px 20px rgba(31,38,135,.20),0 2px 4px rgba(31,38,135,.12);}
+  /* ★R151① 白描边 → 中性暗描边（白底栏上白边等于没有边界）
+     ★R152 外投影第一次收敛：18px/20% → 14px/14%
+     ★R153 第二次收敛（**归零模糊**）：参考静置态泡外只有 3px 过渡就回到页底色，
+     完全没有模糊投影；14px 的模糊仍会在泡外拖出约 10 档的灰晕 → 只留 1px 接触线。
+     描边 17% → 26%（对齐参考外缘硬线 Δ-66 的反算值）。 */
+  border-color:color-mix(in srgb, var(--text,#1f2937) 30%, transparent);
+  box-shadow:0 1px 2px rgba(31,38,135,.06);}
 /* ★R148 删掉「真透镜折射」的整条管线（@supports backdrop-filter:url(#lqRefract) + feImage 位移图）：
    实测 backdrop-filter **不加载 feImage**（见上方 R148 三层结论）→ 那个滤镜在本项目里从未真正折射过。
    ★R150 出路：把 feImage 位移图改挂到**普通元素的 filter** 上（filter 支持 feImage）→ 边缘折射成立；
@@ -12623,8 +12676,19 @@ var LIQ_GW=1.10;                    /* 泡宽 = tab 宽 × 此值（★R142 用�
         → 泡高一旦超过 2×45.5 就会把下缘裁在屏幕外（参考图泡底距屏幕底还有 43px，我们没这个余量）。
      ③ LIQ_GHNAV = 泡高的**下限**比例（栏高 × 此值）→ 窄屏/小栏高时也保证「一定溢出栏外」。
    ★所以最终 gh = clamp(max(泡宽×GHK, 栏高×GHNAV), 28, 视口底余量)。 */
-var LIQ_GHK=0.62;                   /* 泡高 = 泡宽 × 此值（近「高≈宽」的大团；会被视口底余量截短） */
-var LIQ_GHNAV=1.45;                 /* 泡高下限 = 导航栏高 × 此值（保证「上下都溢出栏外」） */
+var LIQ_GHK=0.46;                   /* 泡高 = 泡宽 × 此值（下限之一；★R153 由 0.62 降到 0.46）。
+                                       ★为什么必须一起降：1.45→1.22 只在**手机宽度**（<560px）生效 ——
+                                         那里 gw≈85，gw×0.62=53 < 栏高×1.22=72 → 由 LIQ_GHNAV 说了算；
+                                         但桌面端 gw≈155，gw×0.62=96 > 72 → 高度改由本系数决定，
+                                         于是桌面端 h/栏高 仍是 1.57（= 改了个寂寞，用户界面上看不到区别）。
+                                       0.46 × 154.8 = 71.2 ≈ 1.22 × 栏高(59) = 72 → 全视口统一走「栏高比例」，
+                                       不再随栏宽膨胀。 */
+var LIQ_GHNAV=1.22;                 /* 泡高下限 = 导航栏高 × 此值（保证「上下都溢出栏外」）。
+                                       ★★R153 由 1.45 降到 1.22 —— 参考整屏截图逐行实测（泡心柱 x=961）：
+                                         泡 y2525..2768（h=243px）、栏 y2546..2745（h=200px）→ **泡高/栏高 = 1.215**，
+                                         即泡上下各只溢出栏外约 6.3 / 7 css px（@3x 19/21px）。
+                                       而 1.45 让我们溢出 12.3 css px、观感是「一大团浮在栏上」，
+                                       参考则是「一块几乎贴着栏边的厚板」。 */
 var LIQ_GRK=0.44;                   /* 基础圆角 = min(泡宽,泡高) × 此值。
    参考图长按态（静止）泡已经是「两端近半圆的胶囊/椭圆」→ 静止圆角就必须逼近 fullR（=min/2），
    旧值 0.32 是「泡高=栏高」时代的（那时 gh 小、0.32 已接近全圆）；泡高变大后必须同步上调，
@@ -13056,8 +13120,10 @@ function _liqArm(cx,cy){
   var _gmax=Math.round(2*(_npad+tw/2)-2);
   liq.gw=Math.round(tw*LIQ_GW);
   /* 【★R151③ 口径更新：删掉 `Math.round(r.height*2.4)` 这条上限 —— 它是「泡高 = 栏高」时代的
-     「别让泡横向太扁」护栏（59×2.4 = 142）；现在泡高已放大到 ≈1.5×栏高，泡宽宽高比本就降到 1.7，
-     这条会白白把泡宽从 153 卡到 142。真正的硬约束只剩 _gmax 与「两端不出层」。】 */
+     「别让泡横向太扁」护栏（59×2.4 = 142）。真正的硬约束只剩 _gmax 与「两端不出层」。
+     ★R153 起泡高固定为「栏高 × 1.22」（见 LIQ_GHNAV/GHK），不再随栏宽膨胀 ——
+     宽栏（桌面 720px）上泡高仍是 72，而宽度 155 → 宽高比 2.15，这是**宽栏本身的形状**造成的，
+     不是泡的系数问题（参考设备是 360px 窄屏：栏 340×57 → 泡 69×68，几乎正方）。】 */
   liq.gw=Math.max(48,Math.min(liq.gw,_gmax,Math.round(r.width-6)));
 
   /* ★R142 层已挂在 nav 内铺满（absolute 100%），不再需要 fixed 定位换算；
