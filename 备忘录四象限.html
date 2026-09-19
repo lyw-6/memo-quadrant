@@ -2573,6 +2573,30 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 /* 泡压住的原 active tab 也要亮（lp-hover 优先级高于上面的压制规则） */
 .bottom-nav.liq-drag .nav-tab.lp-hover{color:var(--color-primary,#6366f1)!important;}
 .bottom-nav.liq-drag .nav-tab.lp-hover svg{filter:drop-shadow(0 1px 2px rgba(99,102,241,.4))!important;}
+/* ★★R155 长按/拖动期整条底栏「微放大」——用户口径：「长按导航栏时，玻璃块出现时，
+   它的导航栏也跟着放大一点点」（对照酷安长按态：整条栏连图标一起变大）。
+   ★幅度取自参考图实测：长按态底栏顶边比常态**高 3px / 栏高 200px ≈ 1.5%**
+     （x=250/300/700 三列一致：栏顶 255 亮线在 B 里上移 3px，底边贴屏幕底不动）。
+     取 2.5% 略放大一点以保证「看得出」。
+   ★必须带上 translateX(-50%)：底栏基础定位是 left:50% + translateX(-50%)，
+     只写 scale() 会把整条栏甩到屏幕右半边。
+   ★origin 取「底边中点」：参考图是「底边固定、往上长」。
+   ★底栏自带 transition:transform .25s ease → 放大/收回都自动平滑，无需另加过渡。
+   ★加 :not(.nav-hidden) 护栏：滚动渐隐那条也是 2 个 class 的同特异性规则，
+     若同时命中会被本规则按「后者胜」覆盖 → 渐隐失效（栏在半空定住）。 */
+.bottom-nav.liq-drag:not(.nav-hidden){transform:translateX(-50%) scale(1.025);transform-origin:50% 100%;}
+/* ★★R155 坐标空间口径定稿：**全局只在「底栏布局 px」一套空间里算，绝不反向缩放拖动层**。
+   ★曾试过给 `.liquid-layer` 加 `scale(1/1.025)` 抵消底栏放大 —— **已废弃**，因为它与
+     「折射副本必须与真实图标 1:1 重合」直接冲突：层被反向缩回 1.0 后，层内副本渲染成 638，
+     而真实图标被底栏放大到 654 → 泡里是「小一号的图标」，左右缘立刻双影。
+   ★正解：层**跟着底栏一起放大**（不动它），一切跟手/钳制/命中都在**布局 px** 里算，
+     指针从视口 px 换算时除以当前缩放 S：
+        `layX = layW/2 + (clientX − navCenterX) / S`
+     S 用 `navRect.width / nav.offsetWidth` 现取 —— 自带 `transition` 期间也取到**当帧真值**，
+     不会像「写死 1.025」那样在过渡里偏 2.5%。
+   ★navCenterX（= rect.left + rect.width/2）与 rect.bottom 在 `origin:50% 100%` 下是**不变量**
+     （横向缩放不动中线、纵向缩放不动底边）→ 拿它们当锚点最稳。
+   ★tab 中心改用 `offsetLeft/offsetWidth`（布局值，不受 transform 影响）→ 与 layW 同空间。 */
 /* ★R142 泡高不超导航栏（竖向钳制，曾试「超出栏高」会闪纵向滚动条 → 已回退）；
    clampY 本身就把泡上下边钳在栏内 —— 纵向横向都出不去 */
 /* ===== ★R140 底部导航「液态玻璃」（参考酷安 / iOS 26 Liquid Glass） =====
@@ -2683,10 +2707,17 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    ★R147 浅色主题护栏：底色脱到 4~9% 后，白底栏（#fff）上的白描边/白高光会「消失」，
      泡失去轮廓 → 补一道极淡的冷色内描边把形体界定出来（见下方 [data-theme="light"] 覆盖）。 */
 .liquid-sheen{position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  /* ★★R155 玻璃面「去乳白」——用户口径：「图片效果是很纯净很清晰的图案，你这个有点像近视眼+散光」。
+     旧值三层白 wash 叠在折射副本之上：
+       ① 顶部 linear .92→.30→.05 铺满上 30% 高度；
+       ② radial 88%×64% 再补一层 .30 的顶弧散射；
+       ③ 底部 .26 的宽回光。
+     三层加起来 = 一层**半透明白纱**盖住整个泡心 → 副本里的图标/文字被整体洗淡，
+     看起来就是「近视 + 散光」。参考图（酷安长按态）泡心是**清晰的原图案**，
+     玻璃自身的贡献只有约 4% 的中性明暗 + 一条极窄顶缘亮线。
+     ★现在：只留一条 **2.2% 高度**的顶缘 specular（.50 → 0），其余三层全删。 */
   background:
-    linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.30) 3.5%, rgba(255,255,255,.05) 13%, rgba(255,255,255,0) 30%),
-    radial-gradient(88% 64% at 50% 0%, rgba(255,255,255,.30) 0%, rgba(255,255,255,.07) 52%, rgba(255,255,255,0) 100%),
-    linear-gradient(0deg, rgba(255,255,255,.26) 0%, rgba(255,255,255,.06) 8%, rgba(255,255,255,0) 22%),
+    linear-gradient(180deg, rgba(255,255,255,.50) 0%, rgba(255,255,255,.06) 2.2%, rgba(255,255,255,0) 7%),
     /* ★R151① 泡体去色：参考图长按态泡体实测 #f1f1f1，而底栏 #f9f9f9 → 玻璃自身只贡献约 4% 的
        **中性**明暗，颜色全部来自身后内容。旧值 color-mix(primary 9%) 在浅色主题下出「薰衣草紫」
        = 用户一眼否掉的主因（他说「不是紫色的塑料片」）。
@@ -2736,8 +2767,10 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
          上一版写着 3%/4.5%，实测边缘只有 Δ-2 → 等于没画。现在按 2× 反算：
          主带 10% + 近缘 4% → 边缘合成 6.9% → Δ-17 ✓，跨度 = blur/2 = 18px ✓（与参考 55px@3x 吻合）。
        ★分工：**「外缘硬暗线」交给 border（1px、Δ-66），这两条只做内侧渐隐**。 */
-    inset 0 0 36px 0 color-mix(in srgb, var(--text,#1f2937) 10%, transparent),
-    inset 0 0 12px 0 color-mix(in srgb, var(--text,#1f2937) 4%, transparent),
+    /* ★★R155 收窄（36px→22px）：36px 的软黑圈在白底栏上会形成一圈「发毛的暗环」，
+       正是用户说的「近视感」；参考图的厚度带更短更脆。深度同步 10%→7%（贴边仍达 Δ-12）。 */
+    inset 0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 7%, transparent),
+    inset 0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 3%, transparent),
     /* ★R153 外圈白环 .14 → .05：参考泡的最外一像素是**暗**的（183），这一圈白会把它顶亮。 */
     0 0 0 1px rgba(255,255,255,.05);}
 /* ★R146 表面的跟手镜面高光 = 「液态」的核心：
@@ -2747,16 +2780,19 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    ★R147 形态改写：从「中央 38×26px 圆斑」改成「贴顶缘的窄亮带」（高 12px、纵位 13%、横向再拉长）——
      跟手逻辑一字未动，但观感从「泡中央被打了盏聚光灯」变成「光沿顶缘的液面流动」（iOS 的 specular 在边缘）。 */
 .liquid-glass::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
-  background:radial-gradient(calc(46px * var(--lq-hs,1)) calc(12px / var(--lq-hs,1)) at var(--lq-hx,34%) var(--lq-hy,13%),
-    rgba(255,255,255,var(--lq-hi,.56)) 0%, rgba(255,255,255,.13) 48%, rgba(255,255,255,0) 80%);
+  /* ★★R155 高光「去团化」——用户口径：「图片效果是很纯净很清晰的图案，你这个有点像近视眼+散光」，
+     并直接点名「是不是因为你弄了选中发光的效果」。旧值是 46×12px 的**大团径向白斑**
+     （峰值 α.56 + 48% 处还有 .13 的半影），screen 混合把泡心整片提亮 → 图案被"糊"掉。
+     现在收成**贴顶缘的细窄镜面线**（38×6px、70% 处就归零、峰值 α 降到 .16→.40），
+     只保留「液体被甩起来时顶缘亮一线」的液态感，不再是发光。 */
+  background:radial-gradient(calc(38px * var(--lq-hs,1)) calc(6px / var(--lq-hs,1)) at var(--lq-hx,34%) var(--lq-hy,8%),
+    rgba(255,255,255,var(--lq-hi,.16)) 0%, rgba(255,255,255,0) 70%);
   mix-blend-mode:screen;}
 /* ★R146 glass 主题的泡 = 「白玻璃」（与常态胶囊同色系，不重现 R143 的「拖动时变蓝」）：
    去掉主色 tint，换成纯白玻璃 + 白色边缘光；色散边保留（白玻璃的边缘色散最显「真玻璃」）。 */
 [data-theme="glass"] .liquid-sheen{
   background:
-    linear-gradient(180deg, rgba(255,255,255,.88) 0%, rgba(255,255,255,.28) 3.5%, rgba(255,255,255,.05) 13%, rgba(255,255,255,0) 30%),
-    radial-gradient(88% 64% at 50% 0%, rgba(255,255,255,.32) 0%, rgba(255,255,255,.08) 52%, rgba(255,255,255,0) 100%),
-    linear-gradient(0deg, rgba(255,255,255,.24) 0%, rgba(255,255,255,.05) 8%, rgba(255,255,255,0) 22%),
+    linear-gradient(180deg, rgba(255,255,255,.46) 0%, rgba(255,255,255,.05) 2.2%, rgba(255,255,255,0) 7%),
     /* ★R151① 白玻璃也要「去色」：原来这层是纯白 12%/4%，白泡叠白底栏（glass 主题底栏本身就是半透明白）
        → 泡体跟底栏同色、只剩描边能看。改成「中性深色 + 一点白」→ 泡比底栏略暗或略亮，
        形体靠中性描边 + 厚度弧带立住，颜色仍旧由身后内容提供。 */
@@ -2768,8 +2804,8 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     inset 0 1px 0 rgba(255,255,255,.50),
     inset 0 0 0 1px rgba(255,255,255,.30),
     inset 0 -1px 0 rgba(255,255,255,.44),
-    inset 0 0 36px 0 color-mix(in srgb, var(--text,#1f2937) 9.5%, transparent),
-    inset 0 0 12px 0 color-mix(in srgb, var(--text,#1f2937) 3.8%, transparent),
+    inset 0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 6.8%, transparent),
+    inset 0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 2.8%, transparent),
     0 0 0 1px rgba(255,255,255,.10);}
 [data-theme="glass"] .liquid-glass{
   /* ★glass 主题的底栏本身就是「半透明白玻璃」→ 白泡叠白底容易糊在一起，
@@ -2787,9 +2823,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 [data-theme="light"] .liquid-sheen,
 [data-theme="green"] .liquid-sheen{
   background:
-    linear-gradient(180deg, rgba(255,255,255,.94) 0%, rgba(255,255,255,.34) 3.5%, rgba(255,255,255,.06) 13%, rgba(255,255,255,0) 30%),
-    radial-gradient(88% 64% at 50% 0%, rgba(255,255,255,.30) 0%, rgba(255,255,255,.07) 52%, rgba(255,255,255,0) 100%),
-    linear-gradient(0deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 8%, rgba(255,255,255,0) 22%),
+    linear-gradient(180deg, rgba(255,255,255,.52) 0%, rgba(255,255,255,.06) 2.2%, rgba(255,255,255,0) 7%),
     /* ★R152 同基础：均匀 tint 1.3%/1.0%（原来 6%/4% → 泡心比白底栏暗 15 档，一眼灰块）。
        白底栏上要立形体**只靠边缘**：弧带比基础再浓一档（参考图浅底栏上近缘压暗确实更明显）。 */
     linear-gradient(180deg,
@@ -2799,8 +2833,8 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     inset 0 1px 0 rgba(255,255,255,.48),
     inset 0 0 0 1px color-mix(in srgb, var(--text,#1f2937) 16%, transparent),
     inset 0 -1.5px 1px -0.5px color-mix(in srgb, var(--text,#1f2937) 12%, transparent),
-    inset 0 0 36px 0 color-mix(in srgb, var(--text,#1f2937) 11%, transparent),
-    inset 0 0 12px 0 color-mix(in srgb, var(--text,#1f2937) 4.5%, transparent);}
+    inset 0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 7.6%, transparent),
+    inset 0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 3.2%, transparent);}
 [data-theme="light"] .liquid-glass,
 [data-theme="green"] .liquid-glass{
   /* ★R151① 白描边 → 中性暗描边（白底栏上白边等于没有边界）
@@ -12665,41 +12699,50 @@ var LIQ_MAXS=0.34, LIQ_SV=50;      /* 拉伸强度上限 / 速度标定(px per 1
      手指停下后泡像糖浆一样慢慢流回原形（峰值不变 —— 持续速度下照样收敛到 sTgt，只改进出的快慢）。
    LIQ_S_SETTLE = 松手后形变收敛速率（0.14）：泡先滑到位、形变再慢慢摊平 = 一滴水被放下。 */
 var LIQ_FOLLOW=0.72, LIQ_S_UP=0.26, LIQ_S_DN=0.10, LIQ_S_SETTLE=0.14;
-var LIQ_GW=1.10;                    /* 泡宽 = tab 宽 × 此值（★R142 用户：拖动块要比选中背景「更大」→ 1.10 倍 tab 宽） */
+var LIQ_GW=1.25;                    /* 泡宽 = tab 宽 × 此值。
+   ★R142 用户：拖动块要比选中背景「更大」→ 首版 1.10。
+   ★★R156 提到 1.25：参考（`长按态.jpg` 实测）泡宽 85.2 css / tab 间距 ~65 ≈ **1.31×间距**，
+     而本 App tab 宽 64 / 间距 66 → 要「宽度比例」对上，gw/tab宽 得在 1.25~1.33。
+     取 1.25 而不是 1.33：**端部不能越界** —— 最左/最右 tab 中心离层边缘只有 padding+tab/2 = 40，
+     gw/2 一旦 > 40（gw > 80）端部 tab 的泡就会被 clamp 顶回来（R143 踩过「端部吸附偏了」）。
+     1.25×64 = 80 = 上限，正好取满 → 手机端 w/h ≈ 80/66 = **1.21**（参考 85.2/67.1 = **1.27**）✓ */
 /* ★R151③ 「大团」：参考图长按态泡实测 ≈ 318×219 像素、栏高 182 →
      泡高 ≈1.20×栏高、泡宽 ≈1.44×tab 间距，且以**栏中线为中心**上下对称溢出栏外各 ≈18px（≈10% 栏高）。
    ★本 App 的底栏是「矮而宽」（栏高 59 / tab 宽 139；参考图 61 / 74）→ 两个比例不可能同时满足：
      ① 泡宽的真实约束是 _gmax（端部 tab 中心必须落在 clamp 可覆盖范围内，R143 踩过「端部吸附偏了」）
-        = 2×(padding + tab/2) - 2 = 153 → 已取满（1.10×tab 宽），不可能再追参考的 1.44×间距；
-     ② 泡高若照搬「1.20×栏高」只有 71px（泡宽 153 → 宽高比 2.15，比现在还扁）→ 所以改成
-        「泡宽 × LIQ_GHK」求「大团」形状，再用「视口底」兜住：泡中心在栏中线，而栏底距视口底仅 10px
-        → 泡高一旦超过 2×45.5 就会把下缘裁在屏幕外（参考图泡底距屏幕底还有 43px，我们没这个余量）。
-     ③ LIQ_GHNAV = 泡高的**下限**比例（栏高 × 此值）→ 窄屏/小栏高时也保证「一定溢出栏外」。
+        = 2×(padding + tab/2) = 80 → 已取满（见 LIQ_GW），不可能再追参考的 1.44×间距；
+     ② 泡高改成「泡宽 × LIQ_GHK」与「栏高 × LIQ_GHNAV」取大，用「视口底」兜住上限。
    ★所以最终 gh = clamp(max(泡宽×GHK, 栏高×GHNAV), 28, 视口底余量)。 */
-var LIQ_GHK=0.46;                   /* 泡高 = 泡宽 × 此值（下限之一；★R153 由 0.62 降到 0.46）。
-                                       ★为什么必须一起降：1.45→1.22 只在**手机宽度**（<560px）生效 ——
-                                         那里 gw≈85，gw×0.62=53 < 栏高×1.22=72 → 由 LIQ_GHNAV 说了算；
-                                         但桌面端 gw≈155，gw×0.62=96 > 72 → 高度改由本系数决定，
-                                         于是桌面端 h/栏高 仍是 1.57（= 改了个寂寞，用户界面上看不到区别）。
-                                       0.46 × 154.8 = 71.2 ≈ 1.22 × 栏高(59) = 72 → 全视口统一走「栏高比例」，
-                                       不再随栏宽膨胀。 */
-var LIQ_GHNAV=1.22;                 /* 泡高下限 = 导航栏高 × 此值（保证「上下都溢出栏外」）。
-                                       ★★R153 由 1.45 降到 1.22 —— 参考整屏截图逐行实测（泡心柱 x=961）：
-                                         泡 y2525..2768（h=243px）、栏 y2546..2745（h=200px）→ **泡高/栏高 = 1.215**，
-                                         即泡上下各只溢出栏外约 6.3 / 7 css px（@3x 19/21px）。
-                                       而 1.45 让我们溢出 12.3 css px、观感是「一大团浮在栏上」，
-                                       参考则是「一块几乎贴着栏边的厚板」。 */
-var LIQ_GRK=0.44;                   /* 基础圆角 = min(泡宽,泡高) × 此值。
-   参考图长按态（静止）泡已经是「两端近半圆的胶囊/椭圆」→ 静止圆角就必须逼近 fullR（=min/2），
-   旧值 0.32 是「泡高=栏高」时代的（那时 gh 小、0.32 已接近全圆）；泡高变大后必须同步上调，
-   否则静止态是个「圆角矩形」而不是一滴摊开的水。拖动时 R143 那条 sqrt 曲线照旧吃到 fullR。 */
+var LIQ_GHK=0.38;                   /* 泡高 = 泡宽 × 此值（下限之一；R153 0.62 → 0.46 → ★R156 0.38）。
+                                       ★必须与 LIQ_GHNAV 同源才「全视口一个比例」：
+                                         桌面端 gw≈171 → 171×0.38 = 65 ≈ 1.12×栏高(59) = 66 ✓
+                                         （若留 0.46 → 171×0.46 = 79 = 1.34×栏高，桌面端又变成「一大团」）。 */
+var LIQ_GHNAV=1.12;                 /* 泡高下限 = 导航栏高 × 此值（保证「上下都溢出栏外」）。
+                                       ★R153 用 1.22（据另一款 App 的整屏截图：泡 243px / 栏 200px）。
+                                       ★★R156 改 1.12 —— 用户本轮指定的参考（酷安 `长按态.jpg` 特写）实测：
+                                         泡顶 y=8.57 / 泡底 y=75.71 → 泡高 67.14；底栏 780.3−720.6 ≈ 59.7
+                                         ⇒ **泡高/栏高 = 1.12**（上下各只溢出栏外 ~3.7 css）。
+                                         1.22 会让泡比参考高 6 css、显得「胖」而不是参考那块「厚板」。 */
+var LIQ_GRK=0.42;                   /* 基础圆角 = min(泡宽,泡高) × 此值。
+   ★★★R156 定稿 = 0.42（参考实测），历史两次都偏了：
+     · R155 曾用 0.44 —— 但那批参考图量得不准，且当时泡是「近正方形」，0.44 直接变成胶囊；
+     · 同轮又降到 0.18 —— 用户立刻退回：「长按玻璃片弧度太方了，能否按照图片的弧度来」。
+   ★本轮用**更硬的办法**重新量参考（`长按态.jpg` = 用户裁的静置长按特写，360css@3.5）：
+     ① 泡左缘长基线轮廓（x∈[262,290]css，该带内除泡缘无任何墨 —— 图标在 x≥289）：
+        y=9.43→xL=288.86 单调下行至 y≈42 的 xL=263.71 再回升 → **左缘最小 263.71**
+     ② 泡右缘：最大 348.86 ③ 泡顶 y=8.57 / 底 y=75.71
+     ⇒ **泡 85.2 × 67.1 css**；圆角横向跨度 = 288.86−263.71 = **25.5**、纵向跨度 ≈ **30.1**
+       （纵向 > 横向 → 参考用的是「连续圆角/squircle」，过渡比正圆长 ~18%）
+     ⇒ r/min = 25.5/67.1 = **0.380**（横向口径）/ 30.1/67.1 = **0.449**（纵向口径）
+     → CSS 只有正圆角，取两口径的中间 **0.42** 最接近参考观感。
+   ★与 R155 的 0.18 对比：0.18×70 = 12.6（四条长直边 = 「太方了」）；0.42×70 = 29.4（近乎半圆端）。
+   ★配合「快则圆」：高速时吃到 min/2（见下方 _liqDynR），慢/静置停在 0.42×min。 */
 var LIQ_PULL=0.62;                  /* ★R143 柔性磁吸最大拉力：指针正落在 tab 中心时最多把它拉到
    距中心 (1-LIQ_PULL) 的位置。用户口径「不要这么黏、拖一下就吸附」→ 只给柔性牵引（越近越强），
    全程保持连续流动；硬吸附（一颗一颗跳）在 R143 首版被用户退回。 */
-var LIQ_RFULL=0.16;                 /* ★R143 圆角吃满「全圆端」所需的拉伸量 s（上限 LIQ_MAXS=0.34 的一半）。
-   ★用户实测口径：「速度快时是椭圆」。全圆端 border-radius = min(gw,gh)/2 → 圆角矩形变成胶囊/椭圆
-   （再叠上 scale(1+s,…) 的横向拉伸就是椭圆状）；旧实现「0.85 × 线性映射」，
-   快甩时 s≈0.20 → 只走到全圆的 85%×(0.20/0.34)=50%，看上去还是方的 → 改成 sqrt 提前段 + 到点吃满。 */
+var LIQ_RFULL=0.11;                 /* ★R143 圆角吃满「全圆端」所需的拉伸量 s（上限 LIQ_MAXS=0.34）。
+   ★R155 由 0.16 收到 0.11：配合 LIQ_GRK 0.18，让「方形 → 正圆」在更小的速度下就完成，
+   快速拖动时形状确定性地落在「圆」上（用户口径：快则圆）。 */
 var LIQ_EDGE=18;                    /* ★R144 「归属外扩」(px)：tab 半宽之外再往外这么一段，也算归属这颗 tab。
    ★为什么需要：5 颗 tab 的中心间距 ≈ 91px、而每颗 tab 宽 89px → 相邻两颗的「半宽判定区」之间还剩 2px 缝；
      两端还各有 ~9px 导航条内边距。旧规则在这些死区里判「谁都不高亮 = 落空 → 泡飞回当前选中位」，
@@ -12735,7 +12778,17 @@ var LIQ_EDGE_BANDK=0.20; /* 折射带宽度 = 泡宽 × 此系数（同时是染
    改归属逻辑时别顺手改到这里；反之亦然。 */
 var LIQ_EDGE_MAXK=0.22;  /* 贴边处最大外推位移 = 泡宽 × 此系数（R151② 0.13→0.22，见 BANDK 注释） */
 var LIQ_EDGE_P=1.3;      /* 剖面指数（见上） */
-var LIQ_EDGE_SREF=0.11;  /* 位移强度 = clamp(s/SREF)：s 是泡自身的拉伸量（自带黏滞回落）→ 静止时归零 */
+var LIQ_EDGE_SREF=0.11;  /* 位移强度 = clamp(s/SREF)：s 是泡自身的拉伸量（自带黏滞回落）。 */
+/* ★★R155 静止态「折射下限」（FLOOR）—— 用户口径「放在两个图标没有人家的效果」的真因。
+   参考图（酷安长按态，「按住不动 1 秒以上」那张）里 **静置时折射依然在**：
+   发现 / 我的两个图标被泡的前后缘明显拉歪、底缘还挂着一条彩虹带。
+   而旧实现 e = s/SREF → 松手停住 s→0 → e→0 → `_lqEdgeApply` 直接**摘掉滤镜**，
+   泡变成「一块干净的玻璃」= 没有任何折射，正是用户看到的那张效果图里缺的东西。
+   现在 e = FLOOR + (1−FLOOR)×clamp(s/SREF)：
+     · 静止 → 35% 位移：看得见的「拉歪 + 彩带」（连图标一起，就是参考图静置态的样子）；
+     · 拖起来 → 升到 100%：边缘把内容「黏住」拖着走。
+   ★下限不能给太高：位移带贴着圆角走，给满会让静止态看着像「一直在抖」。 */
+var LIQ_EDGE_FLOOR=0.35;
 /* ★R151② 色散：**方向修正** + 强度加大。
    ★★方向修正（这是上一版「蓝紫重影」的根因）：真实玻璃是**短波偏折更多** → 紫/蓝落在更外侧，
      红落在更内侧。参考图实测完全吻合（移动态 y=220 右缘，从泡内到泡外）：
@@ -12769,6 +12822,9 @@ var liq={down:false,on:false,armed:false,pid:null,pidType:'mouse',raf:0,last:0,h
          cacheTabs:null,
          sx:0,sy:0,px:0,py:0,ox:0,oy:0,tx:0,ty:0,hit:null,noClick:0,hoverTab:null,
          lx:0,lastR:-1,
+         /* ★★R155 坐标空间锚点（`_liqArm` 里量）：sc = 底栏当帧缩放（长按期 1.025），
+            cx0 = 底栏中线视口 x（横向缩放不变量）。`_liqToLay` 用它们把视口 px 换成布局 px。 */
+         sc:1,cx0:0,
          /* ★R149 跟手二阶滤波的第一级状态（fx/fy = 指针的一级滤波结果，x/y 是它的二级结果）：
             两级级联 = 临界阻尼二阶 → 柔、带黏，且不过冲。 */
          fx:0,fy:0,
@@ -12782,11 +12838,24 @@ var liq={down:false,on:false,armed:false,pid:null,pidType:'mouse',raf:0,last:0,h
 var _liqLayer=null, _liqGlass=null, _liqLens=null, _liqLensIn=null, _liqLensNav=null, _liqLensTabs=null;
 
 function _liqNav(){return document.getElementById('bottomNav');}
+/* ★★R155 视口 px → 底栏布局 px。`liq.sc` / `liq.cx0` 在 `_liqArm` 里一次量好（拖动期间不变）。
+   ★`liq.cx0` = 底栏 rect 的中线：`origin:50% 100%` 下横向缩放不动中线 → 它与缩放进度无关，可当锚点。
+   ★`liq.sc` 当场现取（rect.width / offsetWidth）→ 过渡动画里的任何一帧都拿到当帧真值。 */
+function _liqToLay(px){
+  var s=liq.sc||1;if(s<0.2||s>5)s=1;
+  return liq.layW/2+(px-liq.cx0)/s;
+}
+/* ★★R155 tab 中心一律用 **布局 px**（offsetLeft/offsetWidth）：
+   `getBoundingClientRect()` 在底栏 `scale(1.025)` 期间返回的是**缩放后**的中间值 →
+   与 `liq.layW`（clientWidth，布局值）不同空间 → 钳制/磁吸/hover 全部系统性偏移。
+   offsetLeft 相对 offsetParent（= position:fixed 的 nav 的 padding box），
+   与 `.liquid-layer`（absolute; left:0; width:100%）的坐标原点**完全同一个** → 直接可比。 */
 function _liqTabs(){
   var n=_liqNav();if(!n)return[];
   var a=n.querySelectorAll('.nav-tab'),o=[],i;
-  for(i=0;i<a.length;i++){var r=a[i].getBoundingClientRect();
-    o.push({el:a[i],v:a[i].getAttribute('data-view'),cx:r.left+r.width/2,cy:r.top+r.height/2,w:r.width});}
+  for(i=0;i<a.length;i++){var t=a[i];
+    o.push({el:t,v:t.getAttribute('data-view'),
+      cx:t.offsetLeft+t.offsetWidth/2,cy:t.offsetTop+t.offsetHeight/2,w:t.offsetWidth});}
   return o;
 }
 /* ★R148 删掉 _liqContentH（量 tab 内容高）、_liqEnsureDefs / _liqRefract
@@ -12991,7 +13060,7 @@ function _lqEdgeScale(g,sc){
    （对应参考图「长按态」看不出任何形变）；拖起来 s 升 → 边缘开始「黏」住扫过的图标。 */
 function _lqEdgeApply(dynR){
   if(!_liqLensIn)return;
-  var e=liq.s/LIQ_EDGE_SREF;if(e>1)e=1;
+  var e=LIQ_EDGE_FLOOR+(1-LIQ_EDGE_FLOOR)*(liq.s/LIQ_EDGE_SREF);if(e>1)e=1;
   var maxD=Math.max(6,Math.round(liq.gw*LIQ_EDGE_MAXK));
   var sc=Math.round(maxD*e*2)/2;               /* 位移上限(px)，0.5px 量化去重 */
   if(sc<0.5){                                  /* 位移太小 → 直接摘掉滤镜（省一次滤镜重绘） */
@@ -13098,50 +13167,60 @@ function _liqArm(cx,cy){
   liq.holdTimer=0;
   var r=nav.getBoundingClientRect();
   if(r.width<24||r.height<8){liq.armed=false;liq.down=false;liq.pid=null;return;}
+  /* ★★R155 布局口径：几何一律用 offsetWidth/offsetHeight（布局值），视口锚点用中线/底边（不变量）。 */
+  var _nw=nav.offsetWidth||r.width,_nh=nav.offsetHeight||r.height;
+  liq.sc=_nw>0?r.width/_nw:1;                       /* 当帧缩放（长按期 1.025，过渡中取真值） */
+  liq.cx0=r.left+r.width/2;                        /* 底栏中线（横向缩放不变量） */
   _liqBuild();
   /* ★R142 拖动期玻璃泡接管「选中胶囊」→ 藏真 pill 防双泡（到位交接时摘除） */
   nav.classList.add('liq-drag');
   document.documentElement.classList.add('liq-grabbing');
   try{var _sel=window.getSelection();if(_sel&&_sel.removeAllRanges)_sel.removeAllRanges();}catch(_){}
 
-  /* ★R142 活动区尺寸 = 层的真实 rect（nav 内容盒），不能用 nav border box（差 2px border →
-     泡起步偏离栏中线 1px，Y 锁断言会抓到） */
+  /* ★★R155 活动区尺寸 = 底栏**布局盒**（clientWidth/clientHeight）。
+     ★为什么不用 rect：长按期底栏带 `scale(1.025)` + `transition:transform .25s ease`，
+       `_liqArm` 正好落在过渡区间内 → rect 拿到「正在变大的中间值」（实测 638→622，偏小 2.5%）；
+       后果两层：① 泡几何（gw/gh/clamp）全按 622 算，与真实 638 的底栏对不上；
+       ② **折射副本按 622 宽构建，真实底栏内容是 638 宽 → 副本被拉大 2.6%**，
+          左右缘立刻「真图标 + 副本图标」双影（R150⑧ 实测 ratio 1.0262 就是它）。
+     ★为什么不能反向缩放层来抵消：层缩回 1.0 后副本渲染 638、真实图标被放大到 654 →
+       双影更严重（见 CSS 处注释）。所以**层跟着缩放、坐标用布局 px**，两者都 1:1。
+     ★★⚠️**必须在 `_liqToLay` 之前量**：`_liqToLay` 要用 `liq.layW` 当坐标原点中心；
+       旧写法把它排在「找最近 tab」之后 → **首次长按 layW 还是 0**，落点被算到栏左端附近
+       （实测「按日历却在四象限浮起」）。所以：先 display:block → 量 layW/layH → 再换算落点。 */
+  _liqLayer.style.display='block';
+  liq.layW=_liqLayer.clientWidth||_nw;liq.layH=_liqLayer.clientHeight||_nh;
+
+  /* ★R142 活动区 = nav 的内容盒（不是 border box：差 2px border → 泡起步偏离栏中线 1px） */
   var tabs=_liqTabs();
   liq.cacheTabs=tabs; /* ★R141 拖动期间 hover 判定用（泡中心 X vs tab 中心距离），缓存避免每帧重排 rect */
-  /* 先找离按下点最近的 tab，同时量出它的真实宽度 */
-  var best=1e9,hc=cx,tw=0;
-  for(var i=0;i<tabs.length;i++){var d=Math.abs(tabs[i].cx-cx);if(d<best){best=d;hc=tabs[i].cx;tw=tabs[i].w;}}
+  /* ★★R155 先把按下点从视口 px 换算到布局 px，之后全程同一个空间 */
+  var cz=_liqToLay(cx);
+  var best=1e9,hc=cz,tw=0;
+  for(var i=0;i<tabs.length;i++){var d=Math.abs(tabs[i].cx-cz);if(d<best){best=d;hc=tabs[i].cx;tw=tabs[i].w;}}
   /* ★R143 泡宽改用「实测 tab 宽 × LIQ_GW」：旧写法 nav 的 border-box 宽 / n 会把两侧内边距一起
      摊进每格 → 泡比 tab 系统性偏宽（窄屏上「泡比选中背景宽出一圈」更明显）。
-     再收一条「两端 tab 中心必须落在 clamp 可覆盖范围内」的硬上限：泡宽 = 1.1×tab 宽时，
+     再收一条「两端 tab 中心必须落在 clamp 可覆盖范围内」的硬上限：泡宽 = 1.25×tab 宽时，
      第一/最后一颗 tab 的中心离层边缘只有 padding + tab/2，若 gw/2 超过它，clamp 会把泡顶回来
-     → 端部 tab 永远吸附不到位（= 用户看到的「偏了」）。上限 = 2×(padding + tab/2) - 2px 余量。 */
+     → 端部 tab 永远吸附不到位（= 用户看到的「偏了」）。
+     ★R156 去掉原来的 −2px 余量：参考实测 gw/tab 宽 ≈ 1.31，而 1.25×tab 宽正好等于 2×(padding+tab/2)
+       → 抠掉 2px 就只能取到 1.22×tab 宽，白丢一圈。余量改由 clamp 本身（含拉伸半宽）承担。 */
   var _npad=parseFloat(getComputedStyle(nav).paddingLeft)||0;
-  var _gmax=Math.round(2*(_npad+tw/2)-2);
+  var _gmax=Math.round(2*(_npad+tw/2));
   liq.gw=Math.round(tw*LIQ_GW);
   /* 【★R151③ 口径更新：删掉 `Math.round(r.height*2.4)` 这条上限 —— 它是「泡高 = 栏高」时代的
      「别让泡横向太扁」护栏（59×2.4 = 142）。真正的硬约束只剩 _gmax 与「两端不出层」。
      ★R153 起泡高固定为「栏高 × 1.22」（见 LIQ_GHNAV/GHK），不再随栏宽膨胀 ——
      宽栏（桌面 720px）上泡高仍是 72，而宽度 155 → 宽高比 2.15，这是**宽栏本身的形状**造成的，
-     不是泡的系数问题（参考设备是 360px 窄屏：栏 340×57 → 泡 69×68，几乎正方）。】 */
-  liq.gw=Math.max(48,Math.min(liq.gw,_gmax,Math.round(r.width-6)));
+     不是泡的系数问题（参考设备是 360px 窄屏：栏 348×59 → 泡 70×70，几乎正方）。】 */
+  liq.gw=Math.max(48,Math.min(liq.gw,_gmax,Math.round(_nw-6)));
 
-  /* ★R142 层已挂在 nav 内铺满（absolute 100%），不再需要 fixed 定位换算；
-     活动区天然 = 底栏矩形本身 */
-  _liqLayer.style.display='block';
-  /* ★R142 活动区尺寸 = 层的真实 rect（nav 内容盒），不能用 nav border box（差 2px border →
-     泡起步偏离栏中线 1px）；⚠️必须在 display='block' 之后量，none 状态 rect 全 0 */
-  var lr0=_liqLayer.getBoundingClientRect();
-  liq.layW=lr0.width;liq.layH=lr0.height;
-  /* ★R151③ 泡高「大团」+ 两个护栏（必须排在量完 lr0 之后：视口底余量要用层的真实位置算）。
-     ★护栏一：不超「栏中线 → 视口底」的两倍。泡中心 = 层的中线（liq.y 恒为 layH/2），
-       所以泡下缘落在视口底时的最大高度正好是 2×(视口底 − 层中线)。留 2px 余量。
-       （不变量：底栏 bottom:22px → 该余量 ≈ 51.5px → 泡高上限 ≈ 93px；再减 5px 视觉余量 →
-         泡底离屏幕底约 5px，不会「糊在屏幕底边上」。若哪天底栏位置再动，泡会自然跟着变大变小。）
-     ★护栏二：不超泡宽（否则变成竖椭圆）。 */
-  var _c2bot=((window.innerHeight||document.documentElement.clientHeight||0)-lr0.top)-liq.layH/2;
+  /* ★R151③ 泡高「大团」+ 两个护栏（视口底余量要用**不变量**算：底栏底边在 origin:50% 100%
+     下不随缩放移动 → 用 rect.bottom 而不是「层 top + 层高」）。 */
+  var _vb=window.innerHeight||document.documentElement.clientHeight||0;
+  var _c2bot=(_vb-r.bottom)+_nh/2;
   var _ghCap=_c2bot>12?Math.floor((_c2bot-5)*2):1e9;
-  liq.gh=Math.max(Math.round(liq.gw*LIQ_GHK),Math.round(r.height*LIQ_GHNAV));
+  liq.gh=Math.max(Math.round(liq.gw*LIQ_GHK),Math.round(_nh*LIQ_GHNAV));
   if(liq.gh>_ghCap)liq.gh=_ghCap;
   if(liq.gh>liq.gw)liq.gh=Math.round(liq.gw);
   if(liq.gh<28)liq.gh=28;
@@ -13154,18 +13233,20 @@ function _liqArm(cx,cy){
   /* 起始位 = 离按下点最近的 tab 中心（★R141 玻璃泡原地出现；落空松手就原地淡出，不再飞回这里）
      ★oy 用层高（=nav 内容盒）的一半 = 真正的栏中线；r.height 是 border box（多 2px border），
        用它会让泡起步偏离中线 1px、前几帧被 Y 锁断言抓到 */
-  liq.ox=_liqClampX(hc-r.left);liq.oy=_liqClampY(liq.layH/2);
+  liq.ox=_liqClampX(hc);liq.oy=_liqClampY(liq.layH/2);
   liq.x=liq.ox;liq.y=liq.oy;
   /* ★R149 二阶滤波的两级都从「静止于起点」开始 → 浮起瞬间不会先被"空推"一下 */
   liq.fx=liq.ox;liq.fy=liq.oy;
   liq.px=liq.ox;liq.py=liq.oy;
-  liq.lx=cx-r.left;   /* ★R139 指针在本层坐标的 x（落点就近归属用） */
+  liq.lx=cz;   /* ★R139/R155 指针在**本层布局坐标**的 x（落点就近归属用） */
   liq.s=0;liq.o=0;liq.hit=null;liq.mode='drag';liq.last=0;
   /* ★R146 本轮拖动的镜面高光从「静止态」起步（清掉上一次拖动的残值，否则新一次浮起时
      高光会从上一轮的方向偏位直接开始 → 闪一下） */
   liq.pX=liq.ox;liq.hxd=0;liq.lqHx=-1;liq.lqHs=-1;liq.lqHi=-1;
-  /* ★R150 本轮拖动从「零位移」起步：s=0 → _lqEdgeApply 直接摘掉滤镜，泡就是一块干净的玻璃
-     （对应参考图「长按态」看不出任何形变）；只有拖起来 s 升起来，边缘才开始「黏」图标。 */
+  /* ★R150 本轮拖动从「零位移」起步；★★R155 口径更新：**静止不再等于零折射** ——
+     参考图（酷安长按态「按住不动 1 秒以上」）里静置时图标就被前后缘拉歪、底缘带彩虹，
+     所以 `_lqEdgeApply` 现在有 LIQ_EDGE_FLOOR=0.35 的下限（见那里的注释）。
+     这里仍然先把 filter 清成 none，让起步那一帧干净、由本帧 _liqPaint 重新挂上带下限的滤镜。 */
   liq.lensTf='';liq.ef='';liq.es=-1;
   if(_liqLensIn)_liqLensIn.style.filter='none';
   liq.on=true;
@@ -13180,8 +13261,15 @@ function _liqArm(cx,cy){
 }
 function _liqMove(e){
   if(!liq.on||liq.mode!=='drag'||e.pointerId!==liq.pid)return;
-  var lr=_liqLayer.getBoundingClientRect();
-  var nx=e.clientX-lr.left;
+  /* ★★R155 指针 → 布局 px。★`liq.sc` 必须**每次重取**（和旧代码每次读层 rect 同成本）：
+     长按触发时底栏刚开始做 `.25s` 的 1→1.025 放大过渡，`_liqArm` 里量到的还是 1.0；
+     若一路用这个陈旧值换算，越靠栏两端偏差越大（±174 × 0.0244 ≈ ±4.2px）＝「泡追不上手指」。
+     现取就能逐帧跟上过渡，且过渡结束后恒为 1.025。 */
+  var _nv=_liqNav(),nr=_nv.getBoundingClientRect();
+  var nw=_nv.offsetWidth||nr.width;
+  if(nw>0)liq.sc=nr.width/nw;
+  liq.cx0=nr.left+nr.width/2;
+  var nx=_liqToLay(e.clientX);
   /* ★R139 记下「指针在本层坐标下的 x」：落点的就近归属（_liqUp）要用它。
      【★R149 口径更新：这里**不再**累加 travel 当速度源 —— 速度改在 _liqTick 里用
        「泡自身的帧间位移（已按 dt 归一化）」算（见 _liqTick），好处有三：
@@ -13205,11 +13293,11 @@ function _liqMove(e){
    edge = 归属外扩（见 LIQ_EDGE）：bd 超过「半宽 + edge」才算真的谁都不沾（返回 null）。 */
 function _liqNearTab(x,edge){
   var tabs=liq.cacheTabs;if(!tabs||!tabs.length)return null;
-  var lr=_liqLayer.getBoundingClientRect();
   var best=null,bd=1e9,i,d;
-  for(i=0;i<tabs.length;i++){d=Math.abs((tabs[i].cx-lr.left)-x);if(d<bd){bd=d;best=tabs[i];}}
+  /* ★R155 两边都是布局 px（cacheTabs 已由 offsetLeft 得到、x 由 _liqToLay 换算）→ 不再 `-lr.left` */
+  for(i=0;i<tabs.length;i++){d=Math.abs(tabs[i].cx-x);if(d<bd){bd=d;best=tabs[i];}}
   if(!best||bd>best.w/2+(edge||0))return null;
-  return {tab:best,bd:bd,lx:lr.left};
+  return {tab:best,bd:bd};
 }
 /* ★R143 柔性磁吸：指针在哪颗 tab 的「半宽」内（= 这颗会被高亮）→ 按接近度把它往该 tab 中心拉
    (最多 LIQ_PULL)；落在两端留白里（谁都不高亮）→ 原样跟手。 */
@@ -13217,7 +13305,7 @@ function _liqPullX(x){
   var n=_liqNearTab(x,0);if(!n)return x;
   var q=1-n.bd/(n.tab.w/2);              /* 0=刚进这颗 tab 的边界, 1=正落在它中心 */
   var pull=LIQ_PULL*Math.pow(q,1.4);
-  return x+((n.tab.cx-n.lx)-x)*pull;
+  return x+(n.tab.cx-x)*pull;            /* ★R155 同空间直接比（旧式 (cx-lr.left)-x 已去掉） */
 }
 /* ★R141 改「玻璃泡压住的 tab」判定：玻璃泡只横滑后指针可能跑到导航条上/下方（elementFromPoint
    会落空丢 hover），改用泡中心 X 的水平距离判定 —— 最近 tab 且在其自身半宽内才算压住（与参考实现同口径）。 */
@@ -13246,7 +13334,7 @@ function _liqUp(e){
     liq.hit=tab.getAttribute('data-view');
     var tabs=liq.cacheTabs,tw=null;
     for(var i=0;i<tabs.length;i++){if(tabs[i].el===tab)tw=tabs[i];}
-    liq.tx=_liqClampX(tw?tw.cx-_liqLayer.getBoundingClientRect().left:liq.x,0);liq.ty=liq.layH/2;
+    liq.tx=_liqClampX(tw?tw.cx:liq.x,0);liq.ty=liq.layH/2;
     /* ★R142 列表立即切换；玻璃泡随后滑向新选中位，到位后与真 pill 交接 */
     if(liq.hit&&typeof setView==='function'&&liq.hit!==currentView)setView(liq.hit);
   }else{
@@ -13254,7 +13342,7 @@ function _liqUp(e){
     liq.hit=null;
     var nav=_liqNav(),at=nav?nav.querySelector('.nav-tab.active'):null,ac=null;
     if(at&&liq.cacheTabs){for(var j=0;j<liq.cacheTabs.length;j++){if(liq.cacheTabs[j].el===at)ac=liq.cacheTabs[j];}}
-    liq.tx=ac?_liqClampX(ac.cx-_liqLayer.getBoundingClientRect().left,0):liq.ox;liq.ty=liq.layH/2;
+    liq.tx=ac?_liqClampX(ac.cx,0):liq.ox;liq.ty=liq.layH/2;
   }
   if(liq.hoverTab){liq.hoverTab.classList.remove('lp-hover');liq.hoverTab=null;}
   _liqLensHover(null);
@@ -13283,7 +13371,9 @@ function _liqPaint(){
      ★三个值都量化去重后再写：一次 style 写入 = 一次样式重算，60fps 下能省则省。 */
   var hxq=Math.round((34+liq.hxd*26)/2)*2;
   var hsq=Math.round((1+liq.s*2.6)*10)/10;
-  var hiq=Math.round((0.44+Math.min(1,liq.s/LIQ_MAXS)*0.38)*20)/20;
+  /* ★R155 强度基准 .44→.16、增量 .38→.24：高光已从「大团发光」收成「细窄镜面线」（见 CSS），
+     峰值必须同步降下来才不会重新变回一圈白雾。 */
+  var hiq=Math.round((0.16+Math.min(1,liq.s/LIQ_MAXS)*0.24)*20)/20;
   if(hxq!==liq.lqHx){liq.lqHx=hxq;_liqGlass.style.setProperty('--lq-hx',hxq+'%');}
   if(hsq!==liq.lqHs){liq.lqHs=hsq;_liqGlass.style.setProperty('--lq-hs',hsq.toFixed(2));}
   if(hiq!==liq.lqHi){liq.lqHi=hiq;_liqGlass.style.setProperty('--lq-hi',hiq.toFixed(2));}
