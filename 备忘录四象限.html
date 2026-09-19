@@ -2747,9 +2747,22 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        → 边界 Δ ≈ 0.5×(7%+6%)×255 ≈ 16.6（参考实测贴缘最深 Δ-17）✓；
        衰减跨度 ≈ blur/2 ≈ 11 css px（参考实测柔过渡 ≈10 css px）✓。
        ★标定方法：同一构建注入三档（5/16、6/26、8/38）渲染后与参考同裁剪并排比 → 取中间档。 */
+  /* ★★R163 泡缘改「柔白晕开」—— 用户本轮参考图（导航栏截图）里的长按泡是**一团边缘化开的柔白玻璃**：
+     没有线、没有彩、边界在约 14px 内渐隐；而旧实现是「形体 + 一圈中性柔晕」=「边界清晰的白块」。
+     三层叠出来（box-shadow 按书写顺序**前面的盖后面的**）：
+       ① 白柔边（最上）：泡自身材质色向外化开 → 泡缘不再是硬边，而是「亮 → 暗」的渐隐；
+       ② 中性柔晕（中）：在白柔边之外再铺一层极淡的暗 —— 白柔边才有边界可看（白底栏上白叠白 = 看不见）；
+       ③ 落影（最下）：泡底一圈更实的淡影（参考图泡下方投影明显，泡才「浮」得起来）。
+     跨主题自洽：① 走 --card-bg（dark 下是深色 → 深柔边）、②③ 走 --text。 */
+  /* ★R163 数值标定（对参考图整屏逐像素竖扫，x=0.80 列，crop 2385×490 = 795×163css@3x）：
+       泡体 252（与底栏同色）→ 缘外先到最深 223（Δ-29）→ 再渐变回 252，
+       暗晕跨度 ≈140px/3 ≈ 47 css px**、底部还有一条 255 的亮回光 + 241 的落影。
+     旧值（26px@8%）只在贴缘给出 Δ≈10 —— 太浅太窄，泡看起来仍是「一圈细软边」而不是参考那种「化开的光团」。
+     故：中性柔晕加深到 13%、加宽到 30px/10px；落影加重到 18%。 */
   box-shadow:
-    0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 7%, transparent),
-    0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 6%, transparent);}
+    0 0 16px 6px color-mix(in srgb, var(--card-bg,#fff) 92%, transparent),
+    0 0 30px 10px color-mix(in srgb, var(--text,#1f2937) 13%, transparent),
+    0 12px 24px -6px color-mix(in srgb, var(--text,#1f2937) 18%, transparent);}
 /* ★R148 玻璃质感层（叠在折射副本之上）：R146/R147 的全部色值原样搬来，一处未改。
    ★R147 浅色主题护栏：底色脱到 4~9% 后，白底栏（#fff）上的白描边/白高光会「消失」，
      泡失去轮廓 → 补一道极淡的冷色内描边把形体界定出来（见下方 [data-theme="light"] 覆盖）。 */
@@ -2839,9 +2852,22 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 [data-theme="glass"] .liquid-glass{
   /* ★★R157 同基础：不再描边，改用泡外柔晕立形体（glass 主题底栏本身是半透明白玻璃，
      泡体走 card-bg 96% 已能与底栏拉开一档；外面这圈中性柔晕负责界定轮廓）。 */
+  /* ★★R163 泡缘改「柔白晕开」—— 用户本轮参考图（导航栏截图）里的长按泡是**一团边缘化开的柔白玻璃**：
+     没有线、没有彩、边界在约 14px 内渐隐；而旧实现是「形体 + 一圈中性柔晕」=「边界清晰的白块」。
+     三层叠出来（box-shadow 按书写顺序**前面的盖后面的**）：
+       ① 白柔边（最上）：泡自身材质色向外化开 → 泡缘不再是硬边，而是「亮 → 暗」的渐隐；
+       ② 中性柔晕（中）：在白柔边之外再铺一层极淡的暗 —— 白柔边才有边界可看（白底栏上白叠白 = 看不见）；
+       ③ 落影（最下）：泡底一圈更实的淡影（参考图泡下方投影明显，泡才「浮」得起来）。
+     跨主题自洽：① 走 --card-bg（dark 下是深色 → 深柔边）、②③ 走 --text。 */
+  /* ★R163 数值标定（对参考图整屏逐像素竖扫，x=0.80 列，crop 2385×490 = 795×163css@3x）：
+       泡体 252（与底栏同色）→ 缘外先到最深 223（Δ-29）→ 再渐变回 252，
+       暗晕跨度 ≈140px/3 ≈ 47 css px**、底部还有一条 255 的亮回光 + 241 的落影。
+     旧值（26px@8%）只在贴缘给出 Δ≈10 —— 太浅太窄，泡看起来仍是「一圈细软边」而不是参考那种「化开的光团」。
+     故：中性柔晕加深到 13%、加宽到 30px/10px；落影加重到 18%。 */
   box-shadow:
-    0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 7%, transparent),
-    0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 6%, transparent);}
+    0 0 16px 6px color-mix(in srgb, var(--card-bg,#fff) 92%, transparent),
+    0 0 30px 10px color-mix(in srgb, var(--text,#1f2937) 13%, transparent),
+    0 12px 24px -6px color-mix(in srgb, var(--text,#1f2937) 18%, transparent);}
 /* ★R147 浅底栏护栏（light / green）→ **★R151① 口径更新：把「主色 tint」整个换成「中性色」**。
    R147 当时的处境是「白描边在白底栏上隐身」→ 它的修法是「把主色 tint 提回 16%/8% 立形体」。
    但参考图证明这条路走错了：真玻璃**自身无色**（泡体只比底栏暗 4%），形体是靠
@@ -2867,9 +2893,22 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      叠上 .liquid-glass 那圈 30% 的 border，就成了**两道灰环**（外一道硬线 + 内一道细环）。
      参考泡（实测）泡内 252~255 与底栏同色、**零内环**，形体全在泡外 → 两条一起删。
      ★外投影改柔晕：无 spread、6px + 22px 两条。α 反算见基础 .liquid-glass 注释（边界 Δ≈16.6）。 */
+  /* ★★R163 泡缘改「柔白晕开」—— 用户本轮参考图（导航栏截图）里的长按泡是**一团边缘化开的柔白玻璃**：
+     没有线、没有彩、边界在约 14px 内渐隐；而旧实现是「形体 + 一圈中性柔晕」=「边界清晰的白块」。
+     三层叠出来（box-shadow 按书写顺序**前面的盖后面的**）：
+       ① 白柔边（最上）：泡自身材质色向外化开 → 泡缘不再是硬边，而是「亮 → 暗」的渐隐；
+       ② 中性柔晕（中）：在白柔边之外再铺一层极淡的暗 —— 白柔边才有边界可看（白底栏上白叠白 = 看不见）；
+       ③ 落影（最下）：泡底一圈更实的淡影（参考图泡下方投影明显，泡才「浮」得起来）。
+     跨主题自洽：① 走 --card-bg（dark 下是深色 → 深柔边）、②③ 走 --text。 */
+  /* ★R163 数值标定（对参考图整屏逐像素竖扫，x=0.80 列，crop 2385×490 = 795×163css@3x）：
+       泡体 252（与底栏同色）→ 缘外先到最深 223（Δ-29）→ 再渐变回 252，
+       暗晕跨度 ≈140px/3 ≈ 47 css px**、底部还有一条 255 的亮回光 + 241 的落影。
+     旧值（26px@8%）只在贴缘给出 Δ≈10 —— 太浅太窄，泡看起来仍是「一圈细软边」而不是参考那种「化开的光团」。
+     故：中性柔晕加深到 13%、加宽到 30px/10px；落影加重到 18%。 */
   box-shadow:
-    0 0 6px 0 color-mix(in srgb, var(--text,#1f2937) 7%, transparent),
-    0 0 22px 0 color-mix(in srgb, var(--text,#1f2937) 6%, transparent);}
+    0 0 16px 6px color-mix(in srgb, var(--card-bg,#fff) 92%, transparent),
+    0 0 30px 10px color-mix(in srgb, var(--text,#1f2937) 13%, transparent),
+    0 12px 24px -6px color-mix(in srgb, var(--text,#1f2937) 18%, transparent);}
 /* ★R148 删掉「真透镜折射」的整条管线（@supports backdrop-filter:url(#lqRefract) + feImage 位移图）：
    实测 backdrop-filter **不加载 feImage**（见上方 R148 三层结论）→ 那个滤镜在本项目里从未真正折射过。
    ★R150 出路：把 feImage 位移图改挂到**普通元素的 filter** 上（filter 支持 feImage）→ 边缘折射成立；
@@ -12756,7 +12795,10 @@ var LIQ_GYBOT=3;
    但放大本来就不挪中心，且那条只在快速拖动时成立。口径：k = LIQ_MAG → 随拉伸量 s 线性回落到 1
    （静止 1.2、拖快 1.0，与 R150 移动态测量兼容）。 */
 var LIQ_MAG=1.2;
-var LIQ_GRK=0.42;                   /* 基础圆角 = min(泡宽,泡高) × 此值。
+var LIQ_GRK=0.50;                   /* ★R163 半值 = min(gw,gh)×0.5 = 正圆/正胶囊（旧 0.42 = 圆角方）。
+   用户本轮参考图的泡是一个**柔圆团**，没有「方」的痕迹 → 取满 0.5。
+   ★对位移图的影响：_lqEdgeR 按圆角分档，gr 变大后档位整体上移一档，几何自洽、无需另调。
+   ---- 以下 R156 的历史依据（r/min=0.42 的口径）留档；R163 参考图是更圆的柔团 → 取满 0.5 ----
    ★★★R156 定稿 = 0.42（参考实测），历史两次都偏了：
      · R155 曾用 0.44 —— 但那批参考图量得不准，且当时泡是「近正方形」，0.44 直接变成胶囊；
      · 同轮又降到 0.18 —— 用户立刻退回：「长按玻璃片弧度太方了，能否按照图片的弧度来」。
@@ -12800,13 +12842,25 @@ var LIQ_EDGE=18;                    /* ★R144 「归属外扩」(px)：tab 半�
      → feDisplacementMap 的 scale 写 maxScale 即可满精度还原，8bit 不浪费（旧 t^P 剖面只用了 ±127 段）。
    ★B 通道 = 染色掩码（shuding 原版 B=0；我们保留酷安参考的缘带色散，掩码 = 位移权重 (1−scaled)）。
    ★旧 t^P 带状剖面（BANDK/MAXK/P/VK）随本引擎整体退役。 */
-var LIQ_SD_INW=0.30, LIQ_SD_INH=0.30; /* 内域（不折射区）**uv 半幅绝对值**（ix∈−0.5..0.5）。
-   ★★R161 定稿勘误：shuding 原版 fragment 传的就是 0.3/0.2（300×200 元素的 uv 半宽/半高，
+var LIQ_SD_INW=0.36, LIQ_SD_INH=0.36; /* 内域（不折射区）**uv 半幅绝对值**（ix∈−0.5..0.5）。
+   ★R162 由 0.30 收到 0.36：折射带 = 泡宽的 (0.5−0.36)×2 = **28% → 每边 ~11px**
+   （0.30 时每边 16px）。收窄的理由是**近圆泡在白底栏上的可视性**：缘带越宽，
+   「向心采样」把相邻 tab 的深色图标拉进来的面积越大 → 越像脏边而不是折射。
+   ★★R161 定稿勘误（保留）：shuding 原版 fragment 传的就是 0.3/0.2（300×200 元素的 uv 半宽/半高，
    = 半幅 0.5 的 60%/40%）。首版误当「占比」放大成 0.62 —— 内矩形比泡还大 → SDF 恒负 →
-   scaled 恒 1 → 位移图全 128（★R150⑨ 实测全中性图的真因）。近圆泡按 x 轴 60% 各向同性适配取 0.30。 */
-var LIQ_SD_INR=0.60;   /* 内域圆角（shuding 原值；r > 半宽 → 内域轮廓退化为近椭圆） */
-var LIQ_SD_OFF=0.15;   /* 折射从 d−OFF 开始起坡（shuding 原值） */
-var LIQ_SD_SAT=0.80;   /* d−OFF ≥ SAT 处折射归零（shuding 原值） */
+   scaled 恒 1 → 位移图全 128（★R150⑨ 实测全中性图的真因）。 */
+var LIQ_SD_INR=0.12;   /* 内域圆角。★★R162 勘误（用户实测「比上一版还差」的真因）：
+   shuding 原值 0.60 **大于**内域半宽 0.30 → `qx=|x|−w+r` 恒正 → SDF 退化成「对角距离场」，
+     d 沿**边中点最小(0.254)、角点最大(0.531)** → disp 只在角部掉下来 →
+     **四条边中点 scaled≈0.993、位移 ≈ 0.28px（肉眼零折射），只有四角抽一下**。
+     实测就是「泡 = 一个普通放大圆角块」→ 比 R160 的「整圈缘带」差，符合用户反馈。
+   改 0.12（**< 内域半宽 0.36**，回到**常规圆角矩形**）→ d 沿整条边**均匀**（边中点 0.14 / 角点 0.25），
+     折射沿整圈边缘分布、角部略强 —— 这才是参考图「边缘一圈向外鼓」的剖面。 */
+var LIQ_SD_OFF=0.02;   /* 折射起坡点。R162 由 0.15 下调：d 量程随 INR 修正后只剩 0~0.32，
+   0.15 会把整条剖面推到「几乎不起坡」；0.02 = 刚出内域就开始折。 */
+var LIQ_SD_SAT=0.35;   /* d−OFF ≥ SAT 处折射归零。R162 由 0.80 重标定到 d 的真实量程(0.32)：
+   0.80 时 t=(0.8−x)/0.8 ∈ [0.6,1] → disp 恒 ≈0.93~1 → scaled≈1 → **位移恒 0**（同 R161 首版症状）。
+   取 0.35：边缘中点 disp≈0.48（中等折射，静止 ≈7px）、角点 disp≈0.05（强，对角 ≈14px）。 */
 /* ★命名提醒：R144 的 `LIQ_EDGE=18`（放手归属外扩 px）与 `LIQ_EDGE_*`/`LIQ_SD_*` 这族折射参数
    只是恰好同前缀，**语义完全无关**（一个是落点归属判定、一个是折射参数）。
    改归属逻辑时别顺手改到这里；反之亦然。 */
@@ -12821,34 +12875,12 @@ var LIQ_EDGE_SREF=0.11;  /* 位移强度 = clamp(s/SREF)：s 是泡自身的拉�
      · 拖起来 → 升到 100%：边缘把内容「黏住」拖着走。
    ★R161：e 现在乘的是**位移图自身的 maxScale**（见 _lqEdgeApply）——静置 = 35% 的 shuding 缘。 */
 var LIQ_EDGE_FLOOR=0.35;
-/* ★R151② 色散：**方向修正** + 强度加大。
-   ★★方向修正（这是上一版「蓝紫重影」的根因）：真实玻璃是**短波偏折更多** → 紫/蓝落在更外侧，
-     红落在更内侧。参考图实测完全吻合（移动态 y=220 右缘，从泡内到泡外）：
-        红 H=355 → 品红 314 → 紫 294 → 无色；左缘同向（暖白 12 → 紫 269 → 蓝紫 228）；
-        y=150 那条更能说明问题：紫 300 → 黄 47 → 橙 14 → 红 0（从外到内）。
-     即「**内暖外冷**」。R150 的实现是 R×CHR / B÷CHR（红在外、蓝在内）→ 色序整个反了，
-     所以看着像「青蓝色的错位重影」，而不是参考那圈橙粉紫的暖色彩带。
-     现在改成 **R 位移最小（=sc/CHR，落最内）、B 位移最大（=sc×CHR，落最外）**。
-   ★强度 1.4→1.9：三路的落点差 = sc×(CHR − 1/CHR)/2，1.4 只有 0.34×sc、1.9 有 0.69×sc（翻倍）
-     → 彩带宽度才够（参考实测彩带沿缘铺开 10~30px，色相跨度 180°+）。 */
-var LIQ_EDGE_CHR=1.9;
-/* ★R151② 三路**染色**：目标色相 + 源色保留 —— 两版踩坑后的定稿。
-   ★坑一「隔离 R/G/B 通道」：本项目内容是无彩深色（--text 图标/文字 R≈G≈B），隔离后三路
-     拿到同一个暗灰 → screen 叠加仍是灰，只有抗锯齿边缘透一丝彩 → 等于没效果。
-   ★坑二「纯亮度→目标色」（只取 L 再乘目标色）：与内容颜色**完全无关** →
-     三路必然输出固定的三个色 → screen 叠加成固定的粉白。实测整个泡的缘带变成一片粉色，
-     而参考图的暖色明显是「由内容颜色决定的」（红图标 → 红/黄/紫）。
-   ★定稿 = 「源色 (1−WT) + 亮度 × 目标色 × WT」的混合：
-       保留 25% 源色（内容特征 → 深色内容出深彩、亮色内容出亮彩、色相跟内容走）
-       混入 75% 目标色（保证无论内容是什么颜色，色序都是「暖→冷」）。
-   ★目标色按参考实测色序取（**从内到外**）：橙红(14°~25°) → 暖黄(47°) → 紫(294°~300°)。
-     刻意**不含绿色**（参考的色相直方在 60~180° 几乎为零）→ 观感是「暖色彩带」而非「彩虹霓虹」。 */
-var LIQ_EDGE_C1=[1.00,0.42,0.18];  /* 最内层（位移最小）：暖橙红 */
-var LIQ_EDGE_C2=[1.00,0.82,0.25];  /* 中层：暖黄 */
-var LIQ_EDGE_C3=[0.72,0.42,1.00];  /* 最外层（位移最大）：紫 */
-var LIQ_EDGE_WT=0.80;              /* 目标色混合权重（其余 1−WT 保留源色）。
-   ★0.80 是「色序统一」与「跟随内容色」的折中：太低（如 0.5）则左右缘颜色随内容乱跑、
-     一版暖一版冷；太高（如 0.95）就退回「纯目标色」→ 缘带永远是同三个色刷出来的死板粉白。 */
+/* ★★R163 色散与染色**整条退役**（`LIQ_EDGE_CHR` / `LIQ_EDGE_C1~C3` / `LIQ_EDGE_WT` / 三路 feBlend
+   全部删除）—— 用户本轮的参考图给的是最终答案：泡缘是**纯中性白**，一圈柔光、没有任何彩色边。
+   R151② 的三路色散 + 三色染色是为「深色底 + 饱和彩带」标的定，搬到本 App 的**白底栏长按**场景里
+   只有一条出路：白像素被染成目标色（0.80 时 [1,0.54,0.34] 棕褐脏环；0.22 淡褐环；0.12 才勉强干净）。
+   降权重只能「让它不脏」，永远做不出参考那个「干净的柔白玻璃泡」→ 索性整条删掉。
+   现在管线 = 一路中性位移（无色散、不染色）：缘带只被**推挤**，颜色原样保留 → 干净。 */
 var LIQ_EDGE_RSTEP=3;    /* 圆角分档数（位移图要按泡的圆角生成 → 分 3 档 + 静止档，全缓存） */
 var liq={down:false,on:false,armed:false,pid:null,pidType:'mouse',raf:0,last:0,holdTimer:0,mode:'drag',
          cacheTabs:null,
@@ -13016,7 +13048,14 @@ function _lqEdgeGet(gw,gh,r){
       raw[ir++]=dx;raw[ir++]=dy;
     }
   }
-  maxScale*=0.5;if(maxScale<0.5)maxScale=0.5;
+  /* ★★R162 编码量程勘误（shuding 原版是 ×0.5，我们必须是 ×2）：
+     编码 R = 255×(d/maxScale+0.5) 要不钳制，必须 |d|/maxScale ≤ 0.5，即 **maxScale ≥ 2·max|d|**。
+     shuding 原版写 ×0.5 之所以成立，是因为它的剖面**极度偏向角部**（300×200 片：角点 |d|=66.9、
+     边中点只有 1.05，比值 0.016）→ ×0.5 后只有极角越界被钳，钳出来的常量环正是它要的「厚缘」。
+     我们的近圆泡剖面是角点 39.9 / 边中点 21.3（比值 0.53，★R162 把折射还给了整圈边）→
+     ×0.5 会把**整圈外缘一起钳平**成 ±0.5×scale，渐变剖面被削成硬边，折射反而没了层次。
+     ×2 后 raw/maxScale ∈ [−0.5,0.5] → 编码铺满 0~255 满精度，解码位移 = (R/255−0.5)×scale = d×e。 */
+  maxScale*=2;if(maxScale<1)maxScale=1;
   ir=0;
   for(y=0;y<gh;y++){
     var iy2=(y+0.5)/gh-0.5,i0=y*gw*4;
@@ -13038,16 +13077,13 @@ function _lqEdgeGet(gw,gh,r){
          mask  = alphaOf(map)                          ← 把 alpha 抄进 RGB，得到纯掩码
          inv   = 1 - mask                              ← RGB 与 alpha 一起反相
          cen   = SourceGraphic × inv                   ← 泡中心：原色、零位移
-         es    = SourceGraphic × mask                  ← 缘带：待位移 + 待染色
-         d0/d1/d2 = feDisplacementMap(es, scale_k)     ← 三路位移各不同（内暖外冷）
-         t0/t1/t2 = Luminance(d_k) → 目标色            ← 三路各染一个色相
-         edge  = screen(t0, t1, t2)
-         out   = cen + edge                            ← 相加：中心原色 + 缘带彩色
-     ★为什么非拆不可：染色矩阵对**整幅图**生效。若直接染整幅，位移为 0 的泡中心也会被
-       染成「三色 screen 叠加」→ 实测整个泡变成一片粉白；而参考图里泡内图标是**正常原色**
-       （实测 #cb2122），只有贴缘一圈泛彩。拆开后才对得上。
-     ★代价：primitive 从 9 个涨到 14 个 —— 但位移图按 (gw,gh,圆角) 缓存、每帧只改 3 个 scale，
-       位置/尺寸全不变 → 重绘成本仍集中在「3 次位移采样」上（泡只有 153×93）。 */
+         es    = SourceGraphic × mask                  ← 缘带：待位移
+         edge  = feDisplacementMap(es, scale)          ← ★R163 一路中性位移（无色散）
+         out   = cen + edge                            ← 相加：中心原色 + 缘带被推挤
+     ★为什么非拆不可：位移对**整幅图**生效。若整幅都位移，位移图里 d=0 的泡心还好，
+       「带外」样本会把泡外的像素拉进来（feDisplacementMap 是逐像素重采样，会读到泡外）
+       → 泡心出现邻居内容的重影。掩码拆开后中心走原图、只有缘带走位移。
+     ★R163 代价更小：primitive 14 → 11（删了两条 feBlend + 三条染色矩阵 + 两条位移）。 */
   var defs=_lqEdgeEnsure(),fid='lqEdgeF'+(++_lqEdgeSeq);
   var mk=function(n,at){var e=document.createElementNS(NS_SVG,n),k;for(k in at)e.setAttribute(k,at[k]);return e;};
   var f=mk('filter',{id:fid,x:'0',y:'0',width:'1',height:'1',filterUnits:'objectBoundingBox',
@@ -13065,38 +13101,21 @@ function _lqEdgeGet(gw,gh,r){
     k1:'1',k2:'0',k3:'0',k4:'0',result:'cen'}));
   f.appendChild(mk('feComposite',{in:'SourceGraphic',in2:'mask',operator:'arithmetic',
     k1:'1',k2:'0',k3:'0',k4:'0',result:'es'}));
-  /* ★R151② 缘带内容先**提亮**再位移/染色：本 App 的 tab 图标/文字是深色（--text，亮度 ~0.1），
-     直接染色后是「暗彩」→ 实测彩带发灰发脏；而参考图的缘带是**饱和亮彩**（黄 S=88 / 橙 S=80）。
-     ★为什么用 gamma 而不是加常数 offset：offset 对**透明像素**也生效（会把泡内空白整片染上色）；
-       gamma 是 v^0.55 的形状，v=0 → 0 恒成立 → 只提亮「本来就有内容」的像素。
-     ★exponent<1 = 提亮暗部（0.1 → 0.28，约 2.8 倍），亮部（0.9 → 0.94）几乎不动 → 不会爆白。 */
-  var gam=mk('feComponentTransfer',{in:'es',result:'es2'}),gch=['R','G','B'],gi;
-  for(gi=0;gi<3;gi++)gam.appendChild(mk('feFunc'+gch[gi],{type:'gamma',amplitude:'1',exponent:'0.55',offset:'0'}));
-  gam.appendChild(mk('feFuncA',{type:'linear',slope:'1',intercept:'0'}));
-  f.appendChild(gam);
-  var CH=LIQ_EDGE_CHR,disp=[],k2;
-  for(k2=0;k2<3;k2++){
-    /* ★R151② R 路位移最小、B 路最大（旧实现反了，见 LIQ_EDGE_CHR 注释） */
-    var d=mk('feDisplacementMap',{in:'es2',in2:'map',
-      scale:(k2===0?1/CH:(k2===2?CH:1)),xChannelSelector:'R',yChannelSelector:'G',result:'d'+k2});
-    f.appendChild(d);disp.push(d);
-  }
-  /* ★R151② 染色矩阵 = 「源色 (1−WT) + 亮度 × 目标色 × WT」（理由见 LIQ_EDGE_C1 注释）。
-     矩阵按 4×5 行优先，展开「源色 (1−WT) + WT × 目标色 × Rec.709 亮度」：
-        第 i 个输出通道的第 j 个输入系数 = (1−WT)·δij + WT·c_i·lum_j
-     即：把源色按 (1−WT) 原样留一份，再把「亮度×目标色」按 WT 叠上去；第 4 行透传 alpha。 */
-  var tint=[LIQ_EDGE_C1,LIQ_EDGE_C2,LIQ_EDGE_C3],WT=LIQ_EDGE_WT,IV=1-WT,LUM=[0.2126,0.7152,0.0722];
-  for(k2=0;k2<3;k2++){
-    var c=tint[k2],row=[],ci;
-    for(ci=0;ci<3;ci++){var r3=[],cj;
-      for(cj=0;cj<3;cj++)r3.push((ci===cj?IV:0)+WT*c[ci]*LUM[cj]);
-      row.push(r3.join(' ')+' 0 0');}
-    f.appendChild(mk('feColorMatrix',{in:'d'+k2,type:'matrix',
-      values:row.join('  ')+'  0 0 0 1 0',result:'t'+k2}));
-  }
-  f.appendChild(mk('feBlend',{in:'t0',in2:'t1',mode:'screen',result:'b01'}));
-  f.appendChild(mk('feBlend',{in:'b01',in2:'t2',mode:'screen',result:'edge'}));
-  /* ★相加（k2=k3=1）：center 的 alpha = srcA×(1−m)、edge 的 alpha 由各 t 分别携带 m
+  /* ★★R162 删掉「缘带提亮」（R151② 的 feComponentTransfer gamma v^0.55）：
+     它把缘带里的深色图标按 v^0.55 提亮（0.1 → 0.28，约 2.8 倍）—— 在白底栏上就是**一层灰雾**，
+     是用户「越改越离谱」的观感来源之一。当年加它是因为「深色内容染色后是暗彩、缘带发灰发脏」，
+     但染色权重现已降到 0.12（几乎不染），提亮只剩「把深色内容洗成灰」这唯一的副作用 → 直接删除。
+     缘带内容保持**原对比度**（深图标仍深、白底仍白）→ 折射轮廓清晰、不再糊成一片灰。 */
+  /* ★★R163 一路中性位移（替代 R151② 的「三路色散 + 三色染色 + 两次 screen 叠加」）：
+     缘带只被推挤、颜色原样保留 → 参考图那种**干净的柔白玻璃缘**（无彩边、无脏环）。
+     ★为什么不是「把染色权重降到 0」了事：三条路在 WT→0、CHR→1 时会退化成三张**近似相同**的图，
+       而 screen(a,a,a) = 1−(1−a)³ ≈ 把缘带 alpha 抬到 0.875、颜色推向白 —— 会凭空多出一圈白亮带。
+       要么留色散、要么彻底走单路，不能只把系数调零。 */
+  var disp=[];
+  var d0=mk('feDisplacementMap',{in:'es',in2:'map',scale:1,
+    xChannelSelector:'R',yChannelSelector:'G',result:'edge'});
+  f.appendChild(d0);disp.push(d0);
+  /* ★相加（k2=k3=1）：cen 的 alpha = srcA×(1−m)、edge 的 alpha = srcA×m
      → 相加后总 alpha = srcA×(1−m) + srcA×m ≈ srcA ✓（不会出现「缘带突然变透」） */
   f.appendChild(mk('feComposite',{in:'cen',in2:'edge',operator:'arithmetic',
     k1:'0',k2:'1',k3:'1',k4:'0'}));
@@ -13104,15 +13123,12 @@ function _lqEdgeGet(gw,gh,r){
   hit={id:fid,disp:disp,sc:-1,gw:gw,gh:gh,maxScale:maxScale};_lqEdgeCache[key]=hit;
   return hit;
 }
-/* 把位移强度写进当前滤镜的 3 个 feDisplacementMap。
-   ★三路 ratio 必须与上面 _lqEdgeGet 里建滤镜时**完全一致**（1/CH、1、CH）——
-     两处不同步的话「首帧 scale 由这里写、之后由那里写」会出现色序跳变。
+/* 把位移强度写进当前滤镜的 feDisplacementMap（★R163 单路）。
    ★量化为 0.5px 档位：一次属性写 = 一次滤镜重绘，60fps 下能省则省。 */
 function _lqEdgeScale(g,sc){
   if(g.sc===sc)return;
   g.sc=sc;
-  var CH=LIQ_EDGE_CHR,i;
-  for(i=0;i<3;i++)g.disp[i].setAttribute('scale',(sc*(i===0?1/CH:(i===2?CH:1))).toFixed(2));
+  g.disp[0].setAttribute('scale',sc.toFixed(2));
 }
 /* ★每帧调用：强度 = clamp(s/SREF) → 静止（s=0）时 filter:none，泡就是一块干干净净的玻璃
    （对应参考图「长按态」看不出任何形变）；拖起来 s 升 → 边缘开始「黏」住扫过的图标。 */
