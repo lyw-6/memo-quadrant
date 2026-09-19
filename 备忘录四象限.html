@@ -922,7 +922,13 @@ body.kb-edit .memo-list{padding-bottom:var(--kb-spacer,0px);}
    ① 底部导航栏实际高约60px + bottom:10px → 导航顶在视口底部 70px 处；
    ② FAB 底边必须 ≥ 82px(70+12 间距)，否则与导航栏重叠；
    ③ 回到顶部 bottom:144px(82+48+14)，与 FAB 顶 130px 保持 14px 间距，避免视觉压盖。 */
-.fab-add{position:fixed;right:14px;bottom:calc(82px + env(safe-area-inset-bottom));z-index:45;width:48px;height:48px;border:none;border-radius:50%;background:linear-gradient(135deg,color-mix(in srgb,var(--color-primary,#6366f1) 80%,#fff),var(--color-primary,#6366f1));color:#fff;font-size:24px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px color-mix(in srgb,var(--color-primary,#6366f1) 42%,transparent),inset 0 1px 0 rgba(255,255,255,.3);-webkit-tap-highlight-color:transparent;transition:transform .12s ease,filter .15s ease;}
+/* ★R159 与底栏的间距：旧值 `82px` 是「底栏顶边 = --nab + 22 + 59 = 81px」的**同一条线**
+   （实测 fab.bottom=738 vs nav.top=739 → **只差 1px**）→ 手机端 + 落在底栏右端上方，
+   看着是「粘在底栏上」。改成与底栏 `bottom` 同源的口径 + 15px 空隙：
+       fab.bottom = --nab + 22 + 栏高59 + 空隙15 = 96px
+   ★为什么写成 `--nab + 96px` 而不是直接 `96px`：`--nab` 是 Android 底部导航条占位，
+     底栏自己是 `calc(var(--nab) + 22px + …)` —— 两者不同源时，带导航条的设备上又会对不齐。 */
+.fab-add{position:fixed;right:14px;bottom:calc(var(--nab,0px) + 96px + env(safe-area-inset-bottom));z-index:45;width:48px;height:48px;border:none;border-radius:50%;background:linear-gradient(135deg,color-mix(in srgb,var(--color-primary,#6366f1) 80%,#fff),var(--color-primary,#6366f1));color:#fff;font-size:24px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px color-mix(in srgb,var(--color-primary,#6366f1) 42%,transparent),inset 0 1px 0 rgba(255,255,255,.3);-webkit-tap-highlight-color:transparent;transition:transform .12s ease,filter .15s ease;}
 .fab-add svg{width:22px;height:22px;pointer-events:none;}
 .fab-add:active{transform:scale(.94);filter:brightness(.94);}
 /* ★R68 玻璃主题 FAB 毛玻璃化：与「今」按钮同一套玻璃语言（磨砂底+高光描边+玻璃投影），加号改主色 */
@@ -2708,8 +2714,24 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
          「还差点意思」：参考是一块**有厚度的白玻璃砖**，我方是一个**灰圈**。
        ★用 var(--card-bg) 而不是写死白：它就是 .bottom-nav 自己的 background（light #fff / dark #1a1a2e /
          green #f3faf3 / glass 玻璃色）→ 泡与底栏天然同材质、跨 4 主题自洽。
-       ★88% 而不是 100%：参考实测泡内 249 vs 页底 245（+4）——留一点透，别做成实心白卡片。 */
-  background:color-mix(in srgb, var(--card-bg,#fff) 96%, transparent);
+       ★88% 而不是 100%：参考实测泡内 249 vs 页底 245（+4）——留一点透，别做成实心白卡片。
+     ★★R159 推翻上面这条（**必须不透明**）—— 用户口径：「里面能看到折射过的导航栏的外边框」。
+       根因：泡宽 = tab 宽 × 1.25，长按**最后一个 tab** 时泡的右缘必然越过底栏右端
+       （实测：泡 849.1~1008 vs 底栏 280~1000 → 越出 8px）。那 4% 的透光把
+       「底栏的圆角端头 + 圆角外的页面底色」原样透进泡里 → 泡内出现一条**竖的底栏外框**；
+       同时真实底栏的图标/文字也以 4% 透上来，与副本叠成「重影」。
+       → 泡体改成**不透明**：`--card-bg`（主题材质色）叠 `--ov-solid-bg`（主题的不透明等效底色）。
+         第二层是给 glass 主题兜底的（它的 --card-bg 是 rgba(255,255,255,var(--glass-alpha)) 半透明，
+         单层盖不住身后内容）；light/dark/green 的 --card-bg 本就不透明，第二层看不见、零副作用。
+       ★为什么这是对的而不是「变实心卡片」：参考图整屏实测泡内 **249 == 底栏 249**（一分不差）——
+         这种「泡色 = 栏色」只有在泡不透明时才能成立；半透明时泡色必然是「栏色 × 身后内容」的混色。
+         玻璃感由 .liquid-sheen（顶缘镜面）+ 泡外柔晕 + 左右缘折射三样承担，不再靠「透」。 */
+  /* ★★写法坑（R159 自己踩过）：`background:A,B` 里**只有最后一层能带颜色** ——
+     两层都写颜色（`background:#fff,#fff`）是**非法声明，整条会被丢弃** → 泡体变全透明
+     （实测 computed backgroundColor = rgba(0,0,0,0)、backgroundImage = none，静默失效）。
+     正确写法 = 不透明底色走 `background-color`，主题材质色走 `background-image` 的等色渐变。 */
+  background-color:var(--ov-solid-bg,#fff);
+  background-image:linear-gradient(var(--card-bg,#fff),var(--card-bg,#fff));
   /* ★★R157 外投影「从 0 改回柔晕」——与上一条 border 的删除是**同一件事的两半**：
      R153 当年用「1px 硬暗环」代替投影（理由是「参考泡外只有 3px 过渡」），那条读数来自旧的
      `长按态.jpg`（不同批次/不同分辨率）；本批 4 张 1260×2800 图的逐像素采样给出的是：
@@ -2736,12 +2758,14 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      玻璃自身的贡献只有约 4% 的中性明暗 + 一条极窄顶缘亮线。
      ★现在：只留一条 **2.2% 高度**的顶缘 specular（.50 → 0），其余三层全删。 */
   background:
-    linear-gradient(180deg, rgba(255,255,255,.50) 0%, rgba(255,255,255,.06) 2.2%, rgba(255,255,255,0) 7%),
-    /* ★R151① 泡体去色：参考图长按态泡体实测 #f1f1f1，而底栏 #f9f9f9 → 玻璃自身只贡献约 4% 的
-       **中性**明暗，颜色全部来自身后内容。旧值 color-mix(primary 9%) 在浅色主题下出「薰衣草紫」
-       = 用户一眼否掉的主因（他说「不是紫色的塑料片」）。
-       ★用 var(--text) 而不是写死深灰：light/green 的 text 是深色 → 泡比底栏暗一档（与参考一致）；
-         dark 的 text 是浅色 → 泡比底栏亮一档（深底栏上的玻璃必须比底色亮，否则「隐身」）。 */
+    linear-gradient(180deg, rgba(255,255,255,.50) 0%, rgba(255,255,255,.06) 2.2%, rgba(255,255,255,0) 7%);
+  /* ★R151① 泡体去色：参考图长按态泡体实测 #f1f1f1，而底栏 #f9f9f9 → 玻璃自身只贡献约 4% 的
+     **中性**明暗，颜色全部来自身后内容。旧值 color-mix(primary 9%) 在浅色主题下出「薰衣草紫」
+     = 用户一眼否掉的主因（他说「不是紫色的塑料片」）。
+     ★R152 泡心必须「和底栏同色」：参考整屏实测泡心 (249,249,249) == 底栏 (249,249,249)，零压暗；
+       而旧值「整幅均匀压 5.5%/3.5%」在白底栏上得到泡心 244 vs 底栏 255 → 一整块 11 档的灰板。
+     ★R158 均匀层压暗换成白 lift（--text 在 light/green 是深色 → 压灰；换白只会封顶 255）。
+     ★★R159 **这一层整层删除** —— 见下方 R159 注释（它是「泡里图标发糊」的第二大因）。 */
     /* ★R152 泡心必须「和底栏同色」而不是「比底栏暗一档」——
        参考图整屏截图逐像素实测：泡心 (249,249,249) == 底栏 (249,249,249)，**零压暗**；
        近缘向内才慢慢压到 236~243（-6~-13）。而旧值「整幅均匀压 5.5%/3.5%」在白底栏上
@@ -2759,8 +2783,14 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        ★为什么浅色下「亮」只能靠白 lift + 外柔晕、不能靠内暗弧：参考的亮是相对**周围**
          （卡面 239~249）的，我方底栏本身已是纯白 255，没有余量 → 对比只能由
          「泡外一圈柔晕把周围压下去」提供（见 .liquid-glass 的 box-shadow），
-         这正是 R153 那两道「inset 内暗弧」被否掉的原因：压的是泡**内**，方向反了。 */
-    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.04) 100%);
+         这正是 R153 那两道「inset 内暗弧」被否掉的原因：压的是泡**内**，方向反了。
+       ★★R159 再把这一层**整个删掉**（均匀白 lift .10→.04 也去掉）—— 它是「泡里内容发糊」的第二大因：
+         它铺在**折射副本之上**，于是把副本里的图标/文字按 (255−c)×α 洗淡。实测同一个像素：
+         带泡 **140** vs 不带泡的真实底栏 **131**（Δ+9）；y=767 处 α 应为 .10−.06×0.49 ≈ .071
+         → 131 + (255−131)×0.071 ≈ 140 ✓ **逐档吻合**。7% 的白纱正是「图标不够清楚 / 细节没做」。
+       ★为什么删了不会「泡心发灰」退回 R158 的问题：R158 的灰是**压暗**（--text tint）、R159 是**提亮**，
+         两个方向都在破坏「泡色 == 栏色」这条铁律。现在泡体已经**不透明 = --card-bg**（见上条），
+         泡心天然就是栏色、一分不差 → 完全不需要这层补白。 */
   box-shadow:
     /* ★R153 顶缘 specular .92 → .45：参考「静置态」整屏实测里，泡的上下缘**没有任何比栏底更亮的一线**
        （泡心柱上侧：245 242 238 237 208 183 238 239 240 —— 从页底到最暗再回来，全程无亮点；
@@ -2791,14 +2821,10 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    去掉主色 tint，换成纯白玻璃 + 白色边缘光；色散边保留（白玻璃的边缘色散最显「真玻璃」）。 */
 [data-theme="glass"] .liquid-sheen{
   background:
-    linear-gradient(180deg, rgba(255,255,255,.46) 0%, rgba(255,255,255,.05) 2.2%, rgba(255,255,255,0) 7%),
-    /* ★R151① 白玻璃也要「去色」：原来这层是纯白 12%/4%，白泡叠白底栏（glass 主题底栏本身就是半透明白）
-       → 泡体跟底栏同色、只剩描边能看。改成「中性深色 + 一点白」→ 泡比底栏略暗或略亮，
-       形体靠中性描边 + 厚度弧带立住，颜色仍旧由身后内容提供。 */
-    /* ★★R158 同基础 .liquid-sheen：把「var(--text) 中性灰」换成白 lift —— glass 主题底栏本身
-       是半透明白玻璃，再压一档灰会得到「灰白板」（glass 主题实测泡心比底栏暗 2~3 档）。 */
-    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.04) 100%),
-    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 100%);
+    linear-gradient(180deg, rgba(255,255,255,.46) 0%, rgba(255,255,255,.05) 2.2%, rgba(255,255,255,0) 7%);
+  /* ★R151① 白玻璃也要「去色」：原来那层是纯白 12%/4%，白泡叠白底栏（glass 主题底栏本身就是半透明白）
+     → 泡体跟底栏同色、只剩描边能看。→ R158 换白 lift → ★R159 **整层删除**（同基础：
+     泡体已不透明 = --card-bg，泡心天然等于栏色；留着白 lift 只会把折射副本里的图标/文字洗淡）。 */
   /* ★★R157 同基础泡：删掉「内白环 + 22px/6px 中性内暗弧 + 外白圈」，只留 1px 顶缘 specular +
      底缘一线回光；形体交给 .liquid-glass 的泡外柔晕。理由见基础 .liquid-sheen 处的 R157 注释。 */
   box-shadow:
@@ -2819,13 +2845,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 [data-theme="light"] .liquid-sheen,
 [data-theme="green"] .liquid-sheen{
   background:
-    linear-gradient(180deg, rgba(255,255,255,.52) 0%, rgba(255,255,255,.06) 2.2%, rgba(255,255,255,0) 7%),
-    /* ★R152 同基础：均匀 tint 从 6%/4% 收到 1.3%/1.0%（原来泡心比白底栏暗 15 档，一眼灰块）。
-       ★★R158 再收到 **0**（换成白 lift）：白底栏（#fff=255）上「压一档灰」的净效果就是
-         泡心 252 vs 底栏 255 = **一块发灰的板**。参考长按泡心 251~255 是**不小于**周围的亮面，
-         所以浅色主题里这一层只能提亮不能压暗；形体全部交给泡外柔晕（box-shadow）。
-         ★green 底栏 #f3faf3=250 同理：泡心也从 247 抬到 250（= 底栏色）。 */
-    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.04) 100%);
+    linear-gradient(180deg, rgba(255,255,255,.52) 0%, rgba(255,255,255,.06) 2.2%, rgba(255,255,255,0) 7%);
+  /* ★R152 同基础：均匀 tint 从 6%/4% 收到 1.3%/1.0%（原来泡心比白底栏暗 15 档，一眼灰块）。
+     ★R158 再收到 **0**（换成白 lift）：白底栏（#fff=255）上「压一档灰」的净效果就是
+       泡心 252 vs 底栏 255 = **一块发灰的板**；而参考长按泡心 251~255 是**不小于**周围的亮面。
+     ★★R159 最后把白 lift 也删掉（同基础）：泡体已不透明 = --card-bg，
+       light 的泡心 = #fff = 底栏色、green 的泡心 = #f3faf3 = 底栏色，一分不差；
+       再叠 7% 白纱只会把折射副本里的图标/文字洗淡（实测 Δ+9），这才是「细节没做」的观感。 */
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.42),
     inset 0 -1px 0 rgba(255,255,255,.18);}
@@ -12970,7 +12996,21 @@ function _lqEdgeGet(gw,gh,r){
       if(t<=0){dt[i]=128;dt[i+3]=0;continue;}  /* 带外（泡内深处）：零位移 + 掩码 0 = 原样保留 */
       if(t>1)t=1;
       var m=Math.pow(t,P);
-      dt[i+3]=Math.round(255*Math.min(1,m*1.6));
+      /* ★★R159「上下缘一律原样」—— 染色掩码必须乘上**法线的水平分量** |vx|/len。
+         根因：上面的有符号距离是「到圆角矩形**整圈**边界」的，所以 t>0 的带子沿上下缘一样存在
+         （带宽 B = 泡宽 × 0.20）。位移贴上下缘时 vx≈0 → 不移位（对），
+         但 **alpha 掩码没有跟着归零** → 上下缘那圈内容照样被「拆进缘带 → gamma 提亮 → 三色 screen 染色」。
+         泡高只有 67.65px、图标/文字上下各只剩 ~15px 余量 → 带子的**内边界正好横切过图标的顶
+         与文字的下缘**（切口上方被染亮、下方是原色）→ 用户看到的「图标重影 / 眼睛散光」。
+         ★为什么只在桌面端暴露：带宽与位移幅度都 ∝ 泡宽 —— 手机泡宽 82（带 16.4px）、
+           桌面泡宽 158.9（带 31.8px），桌面是手机的 2 倍，带子才够长切进图标。
+         ★修法：掩码 = m × |vx|/len（贴左右缘 ≈1 满格、贴上下缘 ≈0 归零、圆角 45° 处 ≈0.7 自然过渡）
+           → 上下缘既不移位也不染色，而 `cen = Source × (1−mask)` 在那里 = 整份原图
+           → 图标/文字**逐像素还原**（与「完全摘掉滤镜」等价，可用 B 态截图直接对照）。
+         ★这也是「只做水平位移」这条设计口径的必然配套：既然垂直方向不产生位移，
+           就绝不该在上下缘产生染色/提亮。 */
+      var nxf=len>1e-6?Math.abs(vx)/len:0;
+      dt[i+3]=Math.round(255*Math.min(1,m*nxf*1.6));
       /* 法线的 x 分量：贴左右缘时 ≈±1（足额外推）；贴上下缘时 ≈0（不动，保护图标/文字不被削顶）；
          圆角/胶囊端头是 45°→ 约 0.7 折减（自然过渡）。 */
       dt[i]=Math.round(128+127*m*(len>1e-6?vx/len:0));
