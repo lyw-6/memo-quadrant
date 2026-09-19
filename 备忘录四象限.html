@@ -333,13 +333,16 @@ body.kb-edit .hist-actions{display:inline-flex;}
   /* ★R41:卡片禁文字选择——真机长按正文 div 会触发浏览器文字选择并取消触摸流(touchcancel),
      长按拖拽在启动前/启动中被浏览器手势杀死,"无法长按拖拽"的真机根因之一。编辑态 textarea 单独恢复 */
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
-  /* 性能隔离:用 layout/style containment 限制长备忘重排/重绘范围,且不切断 backdrop-filter。
-     关键约束:content-visibility:auto 含 paint containment,会切断 backdrop-filter 采样,与玻璃主题每条磨砂冲突,
-     故 content-visibility:auto 只放在非玻璃主题(见下方 html:not([data-theme="glass"]) .memo-item 规则)。 */
-  contain:layout style;}
-/* 非玻璃主题:无 backdrop-filter,可安全用 content-visibility:auto 跳过离屏长备忘的绘制,滚动/删除不卡。
-   玻璃主题不放(否则 paint containment 会让每条 memo 的磨砂失效)。 */
-html:not([data-theme="glass"]) .memo-item{content-visibility:auto;contain-intrinsic-size:auto 120px;}
+  /* ★R167 删掉的死代码：这里原本紧跟一句 `contain:layout style;}` —— 它写在上方 .memo-item{} 的
+     闭合花括号**之后**，属于「顶层孤立声明」；CSS 错误恢复会把它当成**下一条规则的 prelude**，
+     把它后面那条 `html:not([data-theme="glass"]) .memo-item{content-visibility:auto;…}` 整条吞掉
+     → 这句 contain 与那条 content-visibility **都从未生效过**（computed 恒为 none / visible）。
+     两项都**明确保持关闭**（用户口径：只清死代码、不改行为）：
+       · contain:layout 会让元素成为 **fixed 后代的包含块**，而卡片里的 .cat-dropdown 正是 position:fixed
+         → 一开就会把分类下拉框的定位坐标系换成卡片（R110/R112 反复校准过的位置会全乱）；
+       · content-visibility:auto 含 paint containment，与玻璃主题每条 memo 的 backdrop-filter 冲突
+         （原注释已写明），且与本项目的虚拟滚动/几何测量（vRenderWindow、positionNavPill、拖拽命中）耦合。
+     ⇒ 要恢复：把 contain 移进 .memo-item{} 内部、恢复下面那条 content-visibility，并先给 .cat-dropdown 换定位方案。 */
 .memo-item:active{background:var(--hover-bg);}
 .memo-item.dragging{opacity:.22;box-shadow:none;transform:none;z-index:1;cursor:grabbing;outline:2px dashed var(--border);outline-offset:-2px;background:var(--hover-bg);}
 .memo-list.dragging-active .memo-item{transition:none!important;touch-action:none;}
@@ -479,9 +482,11 @@ html:not([data-theme="glass"]) .memo-item{content-visibility:auto;contain-intrin
 .memo-list.compact .memo-item:not(.expanded) .memo-content{max-height:3.2em;-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;line-height:1.4;font-size:11px;padding:0 26px 0 32px;}
 .memo-list.compact .memo-item.expanded .memo-content,
 .memo-list.compact .memo-item .memo-content:focus{-webkit-line-clamp:unset;display:block;max-height:none;font-size:11px;line-height:1.4;padding:0 26px 0 32px;}
-/* ★ 2026-09-01 修复：左滑操作条改 4 列 2 行网格，容纳 8 个 sw-action(pin/tag/edit/lock/copy/time/group-out/del)完整可见不再切底部
-   原 3 列 2 行只够 6 个，超过 6 个的第 7-8 个被 grid overflow:hidden 切掉 */
-.memo-list.compact .memo-item .swipe-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:1px 2px;align-items:center;justify-items:center;align-content:center;padding:2px 4px;box-sizing:border-box;}
+/* ★ 2026-09-01 修复：左滑操作条改网格，容纳全部 sw-action 完整可见不再切底部
+   原 3 列 2 行只够 6 个，超过 6 个的第 7-8 个被 grid overflow:hidden 切掉 → 当时加到 4 列
+   ★R167 菜单由 8 个精简到 6 个（置顶/编辑/复制/时间/更多/删除）→ 回归 **3 列 × 2 行**正好铺满；
+   若继续用 4 列会变成「第一行 4 个 + 第二行 2 个、左边空两格」，看着像坏了。 */
+.memo-list.compact .memo-item .swipe-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 4px;align-items:center;justify-items:center;align-content:center;padding:2px 4px;box-sizing:border-box;}
 .memo-list.compact .memo-item .swipe-actions .sw-action{width:auto;padding:0;gap:1px;}
 .memo-list.compact .memo-item .swipe-actions .sw-icon{width:20px;height:20px;}
 .memo-list.compact .memo-item .swipe-actions .sw-icon svg{width:12px;height:12px;}
@@ -672,8 +677,13 @@ body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50
 }
 .memo-item.swipe-open .swipe-clip,.memo-item.swipe-closing .swipe-clip{pointer-events:none !important;}
 .memo-item.swipe-open .swipe-actions{opacity:1;visibility:visible;pointer-events:auto;}
-/* 收起淡出:保留可见态但 opacity 渐变到 0,由 JS 在延迟后才真正移除 swipe-open 复位 */}
-.memo-item.swipe-closing .swipe-actions{opacity:0;visibility:visible;pointer-events:none;transition:transform .22s ease,opacity .22s ease,visibility 0s linear .22s;}
+/* ★R167 这条注释原本在末尾多一个孤立的右花括号（紧跟「收起淡出:…复位」之后）——CSS 错误恢复会把它和紧随其后的
+   选择器拼成一条非法 prelude，于是紧跟着的「收起淡出」规则**被整条吞掉**（CSSOM 里查不到该选择器）。
+   本次口径是「只清死代码、不改行为」：去掉多余 `}`，并把这条规则**显式停用**（行为与清理前逐像素一致）。
+   ⇒ 想开启（收起时 .22s 淡出，而不是现在的直接滑出）：删掉下面一整对注释包裹即可，规则本身是完好的。
+   ⚠️教训（R162/R163 同款）：写这种「复述旧注释/旧写法」的说明时，**别把注释结束符原样抄进来**——
+     注释会被提前闭合，剩下的字变成裸 CSS，再把它后面那条规则整条吞掉。本次就踩了一次（自查括号平衡才发现）。 */
+/* .memo-item.swipe-closing .swipe-actions{opacity:0;visibility:visible;pointer-events:none;transition:transform .22s ease,opacity .22s ease,visibility 0s linear .22s;} */
 /* ★R166 菜单打开时淡出左侧色条：色条语义 =「卡片的一条边」，被菜单盖住后不该再露脸。
    纯色主题靠 .swipe-clip 外扩（inset:-1*--card-bw）就能完全盖住；但玻璃主题的菜单是**半透磨砂面板**
    （backdrop-filter），身后饱和度高的色条会透过面板显出一道橙带（实测打开态左缘仍是柔橙渐变、肉眼可见）
@@ -681,6 +691,13 @@ body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50
    closeSwipe 在滑出结束的 240ms 后才摘，所以淡出淡回都与面板同步）。 */
 .memo-item.qb::before{transition:opacity .22s ease;}
 .memo-item.qb.swipe-open::before{opacity:0;}   /* ★注意：qb/swipe-open 同挂在一个元素上，必须是复合选择器，不能写成 `.swipe-open .qb` */
+/* ★R167「删除」危险色：此前 .act-del 全文件零样式 → 和相邻的「更多」长得一模一样，误触风险正来自这里
+   （顺序评测结论：位置保持「更多 | 删除」不变，用颜色拉开）。
+   取「红字 + 悬停浅红底」而非批量栏那种纯红底白字：左滑面板底色随主题变（玻璃 = 半透磨砂），
+   纯色实底会破磨砂质感；红 tint 叠上去仍保留玻璃层。色值走 var(--danger,#ef4444)，与批量栏删除同源。
+   选择器比基础规则多一个 .act-del 类 → 特异性更高，≤560px 媒体块里的同名基础规则不会盖掉颜色。 */
+.memo-item .swipe-actions .sw-action.act-del{color:var(--danger,#ef4444);}
+.memo-item .swipe-actions .sw-action.act-del:hover{background:color-mix(in srgb,var(--danger,#ef4444) 12%,transparent);}
 .memo-item.locked .memo-content.locked-content{display:flex;align-items:center;gap:6px;color:var(--text-tertiary);font-style:italic;}
 .memo-item.locked .memo-content.locked-content svg{width:16px;height:16px;flex:none;}
 /* 锁标记：加锁后常驻显示，提供即时可见反馈（即使左滑菜单已收起） */
@@ -1171,6 +1188,12 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 .more-item:hover{background:var(--hover-bg);color:var(--text);}
 .more-item.danger:hover{background:rgba(239,68,68,.1);color:#e74c3c;}
 .more-item svg{width:13px;height:13px;flex-shrink:0;pointer-events:none;}
+/* ★R167 左滑菜单二级「更多」面板：沿用 .more-menu 的主题令牌（含玻璃主题那条），只调尺寸——
+   它比四象限「…」那个只有分类名的菜单宽（多了「标签（分类 / 紧急）」这种长文案），
+   并且要能被拇指点中（行高 34px 而不是 24px）。 */
+.memo-more{min-width:150px;padding:5px;border-radius:12px;}
+.memo-more .more-item{padding:8px 10px;font-size:13px;gap:9px;border-radius:9px;}
+.memo-more .more-item svg{width:15px;height:15px;}
 .more-wrap{flex-shrink:0;overflow:visible!important;display:flex;align-items:center;margin-left:auto;}
 /* ★R89 margin 归零：.memo-list 恢复 flex 后 gap 已提供 12px 间距，原来的 10px/4px
    会与 gap 叠加成 22px/16px，分组块与普通卡片间距不一致。 */
@@ -2217,7 +2240,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
   .q-cat-row.fade-l.fade-r{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%);}
   /* ===== 左滑菜单手机端适配：与电脑端完全一致——绝对定位覆盖 + 滑入，仅按钮尺寸等比缩小 =====
      不再用 grid 高度 hack(那是错乱根源：与 JS 内联 translateX 冲突 + grid 过渡在 WebView 抖动)。
-     窄屏同样「菜单盖住备忘正文」，靠 .swipe-clip overflow:hidden 裁剪，单行 7 个按钮 flex 均分。 */
+     窄屏同样「菜单盖住备忘正文」，靠 .swipe-clip overflow:hidden 裁剪，单行 6 个按钮 flex 均分（★R167 由 7 个精简而来）。 */
   .memo-item{display:block;}             /* fore 与 clip 上下堆叠(flex 兼容)，clip 仍绝对覆盖 */
   .memo-item .swipe-clip{                 /* ★R166 与桌面端同语义：外扩一个边框宽铺满整个 border box
                                              （原 inset:0 只铺 padding box → 左侧色条出血的 1px 会漏出来） */
@@ -11969,6 +11992,9 @@ var ICON_BOX='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 var ICON_BOX_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.3l2.9 2.9L16.4 9.4"/></svg>';
 var ICON_MERGE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l8 5"/><path d="M3 17l8-5"/><path d="M11 12h7"/><path d="M15 9l3 3-3 3"/></svg>';
 var ICON_SPLIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7l-8 5"/><path d="M21 17l-8-5"/><path d="M13 12H6"/><path d="M9 9l-3 3 3 3"/></svg>';
+/* ★R167 左滑菜单二级「更多」触发器（三个点）。用 inline SVG 而不是 ⋯ 字符：字符与圆形按钮的
+   字体度量对不齐（同一排图标全 SVG 才等大居中）。 */
+var ICON_MORE='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>';
 var ICON_RESTORE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v6h6"/><path d="M3.6 13a9 9 0 1 0 2.1-6.4L3 8"/></svg>';
 /* 批量按钮图标统一包装：固定 15px、pointer-events:none(点击只命中按钮本体) */
 function nbIco(svg){return '<span class="b-ico">'+svg+'</span>';}
@@ -13339,16 +13365,19 @@ function createMemoElement(memo,index,groupId){
   var timeAct=(memo.deadline||memo.scope==='month')?' is-active':'';
   div.innerHTML='<div class="swipe-fore">'+html+'</div>'+
     '<div class="swipe-clip"><div class="swipe-actions" data-id="'+memo.id+'">'+
+    /* ★R167 左滑菜单精简 8 → 6（用户口径：「留 5 个高频 + 更多」）。
+       留在条上的 5 个高频：置顶 / 编辑 / 复制 / 时间 / 删除；
+       收进「更多」二级菜单的 3 个：标签 / 加锁 / 移出(入组)。
+       ★为什么这 3 个可以下移（都不丢能力）：①标签弹层的内容＝分类+紧急程度，
+         卡片底部那两个胶囊（分类下拉、象限标签）本来就能直接改，重复度 100%；
+       ②「移出」在组内卡片上有分组胶囊（含「移出所在分组」）；
+       ③加锁/入组 只是多一跳（卡片上仍有 lock-badge 只读反馈）。
+       ★顺序：破坏性的「删除」保持在最右（末位惯例），「更多」紧邻它左侧。 */
     '<button type="button" class="sw-action act-pin' +pinAct +'" data-act="pin" data-id="'+memo.id+'" title="置顶"><span class="sw-icon">'+ICON_PIN+'</span><span class="sw-label">置顶</span></button>'+
-    '<button type="button" class="sw-action act-tag" data-act="tag" data-id="'+memo.id+'" title="标签(分类/紧急程度)"><span class="sw-icon">'+ICON_TAG+'</span><span class="sw-label">标签</span></button>'+
     '<button type="button" class="sw-action act-edit" data-act="edit" data-id="'+memo.id+'" title="全屏编辑"><span class="sw-icon">'+ICON_EDIT+'</span><span class="sw-label">编辑</span></button>'+
-    '<button type="button" class="sw-action act-lock' +lockAct +'" data-act="lock" data-id="'+memo.id+'" title="加锁"><span class="sw-icon">'+ICON_LOCK+'</span><span class="sw-label">'+(memo.locked?'解锁':'加锁')+'</span></button>'+
     '<button type="button" class="sw-action act-copy" data-act="copy" data-id="'+memo.id+'" title="复制内容"><span class="sw-icon">'+ICON_COPY+'</span><span class="sw-label">复制</span></button>'+
-    '<button type="button" class="sw-action act-time' +timeAct +'" data-act="time" data-id="'+memo.id+'" title="'+(hasDeadline?'修改时间':'设置时间')+'"><span class="sw-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span class="sw-label">'+(hasDeadline?'已设':'时间')+'</span></button>'+
-    /* ★R92 单条「入组」入口：与既有「移出」对称，未在组内时才出现 —— 修掉"单条备忘录根本没有移入分组的入口" */
-    (inGroup
-      ?'<button type="button" class="sw-action act-group-out" data-act="group-out" data-id="'+memo.id+'" title="移出分组"><span class="sw-icon">'+ICON_SPLIT+'</span><span class="sw-label">移出</span></button>'
-      :'<button type="button" class="sw-action act-group-in" data-act="group-in" data-id="'+memo.id+'" title="移入分组"><span class="sw-icon">'+ICON_MERGE+'</span><span class="sw-label">入组</span></button>')+
+    '<button type="button" class="sw-action act-time' +timeAct +'" data-act="time" data-id="'+memo.id+'" title="'+(hasDeadline?'修改时间（含创建/修改时间）':'设置时间（含创建/修改时间）')+'"><span class="sw-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span class="sw-label">'+(hasDeadline?'已设':'时间')+'</span></button>'+
+    '<button type="button" class="sw-action act-more" data-act="more" data-id="'+memo.id+'" title="更多：标签 / 加锁 / 分组"><span class="sw-icon">'+ICON_MORE+'</span><span class="sw-label">更多</span></button>'+
     '<button type="button" class="sw-action act-del" data-act="delete" data-id="'+memo.id+'" title="删除"><span class="sw-icon">'+ICON_TRASH+'</span><span class="sw-label">删除</span></button>'+
     '</div></div>';
 
@@ -13552,6 +13581,9 @@ function createMemoElement(memo,index,groupId){
       if(!b){ closeSwipe(div); return; }
       e.stopPropagation();
       var act=b.getAttribute('data-act'); var id=b.getAttribute('data-id');
+      /* ★R167「更多」= 二级菜单：**不关左滑条**（关掉就看不到锚点了，用户还想接着点别的）→ 提前 return，
+         绝不能落到末尾的 closeSwipe(div)。菜单内容见 openMemoMoreMenu()。 */
+      if(act==='more'){ openMemoMoreMenu(b,id); return; }
       if(act==='pin'){togglePin(id);}
       else if(act==='tag'){openTagPanel(id);}
       else if(act==='edit'){openFullEdit(id);}
@@ -16725,6 +16757,7 @@ function copyMemo(id){
 }
 // ===================== 左滑操作条 / 加锁 / 标签面板 =====================
 function closeSwipe(div){
+  closeMemoMoreMenu();   /* ★R167 左滑条一关，外挂在 body 上的二级菜单也必须跟着收 */
   if(!div)return;
   var fore=div.querySelector('.swipe-fore');
   var actions=div.querySelector('.swipe-actions');
@@ -16747,7 +16780,73 @@ function closeSwipe(div){
     }
   },240);
 }
+/* ===== ★R167 左滑菜单二级「更多」：标签 / 加锁 / 移出(入组) =====
+   为什么挂在 body 上：卡片自身 overflow 与 .memo-item 的合成层都不可靠，浮层一律外挂 + position:fixed
+   （与 #qCatMenu / 组头菜单同一套做法）。锚在「更多」按钮上方，放不下再翻到下方，左右自动回夹。
+   关闭通道：点外部（capture 阶段 + 排除触发器自身，否则「再点一次收起」会被这条先关掉变成一直开）、
+   滚动、窗口尺寸变化、以及左滑条本身关闭时（见 closeSwipe/openSwipe）。
+   ⚠️菜单项状态一律**点击时现读**（findMemoById / getGroupOf），不缓存 —— 卡片可能在菜单开着时被别处改动。 */
+var MEMO_MORE_EL=null;
+function closeMemoMoreMenu(){
+  if(!MEMO_MORE_EL)return;
+  if(MEMO_MORE_EL.parentNode)MEMO_MORE_EL.parentNode.removeChild(MEMO_MORE_EL);
+  MEMO_MORE_EL=null;
+  document.removeEventListener('click',_memoMoreDocClose,true);
+  window.removeEventListener('scroll',_memoMoreScrollClose,true);
+  window.removeEventListener('resize',_memoMoreScrollClose);
+}
+function _memoMoreDocClose(e){
+  if(!MEMO_MORE_EL)return;
+  if(MEMO_MORE_EL.contains(e.target))return;
+  if(e.target.closest&&e.target.closest('.sw-action[data-act="more"]'))return; /* 触发器自身：交给它的 click 做「再点收起」 */
+  closeMemoMoreMenu();
+}
+function _memoMoreScrollClose(){closeMemoMoreMenu();}
+function openMemoMoreMenu(anchor,id){
+  var same=MEMO_MORE_EL&&MEMO_MORE_EL.getAttribute('data-mid')===String(id);
+  closeMemoMoreMenu();
+  if(same)return;                                   /* 再点一次「更多」= 收起 */
+  var m=findMemoById(id); if(!m||!anchor)return;
+  var inG=!!getGroupOf(id);
+  var el=document.createElement('div');
+  el.className='more-menu open memo-more';
+  el.setAttribute('data-mid',id);
+  el.innerHTML=
+    '<div class="more-item" data-mact="tag">'+ICON_TAG+'标签（分类 / 紧急）</div>'+
+    '<div class="more-item" data-mact="lock">'+ICON_LOCK+(m.locked?'解锁':'加锁')+'</div>'+
+    (inG
+      ?'<div class="more-item" data-mact="group-out">'+ICON_SPLIT+'移出分组</div>'
+      :'<div class="more-item" data-mact="group-in">'+ICON_MERGE+'移入分组…</div>');
+  document.body.appendChild(el);
+  el.addEventListener('click',function(e){
+    var it=e.target.closest?e.target.closest('.more-item'):null;
+    if(!it)return;
+    e.stopPropagation();
+    var a=it.getAttribute('data-mact');
+    closeMemoMoreMenu();
+    if(a==='tag')openTagPanel(id);
+    else if(a==='lock')toggleLock(id);
+    else if(a==='group-out')removeFromGroup(id);
+    else if(a==='group-in')openGroupPicker([id]);
+  });
+  var ar=anchor.getBoundingClientRect();
+  var mw=el.offsetWidth,mh=el.offsetHeight,vw=window.innerWidth,vh=window.innerHeight;
+  var left=ar.left+ar.width/2-mw/2;
+  if(left+mw>vw-8)left=vw-mw-8;
+  if(left<8)left=8;
+  /* 默认开在按钮**上方**：左滑条在卡片中部、正下方往往就是下一条卡片，往上翻视觉更干净；放不下再翻到下方 */
+  var top=ar.top-mh-8;
+  if(top<8)top=Math.min(vh-mh-8,ar.bottom+8);
+  el.style.left=Math.round(left)+'px';
+  el.style.top=Math.round(top)+'px';
+  MEMO_MORE_EL=el;
+  /* 点外部关闭挂 capture 阶段 + 延迟 0ms 注册：本次这个 click 事件已经走完，不会被自己刚挂的监听当场关掉 */
+  setTimeout(function(){document.addEventListener('click',_memoMoreDocClose,true);},0);
+  window.addEventListener('scroll',_memoMoreScrollClose,true);
+  window.addEventListener('resize',_memoMoreScrollClose);
+}
 function openSwipe(div){
+  closeMemoMoreMenu();   /* ★R167 换一张卡片开条时，二级菜单必须跟着走（它是外挂在 body 上的，不会自己消失） */
   if(openSwipeEl&&openSwipeEl!==div)closeSwipe(openSwipeEl);
   var fore=div.querySelector('.swipe-fore');
   var actions=div.querySelector('.swipe-actions');
@@ -18427,14 +18526,35 @@ function renderRepeatOptions(){
 }
 /* 结果行：把"最终会写成什么"直接摆出来（原文案「下次提醒」措辞误导 —— 本应用没有系统通知能力，
    而且「9月17日 全天」读起来不像一个截止时间） */
+/* ★R167 「时间」弹层顺带回答「这条什么时候建的 / 改的」——此前创建/修改时间在界面上**没有任何出口**
+   （数据里有 createdAt/updatedAt，排序也按它排，但用户根本看不到）。放这里的理由：零新增入口、零常驻占位，
+   而且「时间」弹层本来就是"这条的时间"这个语义，创建/修改放进去最自然。
+   ⚠️老数据兜底：R133 之前的条目可能没有 createdAt → 用 updatedAt 顶替；
+   两者**格式化后相同**就不重复显示「修改」（同一分钟内建+改很常见，两行一模一样是噪音）。 */
+function pkMemoTimeHtml(){
+  var m=editingMemoId?findMemoById(editingMemoId):null;
+  if(!m)return '';
+  function f(ts){
+    if(!ts)return '';
+    var d=new Date(ts);
+    if(isNaN(d.getTime()))return '';
+    return d.getFullYear()+'/'+pad2(d.getMonth()+1)+'/'+pad2(d.getDate())+' '+pad2(d.getHours())+':'+pad2(d.getMinutes());
+  }
+  var cs=f(m.createdAt)||f(m.updatedAt), us=f(m.updatedAt);
+  if(!cs&&!us)return '';
+  if(!cs)cs=us;
+  var s='创建 '+cs;
+  if(us&&us!==cs)s+=' · 修改 '+us;
+  return '<span class="pk-sub pk-created">'+s+'</span>';
+}
 function updatePickerPreview(){
   if(pickerMonthMode){
     var mk=pickerScopeMonth||monthKeyOf(new Date());
     var warnM=(mk<monthKeyOf(new Date()));
-    pickerPreview.innerHTML='本月任务 · <strong>'+fmtMonthCn(mk)+'</strong><span class="pk-sub'+(warnM?' is-warn':'')+'">'+(warnM?'这个月已经过去了':'整月有效 · 不绑定具体日期')+'</span>';
+    pickerPreview.innerHTML='本月任务 · <strong>'+fmtMonthCn(mk)+'</strong><span class="pk-sub'+(warnM?' is-warn':'')+'">'+(warnM?'这个月已经过去了':'整月有效 · 不绑定具体日期')+'</span>'+pkMemoTimeHtml();
     return;
   }
-  if(!pickerSelectedDate){pickerPreview.innerHTML='请选择日期和时间';return;}
+  if(!pickerSelectedDate){pickerPreview.innerHTML='请选择日期和时间'+pkMemoTimeHtml();return;}
   var h=pad2(parseInt(timeHour.value)||0);
   var m=pad2(parseInt(timeMin.value)||0);
   var dateStr=fmtDateCn(pickerSelectedDate);
@@ -18462,7 +18582,7 @@ function updatePickerPreview(){
   /* ★R135 宽限 60s：没设过时间的条目打开弹层时默认取"此刻"，而输入框只有分钟精度（秒被截断）→
      一打开就比 now 早几十秒，直接判过期会在结果行挂一句没用的红字。只有真的过去 >1 分钟才算过期。 */
   var warn=(endTs<Date.now()-60000);
-  pickerPreview.innerHTML='截止 <strong>'+dateStr+' · '+typeLabel+'</strong>'+repeatText+(warn?'<span class="pk-warn">已过期</span>':'');
+  pickerPreview.innerHTML='截止 <strong>'+dateStr+' · '+typeLabel+'</strong>'+repeatText+(warn?'<span class="pk-warn">已过期</span>':'')+pkMemoTimeHtml();
 }
 function closePicker(){pickerOverlay.classList.remove('open');editingMemoId=null;}
 function confirmPicker(){
