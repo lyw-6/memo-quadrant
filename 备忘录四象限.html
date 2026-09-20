@@ -707,6 +707,15 @@ body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50
 .memo-item .swipe-actions .sw-action.act-del:hover .sw-icon{
   background:color-mix(in srgb,var(--danger,#ef4444) 18%,transparent);
 }
+/* ★R167.2「更多」开合态：菜单开着时触发器圆框上主色浅 tint + 主色图标/文字，建立面板↔触发器的从属关系
+   （此前开/关一个样，看不出浮层是谁弹的 —— 用户截图反馈「突兀」）。
+   用「主色浅 tint」而非 is-active 的实心填充：同色系但浓度分层 —— 实心=功能已开启（置顶/已设），
+   浅 tint=临时选中（面板开着），一眼可分。JS 挂/摘 .menu-open 见 _memoMoreClearTrigger / openMemoMoreMenu。 */
+.memo-item .swipe-actions .sw-action.act-more.menu-open .sw-icon{
+  background:color-mix(in srgb,var(--color-primary,#2563eb) 14%,transparent);
+  color:var(--color-primary,#2563eb);
+}
+.memo-item .swipe-actions .sw-action.act-more.menu-open .sw-label{color:var(--color-primary,#2563eb);}
 .memo-item.locked .memo-content.locked-content{display:flex;align-items:center;gap:6px;color:var(--text-tertiary);font-style:italic;}
 .memo-item.locked .memo-content.locked-content svg{width:16px;height:16px;flex:none;}
 /* 锁标记：加锁后常驻显示，提供即时可见反馈（即使左滑菜单已收起） */
@@ -16796,10 +16805,18 @@ function closeSwipe(div){
    滚动、窗口尺寸变化、以及左滑条本身关闭时（见 closeSwipe/openSwipe）。
    ⚠️菜单项状态一律**点击时现读**（findMemoById / getGroupOf），不缓存 —— 卡片可能在菜单开着时被别处改动。 */
 var MEMO_MORE_EL=null;
+/* ★R167.2 开合态：菜单开着时给**触发器自己**的圆框上主色浅 tint（CSS 见 .act-more.menu-open），
+   建立面版↔触发器的从属关系 —— 此前开/关一个样，用户看不出这块浮层是谁弹的（截图反馈「突兀」）。
+   只清不改走 querySelectorAll：弹层开着时卡片可能被重渲染（旧节点带着类一起被丢，无残留风险）。 */
+function _memoMoreClearTrigger(){
+  var els=document.querySelectorAll('.sw-action[data-act="more"].menu-open');
+  for(var i=0;i<els.length;i++)els[i].classList.remove('menu-open');
+}
 function closeMemoMoreMenu(){
   if(!MEMO_MORE_EL)return;
   if(MEMO_MORE_EL.parentNode)MEMO_MORE_EL.parentNode.removeChild(MEMO_MORE_EL);
   MEMO_MORE_EL=null;
+  _memoMoreClearTrigger();
   document.removeEventListener('click',_memoMoreDocClose,true);
   window.removeEventListener('scroll',_memoMoreScrollClose,true);
   window.removeEventListener('resize',_memoMoreScrollClose);
@@ -16849,6 +16866,8 @@ function openMemoMoreMenu(anchor,id){
   el.style.left=Math.round(left)+'px';
   el.style.top=Math.round(top)+'px';
   MEMO_MORE_EL=el;
+  _memoMoreClearTrigger();
+  anchor.classList.add('menu-open');   /* ★R167.2 开合态：只有真正的触发器上色，其它卡片的更多不受影响 */
   /* 点外部关闭挂 capture 阶段 + 延迟 0ms 注册：本次这个 click 事件已经走完，不会被自己刚挂的监听当场关掉 */
   setTimeout(function(){document.addEventListener('click',_memoMoreDocClose,true);},0);
   window.addEventListener('scroll',_memoMoreScrollClose,true);
