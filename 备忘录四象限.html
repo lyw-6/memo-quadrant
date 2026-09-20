@@ -691,13 +691,22 @@ body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50
    closeSwipe 在滑出结束的 240ms 后才摘，所以淡出淡回都与面板同步）。 */
 .memo-item.qb::before{transition:opacity .22s ease;}
 .memo-item.qb.swipe-open::before{opacity:0;}   /* ★注意：qb/swipe-open 同挂在一个元素上，必须是复合选择器，不能写成 `.swipe-open .qb` */
-/* ★R167「删除」危险色：此前 .act-del 全文件零样式 → 和相邻的「更多」长得一模一样，误触风险正来自这里
-   （顺序评测结论：位置保持「更多 | 删除」不变，用颜色拉开）。
-   取「红字 + 悬停浅红底」而非批量栏那种纯红底白字：左滑面板底色随主题变（玻璃 = 半透磨砂），
-   纯色实底会破磨砂质感；红 tint 叠上去仍保留玻璃层。色值走 var(--danger,#ef4444)，与批量栏删除同源。
-   选择器比基础规则多一个 .act-del 类 → 特异性更高，≤560px 媒体块里的同名基础规则不会盖掉颜色。 */
-.memo-item .swipe-actions .sw-action.act-del{color:var(--danger,#ef4444);}
-.memo-item .swipe-actions .sw-action.act-del:hover{background:color-mix(in srgb,var(--danger,#ef4444) 12%,transparent);}
+/* ★R167「删除」危险色（R167.1 重做）：第一版只把 color 挂在按钮元素上 —— 但这套按钮的
+   圆框底 / 图标 / 文字是三变量分工（--sw-icon-bg / --sw-icon-fg / --sw-label-fg，4 主题各一套，
+   见 .sw-icon/.sw-label 的显式 color），按钮级 color 传不进圆框和文字
+   → 实际渲染成「灰圆框 + 灰图标 + 红字 + 悬停整钮粉底」的拼贴感（用户截图：突兀）。
+   正解 = 在系统内做整套危险色：圆框浅红底 + 红图标 + 红字，三件同色系；
+   悬停只加深圆框（与其它按钮同一悬停层级：hover 只动 .sw-icon，见 :hover .sw-icon 那条），
+   不再整钮泛粉。色值仍走 var(--danger,#ef4444)，与批量栏删除同源。
+   选择器各多一个 .act-del 类 → 特异性压过基础规则与 ≤560px 媒体块同名规则。 */
+.memo-item .swipe-actions .sw-action.act-del .sw-icon{
+  background:color-mix(in srgb,var(--danger,#ef4444) 10%,transparent);
+  color:var(--danger,#ef4444);
+}
+.memo-item .swipe-actions .sw-action.act-del .sw-label{color:var(--danger,#ef4444);}
+.memo-item .swipe-actions .sw-action.act-del:hover .sw-icon{
+  background:color-mix(in srgb,var(--danger,#ef4444) 18%,transparent);
+}
 .memo-item.locked .memo-content.locked-content{display:flex;align-items:center;gap:6px;color:var(--text-tertiary);font-style:italic;}
 .memo-item.locked .memo-content.locked-content svg{width:16px;height:16px;flex:none;}
 /* 锁标记：加锁后常驻显示，提供即时可见反馈（即使左滑菜单已收起） */
