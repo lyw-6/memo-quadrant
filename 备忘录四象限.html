@@ -16230,7 +16230,17 @@ function _edSetOffset(ed,pos){
         var L=c.nodeValue.replace(/\u200B/g,'').length; /* ★R104 剥离 ZWSP(ZWSP 恒在文本节点尾部,剥离计数与 setStart 偏移不冲突) */
         if(pos<=acc+L){try{r.setStart(c,pos-acc);}catch(_){r.setStart(c,L);}r.collapse(true);done=true;return;}
         acc+=L;
-      }else if(c.nodeName==='BR'){acc+=1;}
+      }else if(c.nodeName==='BR'){
+        /* ★R168 修「列表后回车两次，光标跑到下一行末尾」：BR 在文本模型里是那一个 '\n' 字符，
+           但旧写法只 acc+=1 **从不判断 pos 是否落在它身上** → 目标偏移正好落在换行/空行上时会被跳过，
+           一路穿到下一行的文字节点，并算出负偏移被 catch 兜成"该行末尾"。
+           实测：'1. abc\n\n正文' 把光标放到空行(偏移 7) → 落到第 3 行「正文」末尾 → 后续输入插到正文后面，
+           视觉上就是「列表和正文之间多出一堆空行」。
+           BR 自身占 [acc, acc+1]：pos===acc → 停在 BR 前(上一行行尾)；pos===acc+1 → 停在 BR 后(下一行行首＝空行)。 */
+        if(pos<=acc){try{r.setStartBefore(c);}catch(_){}r.collapse(true);done=true;return;}
+        acc+=1;
+        if(pos<=acc){try{r.setStartAfter(c);}catch(_){}r.collapse(true);done=true;return;}
+      }
       else if(c.nodeType===1){
         if(_edIsChk(c)){
           var pl=_edPfxLen(c);
