@@ -2058,7 +2058,11 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .add-btn:hover{border-color:var(--text-tertiary);color:var(--text-secondary);background:var(--hover-bg);}
 .add-btn svg{width:16px;height:16px;pointer-events:none;}
 .empty-state{text-align:center;padding:30px 16px;color:var(--text-tertiary);}
-.empty-state-icon{font-size:36px;margin-bottom:6px;}
+/* ★R169 原来是 📋 字符：全 app 图标都是内联 SVG，唯独这里用 emoji —— 各平台字形/着色不一致（且会忽略 font-size 按固定大尺寸画）。
+   现改为 SVG：跟随 currentColor 与容器宽高，悬停时随 h3 一起变主色。 */
+.empty-state-icon{width:40px;height:40px;margin:0 auto 6px;color:var(--text-tertiary);}
+.empty-state-icon svg{width:100%;height:100%;display:block;}
+#empty-state:hover .empty-state-icon{color:var(--color-primary,#6366f1);}
 .empty-state h3{font-size:14px;color:var(--text-secondary);margin-bottom:2px;font-weight:500;}
 .empty-state p{font-size:12px;}
 #empty-state{cursor:pointer;transition:border-color .2s,background .2s,transform .1s;border:2px dashed var(--border);border-radius:var(--radius-sm);background:var(--card-bg);}
@@ -2356,14 +2360,22 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 @keyframes calSlidePrev{from{opacity:0;transform:translateY(-16px);}to{opacity:1;transform:translateY(0);}}
 .cal-month-grid.cal-anim-next{animation:calSlideNext .2s ease-out;}
 .cal-month-grid.cal-anim-prev{animation:calSlidePrev .2s ease-out;}
-.cal-cell{aspect-ratio:1/1;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;padding:2px;}
+.cal-cell{aspect-ratio:1/1;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;padding:2px;overflow:hidden;}
 .cal-cell:hover{border-color:var(--text-tertiary);}
 .cal-cell.other{opacity:.35;cursor:default;}
 .cal-cell.today{border-color:#3b82f6;color:#3b82f6;}
 .cal-cell .d-num{font-size:14px;font-weight:500;color:var(--text);}
 .cal-cell.other .d-num{color:var(--text-secondary);}
-.cal-cell .d-dots{display:flex;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:center;}
-.cal-cell .d-dot{width:5px;height:5px;border-radius:50%;}
+/* ★R169 日历格内「备忘标题摘要」取代原来的 5px 分类色点：色点只能告诉你"这天有东西"，
+   看不出是什么。现在每格最多列 2 条标题（单行截断、左侧分类色点），超出补 "+N"。
+   · align-self:stretch + width:100%：.cal-cell 是 align-items:center 的 flex column，
+     不加这两条子元素会被压到内容宽、ellipsis 也就无从谈起。
+   · overflow:hidden 兜底：格子是 aspect-ratio 1/1，标题多了不能撑破格子。 */
+.cal-cell .d-memos{display:flex;flex-direction:column;align-self:stretch;width:100%;min-width:0;gap:1px;margin-top:3px;overflow:hidden;}
+.cal-cell .d-memo{position:relative;min-width:0;font-size:10px;line-height:1.25;color:var(--text-secondary);text-align:left;padding-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.cal-cell .d-memo::before{content:'';position:absolute;left:1px;top:.45em;width:4px;height:4px;border-radius:50%;background:var(--mc,#6b7280);}
+.cal-cell .d-memo.done{opacity:.5;text-decoration:line-through;}
+.cal-cell .d-more{font-size:9px;line-height:1.2;color:var(--text-tertiary);text-align:left;padding-left:8px;}
 .cal-cell.selected{background:var(--color-primary,#6366f1);border-color:var(--color-primary,#6366f1);}
 .cal-cell.selected .d-num{color:#fff;}
 /* 进度统计 */
@@ -2408,9 +2420,11 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 /* ★R136: 农历原为 9px + --text-tertiary(第三级灰) → 浅色/护眼主题下对比不足、选中态(蓝底)几乎不可见。
    提到 10px / --text-secondary / 500，并用固定 height 保证"有农历与无农历"的格子内容总高一致 */
 .cal-cell .d-sub{font-size:10px;line-height:1;height:10px;color:var(--text-secondary);margin-top:2px;max-width:100%;overflow:hidden;white-space:nowrap;font-weight:500;}
-/* ★R136: 去掉 margin-top:auto（它把圆点推到正方形格子的最底边），改为紧跟农历下方 3px；
-   固定 height:5px 让"有圆点与无圆点"的格子高度一致 */
-.cal-cell .d-dots{margin-top:3px;margin-bottom:0;height:5px;align-items:center;}
+/* ★R169 窄屏格子小，标题只留 1 行（第二条用 max-height:0 收掉，不是删掉 —— 留着结构稳定，
+   宽屏再放开）：显示 2 行会把日期数字挤到格子外。 */
+.cal-cell .d-memos{margin-top:2px;}
+.cal-cell .d-memo:nth-child(2){max-height:0;overflow:hidden;}
+.cal-cell .d-more{font-size:9px;}
 /* ★R137: 宽屏下 .cal-cell 是正方形 → 实测 99.4px，而"数字+农历+圆点"总高仅 ~36px（内容只占 35%），
    看着空旷。只压高度、不动列宽/列数：max-height 让格子变 99.4×80（占比升到 45%），
    窄屏格子本身 <80px 时不受影响（仍是正方形）。配套把数字 13px→14px。 */
@@ -2467,8 +2481,14 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .cal-cell.selected .d-sub,
 [data-theme="glass"] .cal-cell.selected .d-sub,
 html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-sub{color:#fff;}
-/* 圆点颜色来自分类色内联 style，深蓝底上（尤其灰/蓝系分类）不可辨 → 加白色外圈 */
-.cal-cell.selected .d-dot{box-shadow:0 0 0 1px rgba(255,255,255,.95);}
+/* ★R169 蓝底选中态：摘要文字与分类色点都要能看清 —— 文字反白，色点加深色描边（浅色分类在蓝底上会糊） */
+.cal-cell.selected .d-memo,
+[data-theme="glass"] .cal-cell.selected .d-memo,
+html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-memo{color:#fff;}
+.cal-cell.selected .d-more,
+[data-theme="glass"] .cal-cell.selected .d-more,
+html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(255,255,255,.8);}
+.cal-cell.selected .d-memo::before{box-shadow:0 0 0 1px rgba(0,0,0,.35);}
 /* 统计图表 */
 .stat-card-title{font-size:12px;color:var(--text-tertiary);font-weight:600;margin-bottom:6px;}
 .stat-row .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
@@ -3081,7 +3101,7 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
 <div id="statsView" class="stats-view" style="display:none;" data-page-node-id="Gz9BYpexS6pzPdQXlaIY0z"></div>
 
 <div class="empty-state" id="empty-state" role="button" tabindex="0" aria-label="添加备忘录" title="点击此处添加第一条备忘录" style="display:none;" data-page-node-id="walI0chVXxtKIRnRfpCmAb">
-  <div class="empty-state-icon" data-page-node-id="MB9iGEs7JBKTnsZUQHpcaT">📋</div>
+  <div class="empty-state-icon" data-page-node-id="MB9iGEs7JBKTnsZUQHpcaT"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l3 3v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5.5z"/><path d="M15 3v4h4"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></div>
   <h3 data-page-node-id="MhWoiVj8VoQJ4kV0tnZQD1">暂无备忘录</h3>
   <p data-page-node-id="dra1vvGi9JGAOMkWudEmfV">点击此处，添加第一条备忘录</p>
 </div>
@@ -11956,11 +11976,20 @@ function progressColor(p){
   // 浅色主题(light/green)：卡片不透明、淡彩不会被稀释 → 浓度略低即可呈现同样的「液体注入」层次
   return 'linear-gradient(90deg, hsla('+h+',76%,54%,0.14) 0%, hsla('+h+',78%,52%,0.20) 50%, hsla('+h+',80%,50%,0.30) 100%)';
 }
-// 统一写入进度条的宽度/背景/高光(创建时与刷新时共用,避免首次渲染漏掉)
+/* 统一写入进度条的宽度/背景/高光(创建时与刷新时共用,避免首次渲染漏掉)
+   ★R169 右缘渐隐：填充条宽度＝进度比例，旧样式右端正好落在渐变**最浓**处却是一条垂直直边，
+   在圆角卡片上看着像"渲染截断/错位"（用户反馈）。改为用 mask 在右端做渐隐淡出：
+   · 淡出带用**固定像素** min(22px,40%) —— 用百分比会随进度一起缩放，进度小时淡出带也跟着变短，等于没改；
+     取 min(…,40%) 是给小进度保底：22px 淡出带可能比整条还宽，会把刚开始的任务整条淡没。
+   · p>=1（已到期/过期）不再淡出：那一格语义就是"满了"，淡出会被误读成还没到。 */
+var PROG_FADE='calc(100% - min(22px,40%))';
 function applyProgressVisual(bar,p){
-  if(p===null){bar.style.width='0';bar.style.background='transparent';bar.style.boxShadow='none';return;}
+  if(p===null){bar.style.width='0';bar.style.background='transparent';bar.style.boxShadow='none';
+    bar.style.maskImage='none';bar.style.webkitMaskImage='none';return;}
   bar.style.width=(p*100).toFixed(1)+'%';
   bar.style.background=progressColor(p);
+  var m=(p>=1)?'none':'linear-gradient(90deg,#000 '+PROG_FADE+',rgba(0,0,0,0) 100%)';
+  bar.style.maskImage=m;bar.style.webkitMaskImage=m;
   // 毛玻璃保留液面高光;其它主题卡片不透明,加高光会显脏 → 不加
   bar.style.boxShadow=(document.documentElement.getAttribute('data-theme')==='glass')
     ? 'inset 0 1px 0 rgba(255,255,255,.55)' : 'none';
@@ -12245,6 +12274,21 @@ function memosOnDate(date){
     var d=new Date(m.deadline);
     return d.getFullYear()===date.getFullYear()&&d.getMonth()===date.getMonth()&&d.getDate()===date.getDate();
   });
+}
+/* ★R169 日历格内的备忘摘要：最多 2 条，超出补 "+N"。
+   · 标题把换行拍平成空格（列表项/待办在日历里就是一行摘要，多行会把格子撑破）；
+   · 已完成的加 .done（删除线 + 淡显），与列表里"已完成置底淡显"同一语义；
+   · 分类色走 CSS 变量 --mc，由 .d-memo::before 画左侧色点（颜色来自数据，不能写进 CSS）。 */
+function calDayMemoHtml(onDay){
+  var out='';
+  for(var i=0;i<onDay.length&&i<2;i++){
+    var m=onDay[i];
+    var c=categories[m.category]||categories.other||{color:'#6b7280'};
+    var t=String(m.text||'').replace(/\s*\n\s*/g,' ').trim()||'(无内容)';
+    out+='<span class="d-memo'+(m.done?' done':'')+'" style="--mc:'+c.color+'" title="'+escapeHtml(t)+'">'+escapeHtml(t)+'</span>';
+  }
+  if(onDay.length>2)out+='<span class="d-more">+'+(onDay.length-2)+'</span>';
+  return out;
 }
 /* ★R91 逾期判定：一次性任务已过截止时间且未完成（重复任务按"下次时间"算，不算逾期）
    ★R133 全天任务按「当天结束」判（dayEnd）—— 否则今日新建的条目当天就带上 .overdue 红标 */
@@ -18187,23 +18231,22 @@ function renderCalendar(dir){
   var today=new Date();
   /* ★R136: 其他月格子补上与本月格子同样的三层结构 "→ 内容总高一致，
      配合 justify-content:center 才能让整月数字垂直对齐 */
-  for(var p=lead-1;p>=0;p--){var pd=daysInPrev-p;html+='<div class="cal-cell other" data-d="'+(new Date(year,month-1,pd)).getTime()+'"><span class="d-num">'+pd+'</span><span class="d-sub"></span><span class="d-dots"></span></div>';}
+  for(var p=lead-1;p>=0;p--){var pd=daysInPrev-p;html+='<div class="cal-cell other" data-d="'+(new Date(year,month-1,pd)).getTime()+'"><span class="d-num">'+pd+'</span><span class="d-sub"></span><span class="d-memos"></span></div>';}
   for(var d=1;d<=daysInMonth;d++){
     var cls='cal-cell';
     if(year===today.getFullYear()&&month===today.getMonth()&&d===today.getDate())cls+=' today';
     if(selectedCalDate&&year===selectedCalDate.getFullYear()&&month===selectedCalDate.getMonth()&&d===selectedCalDate.getDate())cls+=' selected';
     var cellDate=new Date(year,month,d);
     var onDay=memosOnDate(cellDate);
-    var dots='';
-    for(var o=0;o<onDay.length&&o<5;o++){var c=categories[onDay[o].category]||categories.other||{color:'#6b7280'};dots+='<span class="d-dot" style="background:'+c.color+'"></span>';}
+    var dots=calDayMemoHtml(onDay);
     var lunar=getLunarText(cellDate);
     var jq=getJieQiText(cellDate);
     var subHtml='<span class="d-sub'+(jq?' jq':'')+'">'+(jq||lunar||'')+'</span>'; /* ★R136: 恒渲染（占位），避免该格高度塔陷 */
-    html+='<div class="'+cls+'" data-day="'+d+'"><span class="d-num">'+d+'</span>'+subHtml+'<span class="d-dots">'+dots+'</span></div>';
+    html+='<div class="'+cls+'" data-day="'+d+'"><span class="d-num">'+d+'</span>'+subHtml+'<span class="d-memos">'+dots+'</span></div>';
   }
   var total=lead+daysInMonth;
   var nextDays=(7-(total%7))%7;
-  for(var n=1;n<=nextDays;n++)html+='<div class="cal-cell other" data-d="'+(new Date(year,month+1,n)).getTime()+'"><span class="d-num">'+n+'</span><span class="d-sub"></span><span class="d-dots"></span></div>';
+  for(var n=1;n<=nextDays;n++)html+='<div class="cal-cell other" data-d="'+(new Date(year,month+1,n)).getTime()+'"><span class="d-num">'+n+'</span><span class="d-sub"></span><span class="d-memos"></span></div>';
   html+='</div>';
   html+='<div class="cal-ym-picker" id="calYmPicker"><div class="cal-ym-head"><button class="cal-nav-btn" id="ym-prev-year">‹</button><span id="ym-year-label"></span><button class="cal-nav-btn" id="ym-next-year">›</button></div><div class="cal-ym-months" id="ym-months"></div></div>';
   html+='<div class="cal-day-panel" id="calDayPanel" hidden>'
