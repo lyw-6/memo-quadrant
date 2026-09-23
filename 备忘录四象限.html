@@ -2765,7 +2765,14 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    ★镜面高光位置由 --pill-hx 驱动（JS 每帧写泡在栏内的相对位置）→ 拖动时表面反光跟着**流动**，
      这是"液态"感的真正来源（静态皮只能做出"玻璃"，做出"液体"要靠反光流动）。 */
 .nav-pill.lift{
-  top:-6px;bottom:-6px;border-radius:26px;
+  /* ★★R175① 浮起的**几何量**改成由 `--lp`（lift progress，1=完全浮起 / 0=常态）驱动：
+     原来 top/bottom/border-radius/外晕写在类里，**只有到 _navFinishSettle 移除 .lift 才开始变**
+     —— 而位置/宽度弹簧早就收完了，于是用户看到「泡先回正 → 停一下 → 才收起来」。
+     现在归位弹簧每帧写 --lp，几何与位置/宽度**同一条时间轴**收敛；收尾移除 .lift 时几何已等于常态 → 零跳变。
+     计算校验：lp=1 → top=5-11=-6px、radius=26px（= 原浮起值）；lp=0 → top=5px、radius=22px（= 常态值）。 */
+  --lp:1;
+  top:calc(5px - 11px * var(--lp));bottom:calc(5px - 11px * var(--lp));
+  border-radius:calc(22px + 4px * var(--lp));
   border:none;
   background:
     /* ① 弧顶镜面：位置跟手流动 */
@@ -2785,8 +2792,9 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     inset 0 1.5px 0 rgba(255,255,255,.98),          /* 顶缘镜面硬线（最亮最锐的那条） */
     inset 0 -1.5px 0 rgba(255,255,255,.40),         /* 底缘回光 */
     inset 0 0 20px -9px rgba(255,255,255,.85),      /* 内部厚度柔光（负 spread 把内边界收干净 → 不形成环） */
-    0 15px 32px -10px color-mix(in srgb, var(--color-primary,#6366f1) 46%, transparent),  /* 外柔晕 = 形体的唯一定义者 */
-    0 4px 12px rgba(0,0,0,.09);
+    /* ★R175① 外晕同样随 --lp 缩放：否则"泡已经收小了、影子还是浮起那么大" = 又一次分段观感 */
+    0 calc(15px * var(--lp)) calc(32px * var(--lp)) calc(-10px * var(--lp)) color-mix(in srgb, var(--color-primary,#6366f1) 46%, transparent),  /* 外柔晕 = 形体的唯一定义者 */
+    0 calc(4px * var(--lp)) calc(12px * var(--lp)) rgba(0,0,0,.09);
   /* ★动画放慢：用户"感觉动画太快、死板" → 0.13s 的瞬时感改成 0.2~0.22s 的缓出 */
   transition:transform .2s cubic-bezier(.22,.61,.36,1), width .2s cubic-bezier(.22,.61,.36,1),
     top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;
@@ -2799,8 +2807,9 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     inset 0 2px 1px rgba(255,255,255,.98),
     inset 0 -1.5px 1px rgba(255,255,255,.52),
     inset 0 0 22px -8px rgba(255,255,255,.55),
-    0 16px 34px -10px color-mix(in srgb, var(--color-primary) 52%, transparent),
-    0 0 26px -4px color-mix(in srgb, var(--color-primary) 30%, transparent);
+    /* ★R175① 同主主题：外晕随 --lp 缩放，与几何同步收回 */
+    0 calc(16px * var(--lp,1)) calc(34px * var(--lp,1)) calc(-10px * var(--lp,1)) color-mix(in srgb, var(--color-primary) 52%, transparent),
+    0 0 calc(26px * var(--lp,1)) calc(-4px * var(--lp,1)) color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
    ★transition 必须在这里补全 padding —— 基础规则的 transition 只列了 opacity/transform，
@@ -12018,10 +12027,18 @@ var VIEW_META={
      stats    3 根柱 + 底线全部按 outline 坐标填充
    线槽/圆槽一律用嵌套子路径 + fill-rule:evenodd 挖空（同向子路径在 evenodd 下照样挖空，不必反向）。 */
 var VIEW_ICON_FILL={
-  list:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M5 4h14v16H5V4Zm3 4.1h8a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8Zm0 4h8a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8Zm0 4h5a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8Z"/></svg>',
-  quadrant:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  /* ★R175③ 填充版外沿 = 镂空版外沿（描边半宽 1px 的补偿），逐个按 viewBox 几何核算：
+     · list 镂空：矩形 5,4→19,20 + stroke2 → 墨迹外沿 x[4,20] y[3,21] → 填充版外框必须写成 4,3→20,21（旧值 5,4→19,20 每边小 1）
+       三条线槽同理取镂空墨迹宽度：y=9/13/17 的线墨迹是 y[8,10] 等，x 分别是 [7,17]/[7,17]/[7,14]
+     · quadrant 镂空：4 个 7×7 方块（x=3/14）+ stroke2 → 外沿 x[2,22]，单块外沿 9×9、中心仍在 6.5/17.5
+       → 填充版必须是 x=2/13 的 9×9 方块（旧值 x=3/14 的 7×7 = 每边小 1） */
+  list:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M4 3h16v18H4V3Zm3 5.1h10a.9.9 0 1 1 0 1.8H7a.9.9 0 0 1 0-1.8Zm0 4h10a.9.9 0 1 1 0 1.8H7a.9.9 0 0 1 0-1.8Zm0 4h7a.9.9 0 1 1 0 1.8H7a.9.9 0 0 1 0-1.8Z"/></svg>',
+  quadrant:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="2" width="9" height="9" rx="2"/><rect x="13" y="2" width="9" height="9" rx="2"/><rect x="2" y="13" width="9" height="9" rx="2"/><rect x="13" y="13" width="9" height="9" rx="2"/></svg>',
   today:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5" stroke="none"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.8" y2="4.2"/></svg>',
-  month:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><rect x="7" y="1" width="2" height="6" rx="1"/><rect x="15" y="1" width="2" height="6" rx="1"/><path d="M4 3h16a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 5.1v1.8h16V8.1H4Zm0 6v1.8h16v-1.8H4Z"/></svg>',
+  /* ★R175③ month 补左边：镂空 rect x=3 w=18 + stroke2 → 外沿 x[2,22]；R174 只把右边扩到 22，
+     左边仍是 4（比外沿 2 小 2px）。现在整框按外沿写成 x[2,22] y[3,22]（rx 用 3 = 镂空 rx2 + 描边半宽 1），
+     两条列表槽取镂空 line 的墨迹宽度 y[8,10] / y[14,16] 且整宽挖通（镂空的线是 x3→21，墨迹也是 x[2,22]）。 */
+  month:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><rect x="7" y="1" width="2" height="6" rx="1"/><rect x="15" y="1" width="2" height="6" rx="1"/><path d="M5 3h14a3 3 0 0 1 3 3v13a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Zm-3 5h20v2H2V8Zm0 6h20v2H2v-2Z"/></svg>',
   calendar:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><rect x="8" y="0" width="2" height="6" rx="1"/><rect x="14" y="0" width="2" height="6" rx="1"/><path d="M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm0 5.1v1.8h14V7.1H5ZM12 19a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>',
   stats:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="19" width="16" height="2" rx="1"/><rect x="6" y="11" width="3" height="9" rx=".8"/><rect x="11" y="6" width="3" height="14" rx=".8"/><rect x="16" y="14" width="3" height="6" rx=".8"/></svg>'
 };
@@ -12673,12 +12690,21 @@ var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素
      · 栏的 padding 收回同步改 0.3s → 0.2s（见 .bottom-nav 基础规则），让"泡收小"与"栏收小"同时结束。 */
 var NAV_SETTLE_K=0.28, NAV_SETTLE_DAMP=0.52;    /* 松手归位·位置弹簧 */
 var NAV_SETTLE_WK=0.34, NAV_SETTLE_WDAMP=0.50;  /* ★R174① 松手归位·宽度弹簧（比位置更快） */
+/* ★★R175① 松手归位·「浮起度」弹簧（--lp：1=完全浮起 → 0=常态）。
+   ★为什么必须补这一条：R174① 只把「位置 / 宽度」分了参数，但浮起的**几何量**（上下外扩 top/bottom、
+   圆角、外晕）还挂在 `.nav-pill.lift` 类上 —— 归位期间帧循环每帧写 `transition:none`，类上的几何
+   **根本不会动**，只能等 `_navFinishSettle` 移除 .lift 之后才靠 CSS 过渡收（0.22s）。
+   于是时间线是「位置/宽度 ~250ms 收完 → 停一下 → 几何再 220ms 收」= 用户说的
+   「能明显看到先回正等一会然后再收起来」。现在几何也进弹簧，三者同起同止。
+   ★参数必须与**宽度弹簧一致**（0.34/0.50）：试过 0.30/0.55，几何比宽度晚 ~115ms 收完（4 tab 布局实测），
+     于是又冒出一条新的"分段尾巴"（宽度先停、几何还在收）。同参数 = 同起点同速度 = 同时收完。 */
+var NAV_SETTLE_LK=0.34, NAV_SETTLE_LDAMP=0.50;
 var NAV_SETTLE_MS=1200;                         /* settle 兜底时长 */
 /* ★R172① 入场滑行时长（ms）：这段由 CSS 过渡驱动，帧循环超时后交回跟手。
    取 260ms = 与过渡曲线同长；再长会让"点一下就切"显得拖沓。 */
 var NAV_ENTER_MS=260;
 var _navLift={lifting:false,settling:false,entering:false,enterT0:0,idx:-1,startIdx:-1,suppressClick:false};
-var _navSettle={x:0,tx:0,w:0,tw:0,vx:0,vw:0,t0:0};
+var _navSettle={x:0,tx:0,w:0,tw:0,vx:0,vw:0,t0:0,lp:1,tlp:0,vlp:0};   /* ★R175① lp/tlp/vlp = 浮起度弹簧 */
 function _navNow(){return (window.performance&&performance.now)?performance.now():Date.now();}
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
 /* ★★R172① 底栏「常态高度」取值器 —— 浮起/归位期底栏会靠 padding 长高 6px（用户要的"导航栏也变大"），
@@ -12773,18 +12799,39 @@ function _navPlacePill(idx,lift){
    用 rAF 循环而非逐次 pointermove 写样式：频繁事件下要帧率一致的插值才顺滑。 */
 var NAV_MORPH_VMAX=1.15;      /* px/ms：达到这个速度即视为"快拖" */
 var NAV_STRETCH=22;           /* 右向快拖时比满宽再多出的宽度（"稍微宽一点的胶囊"）：14 时实测只多 9px，肉眼几乎看不出 → 提到 22 */
-var NAV_SOFT_EXTRA=26;        /* 左向慢拖时 = 圆态宽度 + 这么多（"微微椭圆的圆形"） */
-/* ★★R170.5 形态弹簧要的是「响应快但不过冲」→ **高刚度 + 大阻尼**（K 大、DAMP 小）。
-   第一版我调成低刚度(0.18)，结果快拖 70ms 内根本追不到"圆"（实测左快只到 102.5，判据要求 ≤87）。
-   K=0.30 / DAMP=0.45 → ζ≈0.73（过冲 ~6%）：既跟得上手的快慢，又不会"Q弹过度"。
-   ★★R174③ 用户新口径："速度变化改宽度**太生硬**，没有惯性慢慢收小/扩展的感觉，就是很生硬的变宽变宽"。
-   → ζ 0.73 的"干脆跟随"正是"生硬"的来源。改为**低刚度 + 小阻尼**（更软、允许过冲 = 惯性感）：
-     K=0.20 / DAMP=0.72 → ζ≈0.37（过冲 ~28%）：形状变化有"甩过头再荡回来"的惯性，
-     手停下后的回弹也从"立刻到位"变成"慢慢收"。★仍保留 NAV_MORPH_IDLE 的时间判定（>110ms 才算停）。 */
-var NAV_MORPH_K=0.20, NAV_MORPH_DAMP=0.72;
+/* ★★R175② 形变**幅度**上限（用户："是不是因为宽度太宽，然后移动时突变变短，导致跨度太大、过渡时间太长观感不佳"）。
+   原口径：圆态宽度 = 泡高 h(≈60px)，满宽 wBase(≈144px) → **一次左右切换要跑 84px 的行程**，
+   弹簧再怎么软也只能在这么长的行程里慢慢走 → 观感就是"一下变得很长、一下缩得很短、还迟迟不到位"。
+   现在把最窄压到 `wBase - NAV_NARROW_MAX*(wBase-h)`：0.8 → 行程 84px 砍到 ≈67px（-20%）。
+   ⚠️别再往下压：0.55 时最窄 114px（宽高比 1.9）**已经完全不像圆**，用户立刻问"方向×速度是不是没实现"——
+     收窄幅度就是这个效果的本体，压没了等于把功能删了。要再减"行程"只能靠调 NAV_STRETCH（右向那半）。 */
+var NAV_NARROW_MAX=0.8;
+var NAV_SOFT_EXTRA=14;        /* 左向慢拖（"微微椭圆"）比最窄再宽出的量 —— 只留一点差别，差太多就不是"微"了 */
+/* 形态弹簧史（保留结论，别再退回旧路）：
+   R170.5 0.30/0.45（ζ≈0.73 干脆跟随）→ R174③ 0.20/0.72（ζ≈0.37，更软）→ **R175② 改成"圆度 r"单级弹簧**（见下）。
+   ⚠️R175② 起宽度**不再**自己跑一层弹簧（两级串联 = 响应迟钝 + 行程长 = "过渡时间太长"），
+   宽度直接取 r 算出的目标，惯性由 r 的过冲提供；NAV_MORPH_K/DAMP 与 m.w/m.dvel 已成死代码，一并删除。 */
 var NAV_MORPH_IDLE=110;       /* ms：最后一次移动过去这么久即判定"手停了" → 形状弹回常态胶囊 */
-var _navMorph={w:0,dvel:0,vel:0,lastX:0,lastT:0,raf:0,center:0};
-function _navMorphReset(){_navMorph.w=0;_navMorph.dvel=0;_navMorph.vel=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
+/* ★★R175② 「一下大一下小、没有惯性」的根因 = **目标宽度是速度的分段函数，切换时目标自己跳变**：
+     右快 → wBase+22(≈166)、停 → wBase(≈144)、左慢 → h+26(≈86)、左快 → h(≈60)。
+     手指在左右之间来回（或速度抖动跨过 ±0.03 阈值）时，目标在 166/144/86 之间**瞬间跳**，
+     弹簧再怎么软也只是在"追一个跳变的目标" → 观感就是生硬地一下大一下小。
+   修法：引入**连续的「圆度」r∈[0,1]**（0 = 满宽胶囊，1 = 圆），目标宽度 = lerp(wBase, wRound, r)；
+     方向/速度只决定 r 的**目标**，r 本身由弹簧跟随 → 目标宽度**永远连续**，且自带过冲=惯性。
+   ★R175② 二次修正：惯性**不能靠"慢"来给**（上一版 K_DOWN=0.12 就是太慢 → 用户"过渡时间太长"）。
+     正确解 = **高刚度(快) + 低阻尼(过冲)**：ζ 保持在 0.35~0.40 这一档（R170.4 的"Q弹过度"是 ζ≈0.33 配大行程，
+     现在行程砍掉一半，同样的过冲量看起来就是"利落的一荡"而不是"甩飞"）。
+     实测再修：K_UP=0.34 时首帧就吃掉 34% 的行程 → 一帧跳 37px，观感是"猛地一缩"（过头了）。
+     降到 0.24：首帧 ~16px，过冲改在**尾部**出现（这才是"惯性"，首帧猛冲只是"跳"）。
+     · 涨 K=0.24 / DAMP=0.72 → ζ≈0.335，过冲 ~33%（集中在收尾段）
+     · 收 K=0.20 / DAMP=0.74 → ζ≈0.337，刚度略低 = 收回比涨慢一点点（"慢慢荡回来"的方向保留，但不拖沓） */
+var NAV_MORPH_RK_UP=0.24, NAV_MORPH_RUP_DAMP=0.72;
+var NAV_MORPH_RK_DOWN=0.20, NAV_MORPH_RDN_DAMP=0.74;
+var NAV_MORPH_VEPS=0.03;      /* |速度| 低于此值即视为静止（原代码里散落的 0.03 收到常量） */
+var NAV_MORPH_SMOOTH=0.32;    /* ★速度一阶低通系数：瞬时 dx/dt 抖动很大，滤波后再驱动形态。
+                                 0.45 实测"起步即满速" → 形变第一步就冲到底；0.32 让速度用 ~3 帧建立起来 */
+var _navMorph={vel:0,vf:0,r:0,vr:0,lastX:0,lastT:0,raf:0,center:0};   /* ★R175② 删掉 w/dvel（宽度不再单独跑弹簧） */
+function _navMorphReset(){_navMorph.vel=0;_navMorph.vf=0;_navMorph.r=0;_navMorph.vr=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
 function _navMorphStop(){if(_navMorph.raf){cancelAnimationFrame(_navMorph.raf);_navMorph.raf=0;}}
 /* 镜面高光位置 = 泡中心在栏内的相对位置（0~100%）→ 拖到哪，反光流到哪。
    这是"液态"与"静态玻璃"的分界：玻璃靠边缘光，液体靠**反光会动**。 */
@@ -12799,7 +12846,7 @@ function _navMorphFrame(){
      衰减路线要 ~0.35s 才低于 0.03，用户会看到"手停了泡还赖在圆/椭圆上不动"。
      改判定后：最后一次移动过去 NAV_MORPH_IDLE ms 即视为静止 → 形状立刻弹回常态胶囊（弹簧过冲=Q弹）。 */
   var now=_navNow();
-  if(m.lastT&&now-m.lastT>NAV_MORPH_IDLE){m.vel=0;m.lastT=now;}
+  if(m.lastT&&now-m.lastT>NAV_MORPH_IDLE){m.vel=0;m.vf=0;m.lastT=now;}
   var nav=document.getElementById('bottomNav'),pill=_ensureNavPill(),tabs=_navTabs();
   if(nav&&pill&&tabs.length){
     /* ★R170.4 松手后的「果冻归位」阶段：位置与宽度各自跑弹簧（会过冲回弹），动画收尾时才撤浮起态 */
@@ -12822,17 +12869,31 @@ function _navMorphFrame(){
     var h=pill.getBoundingClientRect().height||60;   /* 圆态：宽 = 高（CSS 的 26px 圆角把方形拉成圆） */
     var wBase=Math.max((tabs[_navLift.idx]?tabs[_navLift.idx].offsetWidth:tabs[0].offsetWidth)+NAV_PILL_EXTRA,h+10);
     if(h>wBase)h=wBase;
-    var wRound=h,wSoft=h+NAV_SOFT_EXTRA;
-    var s=Math.min(1,Math.abs(m.vel)/NAV_MORPH_VMAX);
-    var wTgt;
-    if(m.vel>0.03)wTgt=wBase+s*NAV_STRETCH;                  /* 右：胶囊 → 略宽胶囊 */
-    else if(m.vel<-0.03)wTgt=wRound+(1-s)*(wSoft-wRound);    /* 左：微椭圆圆 → 圆 */
-    else wTgt=wBase;                                         /* 停：满宽胶囊 */
-    if(!m.w)m.w=wBase;                                       /* 首帧直接落在满宽，不从 0 涨起来 */
-    m.dvel+=(wTgt-m.w)*NAV_MORPH_K;                          /* 弹簧（过冲 = Q 弹） */
-    m.dvel*=NAV_MORPH_DAMP;
-    m.w+=m.dvel;
-    var w=Math.max(wRound-6,Math.min(wBase+NAV_STRETCH+18,m.w));
+    /* ★R175② 最窄不再等于泡高（那会让行程长达 84px），改为按 NAV_NARROW_MAX 压缩后的"收短态" */
+    var wRound=wBase-(wBase-h)*NAV_NARROW_MAX;
+    if(wRound< h)wRound=h;                       /* 兜底：极窄屏时不许比泡还窄 */
+    var wSoft=wRound+NAV_SOFT_EXTRA;
+    /* ★R175② 用**低通后的速度** vf 驱动（瞬时 dx/dt 抖动太大，直接拿来算目标 = 抖动的宽度） */
+    var vf=m.vf;
+    var s=Math.min(1,Math.abs(vf)/NAV_MORPH_VMAX);
+    /* 「收短度」目标：左向 → rSoft(慢,微微收) ~ 1(快,收最短)；右向/静止 → 0（满宽胶囊）。
+       rSoft 由"微椭圆宽度"反解：让 r=rSoft 时 wTgt 正好等于 wSoft。 */
+    var span=wBase-wRound;
+    var rSoft=span>0?Math.max(0.2,Math.min(1,(wBase-wSoft)/span)):0.7;
+    var rTgt=(vf<-NAV_MORPH_VEPS)?(rSoft+(1-rSoft)*s):0;
+    /* 不对称弹簧：涨快、收略慢（但两者都是高刚度 → 都不拖沓，惯性靠过冲而不是靠慢） */
+    var rUp=(rTgt>m.r);
+    m.vr+=(rTgt-m.r)*(rUp?NAV_MORPH_RK_UP:NAV_MORPH_RK_DOWN);
+    m.vr*=(rUp?NAV_MORPH_RUP_DAMP:NAV_MORPH_RDN_DAMP);
+    m.r+=m.vr;
+    if(m.r<0){m.r=0;if(m.vr<0)m.vr=0;} else if(m.r>1.25){m.r=1.25;if(m.vr>0)m.vr=0;}
+    var r=Math.max(0,Math.min(1,m.r));
+    /* ★R175② 单级弹簧：宽度**直接**取 r 算出的目标（r 本身已被弹簧平滑过）。
+       原来是「r → wTgt → 宽度弹簧」两级串联 = 两个二阶系统相乘，响应迟钝、行程又长 → 正是"过渡时间太长"。
+       现在一层就够：惯性由 r 的过冲提供，宽度立刻响应。 */
+    var wTgt=wBase+(wRound-wBase)*r;                                  /* 连续：满宽胶囊 ↔ 收短 */
+    if(vf>NAV_MORPH_VEPS)wTgt+=s*NAV_STRETCH;                         /* 右：再被"拉长"一点（连续） */
+    var w=Math.max(wRound-6,Math.min(wBase+NAV_STRETCH+18,wTgt));
     var nr=nav.getBoundingClientRect(),last=tabs[tabs.length-1];
     /* ★R170.3 边界放宽 NAV_OVER：泡可以微微探出底栏左右边缘（用户要"能看到后面的边框"）。
        CSS 侧配套：`.bottom-nav.nav-lift{overflow:visible}`（常态是 overflow-x:clip，不改就看不到）。 */
@@ -12850,6 +12911,7 @@ function _navMorphFrame(){
     _navLitUpdate(nr.left+1+l,nr.left+1+l+w);
   }
   m.vel*=0.72;                                               /* ★R170.5 0.86→0.72：余速更快归零，去掉"惯性滑行"的拖泥感 */
+  m.vf*=0.72;                                                /* ★R175② 滤波速度同步衰减（否则停手后形态卡在旧值） */
   m.raf=requestAnimationFrame(_navMorphFrame);
 }
 function _navMorphMove(clientX){
@@ -12863,7 +12925,11 @@ function _navMorphMove(clientX){
   }
   if(m.lastT){
     var dt=now-m.lastT;
-    if(dt>0){var v=(clientX-m.lastX)/dt;m.vel=m.vel*0.35+v*0.65;}   /* 新speed权重高 = 更跟手（0.5 偏"黏"） */
+    if(dt>0){
+      var v=(clientX-m.lastX)/dt;
+      m.vel=m.vel*0.35+v*0.65;                        /* 新speed权重高 = 更跟手（0.5 偏"黏"） */
+      m.vf=m.vf+(m.vel-m.vf)*NAV_MORPH_SMOOTH;        /* ★R175② 一阶低通 → 形态不再跟着瞬时抖动跳 */
+    }
   }
   m.lastX=clientX;m.lastT=now;m.center=clientX;
   if(!m.raf)m.raf=requestAnimationFrame(_navMorphFrame);
@@ -12904,6 +12970,10 @@ function _navEnterLift(startIdx){
        是"先看到泡滑过去，一按住拖动就立刻粘手"，两者不冲突。 */
     pill.style.transition='transform .26s cubic-bezier(.22,.61,.36,1),width .26s cubic-bezier(.22,.61,.36,1),'
       +'top .26s cubic-bezier(.22,.61,.36,1),bottom .26s cubic-bezier(.22,.61,.36,1),box-shadow .26s ease';
+    /* ★R175① 浮起度必须**重置回 1**：上次归位把它收敛到 0 并留在 inline 上，而 inline 优先级高于
+       `.nav-pill.lift{--lp:1}` —— 不重置的话第二次点按底栏，泡会一直是"常态大小"（浮不起来）。
+       放在 transition 之后写：入场时 --lp 0→1 与加类同帧发生，top/bottom 走 .26s 过渡 = 泡"涨"起来。 */
+    pill.style.setProperty('--lp','1');
   }
   _navPlacePill(_navLift.idx,true);
   _navLitClear();
@@ -12929,6 +12999,7 @@ function _navTeardown(){
     pill.style.transition='';
     pill.style.width='';
     pill.style.transform='';
+    pill.style.removeProperty('--lp');   /* ★R175① 手势作废时连浮起度一起清，别留脏值给下次 */
   }
   _navLitClear();
   positionNavPill();
@@ -12957,6 +13028,11 @@ function _navBeginSettle(tab){
   _navSettle.tx=t.offsetLeft;
   _navSettle.w=pr.width;
   _navSettle.tw=t.offsetWidth;
+  /* ★R175① 浮起度从「当前实时值」起算（不是硬编码 1）：入场滑行中途松手时泡还没完全浮起，
+     从 1 起算会让它先"补涨"一下。tlp=0 = 目标常态。 */
+  var lpNow=parseFloat(pill.style.getPropertyValue('--lp'));
+  _navSettle.lp=(isFinite(lpNow)?lpNow:1);
+  _navSettle.tlp=0;_navSettle.vlp=0;
   _navSettle.vx=0;_navSettle.vw=0;_navSettle.t0=Date.now();
   _navLift.settling=true;
   /* 栏的 padding 与泡的弹簧**同时**收回（★R174① 0.3s → 0.2s，与加快后的宽度弹簧同步收完），
@@ -12973,14 +13049,20 @@ function _navSettleFrame(nav,pill){
      更早收完**，不再是"先对正、后收小"的两段生硬观感。 */
   s.vx+=(s.tx-s.x)*NAV_SETTLE_K; s.vx*=NAV_SETTLE_DAMP; s.x+=s.vx;
   s.vw+=(s.tw-s.w)*NAV_SETTLE_WK; s.vw*=NAV_SETTLE_WDAMP; s.w+=s.vw;
+  /* ★R175① 浮起度弹簧（与位置/宽度**同时**起跑）。允许轻微过冲到 [-0.25,1.25]：
+     收到比常态更小(>5px)一点点再弹回来 = 果冻感；若把下界钳死在 0 会出现"停在常态等一下再回弹"的停滞。 */
+  s.vlp+=(s.tlp-s.lp)*NAV_SETTLE_LK; s.vlp*=NAV_SETTLE_LDAMP; s.lp+=s.vlp;
+  if(s.lp<-0.25)s.lp=-0.25; else if(s.lp>1.25)s.lp=1.25;
   var w=Math.max(28,s.w);
   var nr=nav.getBoundingClientRect();
   pill.style.transition='none';
   pill.style.width=w.toFixed(1)+'px';
   pill.style.transform='translateX('+s.x.toFixed(1)+'px)';
+  pill.style.setProperty('--lp',s.lp.toFixed(3));   /* ★几何（top/bottom/radius/外晕）跟着一起收 */
   _navSheen(pill,nr,s.x+w/2);                      /* 镜面高光跟着泡流动（液态感） */
   _navLitUpdate(nr.left+1+s.x,nr.left+1+s.x+w);    /* +1 = 底栏的 1px 边框 */
-  var done=Math.abs(s.tx-s.x)<0.8&&Math.abs(s.vx)<0.12&&Math.abs(s.tw-s.w)<0.8&&Math.abs(s.vw)<0.12;
+  var done=Math.abs(s.tx-s.x)<0.8&&Math.abs(s.vx)<0.12&&Math.abs(s.tw-s.w)<0.8&&Math.abs(s.vw)<0.12
+    &&Math.abs(s.tlp-s.lp)<0.01&&Math.abs(s.vlp)<0.01;   /* ★R175① 几何没收完就不许收尾 */
   if(done||Date.now()-s.t0>NAV_SETTLE_MS){_navFinishSettle();return true;}
   return false;
 }
