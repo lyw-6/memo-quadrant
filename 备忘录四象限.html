@@ -2742,7 +2742,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    泡压到栏的 1px 描边上时，那条线要能透过玻璃被看见（用户："怎么看不到导航栏的边框…是变暗还是怎么样"）。
    日间主题 --border:#e5e7eb 压在半透紫 tint 下对比度只剩 ~7% → 不明混 text 色一档；
    各主题自动算出协调值，玻璃主题（白描边）同理变实一点。 */
-.bottom-nav.nav-lift{padding:9px 10px;box-shadow:0 -5px 22px rgba(0,0,0,.16);overflow:visible;
+.bottom-nav.nav-lift{padding:8px 9px;box-shadow:0 -5px 22px rgba(0,0,0,.16);overflow:visible;
   border-color:color-mix(in srgb,var(--text) 17%,var(--border));
   /* ★R172② lift 期 tab 一律无底色：hover 底在这里会盖在浮起泡上，显得脏 */
   }
@@ -2769,10 +2769,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      原来 top/bottom/border-radius/外晕写在类里，**只有到 _navFinishSettle 移除 .lift 才开始变**
      —— 而位置/宽度弹簧早就收完了，于是用户看到「泡先回正 → 停一下 → 才收起来」。
      现在归位弹簧每帧写 --lp，几何与位置/宽度**同一条时间轴**收敛；收尾移除 .lift 时几何已等于常态 → 零跳变。
-     计算校验：lp=1 → top=5-11=-6px、radius=26px（= 原浮起值）；lp=0 → top=5px、radius=22px（= 常态值）。 */
+     计算校验：lp=1 → top=5-8=-3px、radius=25px；lp=0 → top=5px、radius=22px（= 常态值）。
+     ★R176 外扩 11px→8px（泡只超出栏上下各 3px）：用户"长按后的导航栏放大效果收小一点，同时那个胶囊泡也一起"
+     —— 栏的 padding 同步 9px 10px → 8px 9px（高度 +6px → +4px）。 */
   --lp:1;
-  top:calc(5px - 11px * var(--lp));bottom:calc(5px - 11px * var(--lp));
-  border-radius:calc(22px + 4px * var(--lp));
+  top:calc(5px - 8px * var(--lp));bottom:calc(5px - 8px * var(--lp));
+  border-radius:calc(22px + 3px * var(--lp));
   border:none;
   background:
     /* ① 弧顶镜面：位置跟手流动 */
@@ -11999,7 +12001,7 @@ var quickAddDateEl=document.getElementById('quickAddDate');
 
 // ===== 视图元数据（图标+名称，风格统一描边）=====
 var VIEW_META={
-  list:{label:'备忘录',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16H5z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>'},
+  list:{label:'备忘录',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>'},
   quadrant:{label:'四象限',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'},
   today:{label:'今日',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.8" y2="4.2"/></svg>'},
   month:{label:'月',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="15" x2="21" y2="15"/></svg>'},
@@ -12030,9 +12032,11 @@ var VIEW_ICON_FILL={
   /* ★R175③ 填充版外沿 = 镂空版外沿（描边半宽 1px 的补偿），逐个按 viewBox 几何核算：
      · list 镂空：矩形 5,4→19,20 + stroke2 → 墨迹外沿 x[4,20] y[3,21] → 填充版外框必须写成 4,3→20,21（旧值 5,4→19,20 每边小 1）
        三条线槽同理取镂空墨迹宽度：y=9/13/17 的线墨迹是 y[8,10] 等，x 分别是 [7,17]/[7,17]/[7,14]
+     · ★R176 list 外框补圆角 rx=2（与 month/calendar 一致 —— 原来是全组唯一的直角外框，用户"有点不和谐"）；
+       填充版圆角 = 2+描边半宽 = 3。几何外沿不变（仍 [4,20]×[3,21]）。
      · quadrant 镂空：4 个 7×7 方块（x=3/14）+ stroke2 → 外沿 x[2,22]，单块外沿 9×9、中心仍在 6.5/17.5
        → 填充版必须是 x=2/13 的 9×9 方块（旧值 x=3/14 的 7×7 = 每边小 1） */
-  list:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M4 3h16v18H4V3Zm3 5.1h10a.9.9 0 1 1 0 1.8H7a.9.9 0 0 1 0-1.8Zm0 4h10a.9.9 0 1 1 0 1.8H7a.9.9 0 0 1 0-1.8Zm0 4h7a.9.9 0 1 1 0 1.8H7a.9.9 0 0 1 0-1.8Z"/></svg>',
+  list:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M7 3h10a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Zm0 5.1h10a.9.9 0 1 1 0 1.8H7a.9.9 0 0 1 0-1.8Zm0 4h10a.9.9 0 1 1 0 1.8H7a.9.9 0 0 1 0-1.8Zm0 4h7a.9.9 0 1 1 0 1.8H7a.9.9 0 0 1 0-1.8Z"/></svg>',
   quadrant:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="2" width="9" height="9" rx="2"/><rect x="13" y="2" width="9" height="9" rx="2"/><rect x="2" y="13" width="9" height="9" rx="2"/><rect x="13" y="13" width="9" height="9" rx="2"/></svg>',
   today:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5" stroke="none"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.8" y2="4.2"/></svg>',
   /* ★R175③ month 补左边：镂空 rect x=3 w=18 + stroke2 → 外沿 x[2,22]；R174 只把右边扩到 22，
