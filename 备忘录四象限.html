@@ -2647,8 +2647,16 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 #bottomNav .batch-count{margin-left:0;display:inline-flex;align-items:center;align-self:center;gap:2px;height:26px;padding:0 9px;border-radius:9px;font-size:11px;font-weight:600;line-height:1;color:var(--color-primary,#6366f1);background:color-mix(in srgb,var(--color-primary,#6366f1) 12%,transparent);white-space:nowrap;flex:0 0 auto;}
 /* 旧浮动批量栏已废弃：彻底隐藏，避免遮挡备忘录 */
 #batchBar{display:none!important;}
-.nav-tab svg{width:22px;height:22px;flex-shrink:0;}
-.nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:10px;transform:scale(0.88);transform-origin:center top;}
+/* ★R173 图标/文字比例放大一档（用户："这个图标的比例对吗，我在电脑上看怎么感觉小小的"）。
+   实测旧值：svg 盒 22px，但图标是在 24 格 viewBox 里画的（墨迹只占 18/24 ≈ 75%）
+   → **肉眼看到的图形只有 ~17px**；而文字还被 scale(0.88) 缩过 → 10px 只剩 8.8px。
+   两者一起压在 59px 高的底栏里 = 内容块仅 34px，四周全是空白 → "小小的"。
+   现取 24px 图标 + 11px 文字（去掉那 12% 缩小）：
+     · 24px 是 Material 3 的导航图标标准尺寸；墨迹 18~20px，与 11px 文字的比 ≈ 2.2×（iOS 2.5× / M3 2×，同区间）
+     · 内容块 34 → 38px，底栏 59 → 62px（+3px）；栏更高是**动态算**的（syncFloatingBars / fitCalGrid 都读实时高度）→ 无副作用
+   ⚠️窄屏（≤560px）有自己的覆盖（22px + 10px×0.88），**不受本条影响**。 */
+.nav-tab svg{width:24px;height:24px;flex-shrink:0;}
+.nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:11px;}
 .nav-tab.active{color:var(--color-primary,#6366f1);}
 .nav-tab.active svg{filter:drop-shadow(0 1px 2px rgba(99,102,241,.4));}
 /* 底部导航选中指示：独立滑块胶囊，切换视图时滑动 + 形变过渡（不随 innerHTML 重建而闪跳）
@@ -12608,7 +12616,7 @@ function renderBottomNav(){
     if(!viewPrefs.visible[v])continue;
     var m=VIEW_META[v]||{label:v,icon:''};
     /* ★R170 每个 tab 挂两套图标：.ni-out 镂空（常态）/ .ni-fill 填充（.active 或拖动高亮 .filling）。
-       span 包裹不影响 .nav-tab svg{width:22px} 那条后代选择器；两份都 display:none 起步，只留一份占位。
+       span 包裹不影响 .nav-tab svg{width:24px} 那条后代选择器；两份都 display:none 起步，只留一份占位。
        ★R172② 文字挂 .nav-label 类：浮起期要用 background-clip:text 给文字做**分段着色**
        （亮区内的字变主色、亮区外保持灰），单元素方案，不复制两份文本（避免基线/字距亚像素差）。 */
     var fi=VIEW_ICON_FILL[v]||m.icon;
