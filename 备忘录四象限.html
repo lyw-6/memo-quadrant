@@ -2635,10 +2635,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       实际比导航栏外缘大 5px，满足「浮起的胶囊要比导航栏大点」）+ 上移 2px + 加重投影。
       ⚠️z-index 必须留在 tab 之下（tab 是 z-index:1）—— 抬到 2 会把图标压住。
       ⚠️.ni 两份图标都 display:none 起步，只留一份占位，不额外撑高 tab。 */
-.nav-tab .ni{display:none;line-height:0;}
-.nav-tab .ni-out{display:block;}
-.nav-tab.active .ni-out,.nav-tab.filling .ni-out{display:none;}
-.nav-tab.active .ni-fill,.nav-tab.filling .ni-fill{display:block;}
+/* ⚠️这两组必须带 !important：窄屏媒体查询里有一条 `.nav-tab span,.nav-tab .nav-label{display:block!important}`
+   （老结构兜底），而 .ni 也是 span → 不加 !important 时两份图标会**同时显示**（窄屏实测 out:block + fill:block = 两层图标）。
+   加 !important 后靠特异性取胜：`.nav-tab .ni-out`(0,2,0) > `.nav-tab span`(0,1,1)。 */
+.nav-tab .ni{display:none!important;line-height:0;}
+.nav-tab .ni-out{display:block!important;}
+.nav-tab.active .ni-out,.nav-tab.filling .ni-out{display:none!important;}
+.nav-tab.active .ni-fill,.nav-tab.filling .ni-fill{display:block!important;}
 .nav-tab.filling{color:var(--color-primary,#6366f1);}
 .bottom-nav.nav-lift{padding:11px 10px;box-shadow:0 -6px 26px rgba(0,0,0,.18);}
 .nav-pill.lift{
@@ -2648,7 +2651,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     inset 0 -1px 0 color-mix(in srgb, var(--color-primary,#6366f1) 14%, transparent),
     0 12px 26px color-mix(in srgb, var(--color-primary,#6366f1) 30%, transparent),
     0 3px 8px rgba(0,0,0,.10);
-  transition:transform .18s cubic-bezier(.34,1.3,.5,1), width .18s cubic-bezier(.34,1.3,.5,1),
+  transition:transform .3s cubic-bezier(.32,1.1,.4,1), width .3s cubic-bezier(.32,1.1,.4,1),
     top .22s cubic-bezier(.34,1.3,.5,1), bottom .22s cubic-bezier(.34,1.3,.5,1), box-shadow .22s ease;
 }
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
@@ -11843,14 +11846,14 @@ var VIEW_META={
 /* ★R170 导航「填充版」图标：长按浮起、胶囊移到哪个 tab，哪个就换成这套实心图标（其余保持镂空）。
    与 VIEW_META 平行存放而不是塞进 VIEW_META —— 那个块每行都很长，改它容易伤到既有图标。
    ★填充版不是把 outline 加个 fill（线条类图标会变成一坨黑），而是按"实心主体 + 挖空细节"重绘：
-   list 实心文档挖 3 条横线、month 实心日历挖空下半（Material 风格）、calendar 整体实心挖一个圆点，
-   这样 filled/month 与 filled/calendar 仍能一眼区分。 */
+   list 实心文档挖 3 条横线、month 实心日历挖「顶部横带 + 3 条列表线」、calendar 实心日历挖「顶部横带 + 一个圆点」，
+   与各自 outline 版的语义（横线 / 圆点）逐一对应，形态也不再像"半空心"或"缩小了一圈"。 */
 var VIEW_ICON_FILL={
   list:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M6.6 2A2.6 2.6 0 0 0 4 4.6v14.8A2.6 2.6 0 0 0 6.6 22h10.8a2.6 2.6 0 0 0 2.6-2.6V7.3L14.7 2H6.6Zm2 8.9h7a.9.9 0 1 1 0 1.8h-7a.9.9 0 0 1 0-1.8Zm0 3.6h7a.9.9 0 1 1 0 1.8h-7a.9.9 0 0 1 0-1.8Zm0 3.6h4.4a.9.9 0 1 1 0 1.8H8.6a.9.9 0 0 1 0-1.8Z"/></svg>',
   quadrant:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7.6" height="7.6" rx="2.2"/><rect x="13.4" y="3" width="7.6" height="7.6" rx="2.2"/><rect x="3" y="13.4" width="7.6" height="7.6" rx="2.2"/><rect x="13.4" y="13.4" width="7.6" height="7.6" rx="2.2"/></svg>',
   today:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4.7"/><g><rect x="11.15" y="1.4" width="1.7" height="3.3" rx=".85"/><rect x="11.15" y="19.3" width="1.7" height="3.3" rx=".85"/><rect x="1.4" y="11.15" width="3.3" height="1.7" rx=".85"/><rect x="19.3" y="11.15" width="3.3" height="1.7" rx=".85"/><rect x="11.15" y="1.4" width="1.7" height="3.3" rx=".85" transform="rotate(45 12 12)"/><rect x="11.15" y="19.3" width="1.7" height="3.3" rx=".85" transform="rotate(45 12 12)"/><rect x="1.4" y="11.15" width="3.3" height="1.7" rx=".85" transform="rotate(45 12 12)"/><rect x="19.3" y="11.15" width="3.3" height="1.7" rx=".85" transform="rotate(45 12 12)"/></g></svg>',
   month:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M7.5 2a1 1 0 0 1 1 1v1h7V3a1 1 0 1 1 2 0v1.1h.5A2.5 2.5 0 0 1 20.5 6.6V9h-17V6.6A2.5 2.5 0 0 1 6 4.1h.5V3a1 1 0 0 1 1-1Zm-2 9h17v8.4A2.5 2.5 0 0 1 20 21.9H6.5A2.5 2.5 0 0 1 4 19.4V11h1.5Z"/></svg>',
-  calendar:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M7.5 2a1 1 0 0 1 1 1v1h7V3a1 1 0 1 1 2 0v1.1h.5A2.5 2.5 0 0 1 20.5 6.6v12.4A2.5 2.5 0 0 1 18 21.5H6A2.5 2.5 0 0 1 3.5 19V6.6A2.5 2.5 0 0 1 6 4.1h.5V3a1 1 0 0 1 1-1ZM12 18.4a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Z"/></svg>',
+  calendar:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M7.5 2a1 1 0 0 1 1 1v1h7V3a1 1 0 1 1 2 0v1.1h.5A2.5 2.5 0 0 1 20.5 6.6v12.4A2.5 2.5 0 0 1 18 21.5H6A2.5 2.5 0 0 1 3.5 19V6.6A2.5 2.5 0 0 1 6 4.1h.5V3a1 1 0 0 1 1-1Zm-1.6 4.4v2.3h12.2V6.4H5.9ZM12 18.9a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/></svg>',
   stats:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="19" width="18" height="2" rx="1"/><rect x="5.6" y="10.5" width="3.4" height="9.5" rx="1.2"/><rect x="10.3" y="5" width="3.4" height="15" rx="1.2"/><rect x="15" y="13.5" width="3.4" height="6.5" rx="1.2"/></svg>'
 };
 
@@ -12483,7 +12486,7 @@ function renderBottomNav(){
      否则 ResizeObserver / resize / render 里的任何一次重排都会把浮起态覆盖回常态位置。
    · 长按后浏览器还会补一次 click：用 suppressClick 吃掉，避免连切两次。 */
 var NAV_LIFT_MS=350, NAV_LIFT_SLOP=8;
-var _navLift={armed:false,lifting:false,timer:0,sx:0,sy:0,idx:-1,suppressClick:false};
+var _navLift={armed:false,lifting:false,timer:0,sx:0,sy:0,idx:-1,moved:false,suppressClick:false};
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
 function _navIndexAt(x){
   var tabs=_navTabs(),best=-1,bestD=Infinity;
@@ -12511,22 +12514,44 @@ function _navPlacePill(idx,lift){
   var t=tabs[idx],w=t.offsetWidth,l=t.offsetLeft;
   if(!w)return;
   if(lift){
-    /* 浮起：宽 +10px（左右各外溢 5px）+ 上移 2px；高度由 CSS 的 .nav-pill.lift 上下外扩负责 */
+    /* 浮起：宽 +10px（左右各外溢 5px）；高度由 CSS 的 .nav-pill.lift 上下外扩负责。
+       ★不再叠 translateY —— 那会让「上边超出栏外的部分」比下边多（用户实测上 7px / 下 2.9px 不对称），
+       浮起感改由阴影 + 高光 + 整体变大承担。 */
     pill.style.width=(w+10)+'px';
-    pill.style.transform='translateX('+(l-5)+'px) translateY(-2px)';
+    pill.style.transform='translateX('+(l-5)+'px)';
   }else{
     pill.style.width=w+'px';
     pill.style.transform='translateX('+l+'px)';
   }
 }
-function _navEnterLift(){
+/* ★R170.1 拖动跟手：胶囊连续跟随手指（带左右边界钳制），不再是"离散吸附到最近 tab 直接跳过去"
+   —— 用户反馈「泡在图标之间没有过渡」，正是离散吸附造成的：从第 1 格移到第 3 格中间那一格完全没经过。
+   跟手期 transition:none（瞬时跟随，否则会滞后于手指）；松手时清掉 inline transition，
+   由 CSS 的 .42s 过渡把它从当前位置平滑送回目标 tab。 */
+function _navLiftPillTo(clientX){
+  var nav=document.getElementById('bottomNav'),pill=_ensureNavPill();
+  var tabs=_navTabs();
+  if(!nav||!tabs.length)return;
+  var nr=nav.getBoundingClientRect();
+  var last=tabs[tabs.length-1];
+  var w=(tabs[_navLift.idx]?tabs[_navLift.idx].offsetWidth:tabs[0].offsetWidth)+10;
+  var minL=tabs[0].offsetLeft-5, maxL=last.offsetLeft+last.offsetWidth-w+5;
+  var l=Math.max(minL,Math.min(maxL,clientX-nr.left-w/2));
+  pill.style.transition='none';
+  pill.style.width=w+'px';
+  pill.style.transform='translateX('+l+'px)';
+}
+function _navEnterLift(startIdx){
   if(_navLift.lifting)return;
   var nav=document.getElementById('bottomNav');
   if(!nav||nav.classList.contains('batch-mode'))return;
   if(!nav.querySelector('.nav-tab'))return;
   _navLift.lifting=true;
   _navLift.suppressClick=true;
-  _navLift.idx=_navCurrentIndex();
+  _navLift.moved=false;   /* 每次进浮起都重置：区分"提起就松手"与"拖动后松手" */
+  /* ★长按哪个 tab，泡就从哪个 tab 浮起（不是从当前激活的那个）——
+     startIdx 由 pointerdown 命中决定；没命中任何 tab 时兜底为当前视图。 */
+  _navLift.idx=(typeof startIdx==='number'&&startIdx>=0)?startIdx:_navCurrentIndex();
   nav.classList.add('nav-lift');
   var pill=_ensureNavPill();
   if(pill)pill.classList.add('lift');
@@ -12540,7 +12565,10 @@ function _navExitLift(){
   var nav=document.getElementById('bottomNav');
   if(nav)nav.classList.remove('nav-lift');
   var pill=_ensureNavPill();
-  if(pill)pill.classList.remove('lift');
+  if(pill){
+    pill.classList.remove('lift');
+    pill.style.transition='';   /* ★清掉跟手期的 transition:none，让 CSS 的 .42s 把它平滑送回目标 tab */
+  }
   _navHighlight(-1);
   positionNavPill();
   /* 让紧随 pointerup 派发的那次 click 被吃掉（click 与 pointerup 同轮，setTimeout(0) 清标记在 click 之后） */
@@ -12555,8 +12583,11 @@ function bindNavLift(){
     if(nav.classList.contains('batch-mode'))return;
     _navLift.armed=true;
     _navLift.sx=e.clientX;_navLift.sy=e.clientY;
+    /* 记住按下的那个 tab：长按到点后泡要从这里浮起 */
+    var tab=e.target.closest?e.target.closest('.nav-tab'):null;
+    _navLift.startIdx=tab?_navIndexAt(tab.getBoundingClientRect().left+tab.getBoundingClientRect().width/2):-1;
     clearTimeout(_navLift.timer);
-    _navLift.timer=setTimeout(function(){_navLift.armed=false;_navEnterLift();},NAV_LIFT_MS);
+    _navLift.timer=setTimeout(function(){_navLift.armed=false;_navEnterLift(_navLift.startIdx);},NAV_LIFT_MS);
   });
   nav.addEventListener('pointermove',function(e){
     if(!_navLift.lifting){
@@ -12567,15 +12598,20 @@ function bindNavLift(){
       return;
     }
     var i=_navIndexAt(e.clientX);
-    if(i>=0&&i!==_navLift.idx){_navLift.idx=i;_navPlacePill(i,true);_navHighlight(i);}
+    if(i>=0&&i!==_navLift.idx){_navLift.idx=i;_navHighlight(i);}
+    _navLift.moved=true;          /* ★只有真的拖动过，松手才切视图（长按不动松手 = 不切） */
+    _navLiftPillTo(e.clientX);   /* ★跟手：泡连续跟着手指走（高亮仍是离散吸附） */
   });
   function up(){
     clearTimeout(_navLift.timer);_navLift.armed=false;
     if(!_navLift.lifting)return;
     var idx=_navLift.idx,tabs=_navTabs();
     var tv=(idx>=0&&tabs[idx])?tabs[idx].getAttribute('data-view'):null;
+    var moved=_navLift.moved;
     _navExitLift();
-    if(tv&&tv!==currentView)setView(tv);
+    /* ★R170.1 只有**真的拖动过**才切视图：泡现在是从"按下的那个 tab"浮起（用户口径），
+       若把"长按不动就松手"也当成选择，用户按住看看就会莫名跳到按下的那个 tab。 */
+    if(moved&&tv&&tv!==currentView)setView(tv);
   }
   nav.addEventListener('pointerup',up);
   nav.addEventListener('pointercancel',function(){
@@ -17172,6 +17208,14 @@ function attachSwipe(div,memo){
     }
     if(dir==='h'){
       moved=true;
+      /* ★R170.2 菜单已开时：只要出现右滑动作（≥10px）就**立即收起** —— 不再走下面的跟手分支
+         （原来菜单开着时右滑是"跟手拖回去、松手再看阈值"，用户反馈要滑很远才收）。 */
+      if(div._swipeOpen&&dx>10){
+        closeSwipe(div);
+        swiping=false;decided=false;dir=null;
+        if(e.cancelable)e.preventDefault();
+        return;
+      }
       /* ★R68 右滑完成：未展开菜单 + 向右拖 → fore 跟手右移露出「完成」提示层（已完成的显示「取消完成」） */
       if(!div._swipeOpen&&dx>0){
         var _first=!rdone;              /* ★R96 本次手势刚进入右滑（用于边沿初始化 tag 文案） */
