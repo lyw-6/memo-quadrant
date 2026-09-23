@@ -1765,7 +1765,10 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
 [data-theme="glass"] .nav-batch{border:1px solid var(--glass-edge);color:var(--text);}
 [data-theme="glass"] .nav-batch.danger{color:var(--color-danger,#ff6b6b);}
 [data-theme="glass"] .nav-batch.ghost{color:var(--text-secondary);}
-[data-theme="glass"] .nav-tab:hover{background:transparent;color:var(--text);}
+/* ★R172③ 原 `[data-theme="glass"] .nav-tab:hover{background:transparent;color:var(--text)}` 已删除：
+   它特异性(0,2,0)压过媒体查询里的 `.nav-tab:hover`(0,1,0) → 玻璃主题的 hover 一直是"透明的、纯黑字"，
+   和本次统一后的 hover 语言冲突；而且它写在 hover 媒体查询之外，触屏上点一下就"粘住"。
+   现在四个主题共用同一个 hover 规则（令牌按主题自动取值）。 */
 [data-theme="glass"] .nav-tab.active{color:var(--color-primary);}
 /* 毛玻璃主题：选中胶囊 = 液态玻璃透镜 —— 顶部高光渐变 + 更强模糊/饱和 + 玻璃边 + 沉浸光晕
    ★R143 曾把（已下线的）拖动泡并进过这条规则同源防「拖动时变蓝」；★R165 该泡连同整套长按
@@ -2583,7 +2586,9 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    ③ ghost（取消）= 透明底 + 次级文字，视觉权重最低。
    ④ 图标全部内联 SVG(currentColor)，替代原 emoji —— 彩色 emoji 与主题色冲突且跨端大小不一。
    ⑤ 玻璃主题单独降不透明度（见 [data-theme="glass"] 覆盖），保留毛玻璃通透感。 */
-.bottom-nav{--nb-surface:color-mix(in srgb,var(--text) 5%,var(--card-bg));--nb-surface-hi:color-mix(in srgb,var(--text) 11%,var(--card-bg));--nb-line:color-mix(in srgb,var(--text) 12%,transparent);}
+.bottom-nav{--nb-surface:color-mix(in srgb,var(--text) 5%,var(--card-bg));--nb-surface-hi:color-mix(in srgb,var(--text) 11%,var(--card-bg));--nb-line:color-mix(in srgb,var(--text) 12%,transparent);
+  /* ★R172③ hover 文字色令牌（各主题自动算出协调值，不必逐主题写死） */
+  --nav-hover-fg:color-mix(in srgb,var(--color-primary,#6366f1) 48%,var(--text-secondary));}
 .nav-batch{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:5px;height:36px;padding:0 8px;border:1px solid var(--nb-line);background:var(--nb-surface);color:var(--text);border-radius:11px;font-size:12px;font-weight:500;line-height:1;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s,border-color .15s,color .15s,transform .1s;overflow:hidden;-webkit-tap-highlight-color:transparent;}
 .nav-batch .b-ico{width:15px;height:15px;flex:none;display:inline-flex;align-items:center;justify-content:center;pointer-events:none;opacity:.85;}
 .nav-batch .b-ico svg{width:15px;height:15px;display:block;flex:none;}
@@ -2678,19 +2683,66 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .nav-tab.active .ni-out,.nav-tab.filling .ni-out{display:none!important;}
 .nav-tab.active .ni-fill,.nav-tab.filling .ni-fill{display:block!important;}
 .nav-tab.filling{color:var(--color-primary,#6366f1);}
-/* ★R170.3 浮起期改「光照式高亮」：泡照到哪个 tab 哪个才亮（填充 + 主色），照不到的一律镂空 + 常规色；
-   泡横跨两格时两个同时亮。所以 lift 期间必须把 .active 的填充/亮色/投影**一起熄灭**，否则会出现 3 个亮图标。
-   ⚠️`:not(.filling)` 不能省：按下那个 tab 常常同时是 .active 与 .filling，少了它会与本组上面的
-     「.active/.filling → ni-fill 显示」规则对撞，把 ni-out 也点亮 = 两层图标。
-   特异性 `.bottom-nav.nav-lift .nav-tab.active:not(.filling)…` = (0,5,0)，稳胜基础那组 (0,3,0)。 */
-.bottom-nav.nav-lift .nav-tab.active:not(.filling) .ni-fill{display:none!important;}
-.bottom-nav.nav-lift .nav-tab.active:not(.filling) .ni-out{display:block!important;}
-.bottom-nav.nav-lift .nav-tab.active:not(.filling){color:var(--text-secondary);}
-.bottom-nav.nav-lift .nav-tab.active:not(.filling) svg{filter:none;}
+/* ★★R172② 浮起期高亮口径升级：从「二值切换」改为「照到多少亮多少」。
+   ── 旧口径（R170.3）的问题（用户实测）：「照到一点点就整个亮完了」——
+      泡只要与该 tab 的重叠 ≥28% 就整格换填充图标 + 整格变主色，边缘那一下太跳。
+   ── 新口径：亮区 = **泡（可变形、可超界）与该 tab 的实际重叠区间**，重叠到哪就亮到哪；
+      泡横跨两格 → 两格各亮一部分（左右各一半时就是"两个半亮"）。
+      于是 R170.3 的「熄灭 .active 的填充」不再需要：亮不亮完全由几何决定，与"谁是当前视图"无关。
+      ⚠️那段 `.bottom-nav.nav-lift .nav-tab.active:not(.filling) .ni-fill{display:none!important}`
+      （(0,5,0)!）必须删掉 —— 它会连"被泡照到的当前选中格"也一起灭掉，正好和新口径对撞。
+   ── 实现：tab 内三层（镂空图标 / 填充图标 / 文字）同宽同原点，各挂一条**起止相同**的线性渐变蒙版：
+      镂空层 = 亮区**之外**不透明；填充层 = 亮区**之内**不透明；文字 = background-clip:text 同段着色。
+      两层的分割线严格互补 → 亮区里绝不会"灰描边叠在实心图标上"。
+   ── --la/--lb 由 `_navLitUpdate` 每帧按重叠区间算（百分比，相对 tab 自身宽度）。 */
+/* ★★R172② 两套图标在浮起期必须**同时在场**（蒙版才能"揭到哪亮到哪"），但**不能叠加高度** ——
+   用 grid 把它们塞进**同一个单元格**（重叠渲染，行高仍等于一份图标）。
+   ⚠️踩过的坑：直接给两份都写 display:flex（tab 是 flex 列向）会退化成"图标多占一行"：
+     tab 45→69、底栏 65→89（实测），长按浮起时整条栏凭空长高 24px —— 视觉上就是"栏被撑肿了"。
+   ⚠️grid 行高与 flex 列向完全一致（同样两项：图标行 + 标签行），所以浮起时栏只按设计长高 6px（padding 6→9）。
+   ⚠️`justify-items:stretch` + 子项 width:100% 是**蒙版坐标系**的前提（见下方三段蒙版说明）。 */
+.bottom-nav.nav-lift .nav-tab{display:grid;grid-template-columns:1fr;align-content:center;
+  justify-items:stretch;row-gap:2px;column-gap:0;padding-left:0;padding-right:0;
+  background:transparent;color:var(--text-secondary);}
+.bottom-nav.nav-lift .nav-tab > .ni{grid-row:1;grid-column:1;display:flex!important;justify-content:center;}
+.bottom-nav.nav-lift .nav-tab > .nav-label{grid-row:2;grid-column:1;width:100%;text-align:center;}
+/* ⚠️特异性：`.bottom-nav.nav-lift .nav-tab .ni`(0,4,0)! 必须压过 `.nav-tab .ni{display:none!important}`(0,2,0)!
+   与 `.nav-tab.active/.filling .ni-out{display:none!important}`(0,3,0)!（所以选择器要写到 .bottom-nav.nav-lift 这一层）。 */
+.bottom-nav.nav-lift .nav-tab .ni-out{color:var(--text-secondary);}
+.bottom-nav.nav-lift .nav-tab .ni-fill{color:var(--color-primary,#6366f1);}
+.bottom-nav.nav-lift .nav-tab svg{filter:none;}
+/* 子层撑满 100%（配合上一条 padding 归零 → 三层与 tab 盒逐像素重合） */
+.bottom-nav.nav-lift .nav-tab > span{width:100%;}
+.bottom-nav.nav-lift .nav-tab .nav-label{text-align:center;}
+.bottom-nav.nav-lift .nav-tab .ni-out{
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(var(--la,100%) - 1px),transparent var(--la,100%),transparent var(--lb,100%),#000 calc(var(--lb,100%) + 1px));
+  mask-image:linear-gradient(90deg,#000 calc(var(--la,100%) - 1px),transparent var(--la,100%),transparent var(--lb,100%),#000 calc(var(--lb,100%) + 1px));
+}
+.bottom-nav.nav-lift .nav-tab .ni-fill{
+  -webkit-mask-image:linear-gradient(90deg,transparent calc(var(--la,100%) - 1px),#000 var(--la,100%),#000 var(--lb,100%),transparent calc(var(--lb,100%) + 1px));
+  mask-image:linear-gradient(90deg,transparent calc(var(--la,100%) - 1px),#000 var(--la,100%),#000 var(--lb,100%),transparent calc(var(--lb,100%) + 1px));
+}
+/* 文字用同一段渐变着色（单元素方案：复制两份文字会带来基线/字距的亚像素差） */
+.bottom-nav.nav-lift .nav-tab .nav-label{
+  background-image:linear-gradient(90deg,var(--text-secondary) var(--la,100%),var(--color-primary,#6366f1) var(--la,100%),var(--color-primary,#6366f1) var(--lb,100%),var(--text-secondary) var(--lb,100%));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
 /* ★R170.3 浮起时允许胶囊微微超出底栏左右边界（用户：微微超过一点点、能看到后面的边框）。
    底栏常态是 overflow-x:clip（R60 用来裁滑动动效的瞬时闪条）→ 不改就永远看不到溢出。
    ⚠️只在 lift 态放开，且必须用简写 `overflow:visible` 覆盖 overflow-x/y 两个长写（长写特异性相同、看声明顺序）。 */
-.bottom-nav.nav-lift{padding:9px 10px;box-shadow:0 -5px 22px rgba(0,0,0,.16);overflow:visible;}
+/* ★R172④ 浮起期把底栏自身的边框**压深一档**：浮起泡是半透玻璃（见 .nav-pill.lift 的 alpha 版背景），
+   泡压到栏的 1px 描边上时，那条线要能透过玻璃被看见（用户："怎么看不到导航栏的边框…是变暗还是怎么样"）。
+   日间主题 --border:#e5e7eb 压在半透紫 tint 下对比度只剩 ~7% → 不明混 text 色一档；
+   各主题自动算出协调值，玻璃主题（白描边）同理变实一点。 */
+.bottom-nav.nav-lift{padding:9px 10px;box-shadow:0 -5px 22px rgba(0,0,0,.16);overflow:visible;
+  border-color:color-mix(in srgb,var(--text) 17%,var(--border));
+  /* ★R172② lift 期 tab 一律无底色：hover 底在这里会盖在浮起泡上，显得脏 */
+  }
+/* ★R172② lift 期：tab 一律无底色（hover 底盖在浮起泡上会显脏）+ 图标/文字回中性色 ——
+   亮不亮、哪一段亮，全部交给下面的蒙版按"泡照到谁"决定（这条把 .nav-tab.active/.filling 的 primary 压掉）。
+   左右 padding 归零是**蒙版坐标系对齐**的前提（见下方 R172② 蒙版组）：行内 flex 子项默认"按内容宽居中"，
+   只有让 tab 内容盒 == tab 盒，子层的百分比蒙版才与 tab 的几何重合。归零不影响任何位移（子项本来就居中）。 */
+.bottom-nav.nav-lift .nav-tab{background:transparent;color:var(--text-secondary);padding-left:0;padding-right:0;}
 /* ★R170.5 松手归位时加这个类：让栏的 padding 与泡的弹簧**同时**收回（0.3s 缓出），
    而不是等 settle 结束再靠移除 nav-lift 突然缩回去 —— 那是用户说的
    「松手后先回正、再收起、然后导航栏才变正常大小」的生硬感来源。
@@ -2710,11 +2762,17 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
   background:
     /* ① 弧顶镜面：位置跟手流动 */
     radial-gradient(130% 96% at var(--pill-hx,50%) -22%, rgba(255,255,255,.92) 0%, rgba(255,255,255,.26) 40%, transparent 66%),
-    /* ② 皮本身：略深于底栏的玻璃色（中心不许比栏暗，所以混的是 card-bg 而不是深色 tint） */
+    /* ② 皮本身：略深于底栏的玻璃色。
+       ★★R172④ 从「不透明混色」改为**同比例 alpha**（color-mix 混 transparent）——
+         混 card-bg 时泡是不透明实体：它压在底栏 1px 描边上就把那条线**完全吃掉**，
+         用户一眼看出"看不到导航栏的边框"（泡像贴纸浮在外面，和栏没有关系）。
+         alpha 版在栏内的观感与之**逐像素等价**（0.23 alpha over card-bg ≡ mix 23% card-bg），
+         但栏的描边、圆角、甚至泡探出栏外那截下面的页面底色都能透上来 —— 这才是"玻璃"。
+       ⚠️不要给这里加 backdrop-filter：它会把那条 1px 描边**糊没**，正好抵消本次要的效果。 */
     linear-gradient(180deg,
-      color-mix(in srgb, var(--color-primary,#6366f1) 23%, var(--card-bg)) 0%,
-      color-mix(in srgb, var(--color-primary,#6366f1) 12%, var(--card-bg)) 56%,
-      color-mix(in srgb, var(--color-primary,#6366f1) 18%, var(--card-bg)) 100%);
+      color-mix(in srgb, var(--color-primary,#6366f1) 23%, transparent) 0%,
+      color-mix(in srgb, var(--color-primary,#6366f1) 12%, transparent) 56%,
+      color-mix(in srgb, var(--color-primary,#6366f1) 18%, transparent) 100%);
   box-shadow:
     inset 0 1.5px 0 rgba(255,255,255,.98),          /* 顶缘镜面硬线（最亮最锐的那条） */
     inset 0 -1.5px 0 rgba(255,255,255,.40),         /* 底缘回光 */
@@ -2744,7 +2802,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 @media (hover:hover) and (pointer:fine){
   .memo-item:hover,
   .memo-item.in-group:hover{background:var(--hover-bg);}
-  .nav-tab:hover{color:var(--text);}
+  /* ★R172③ 底栏 hover 重做：不再把图标/文字压成纯黑。
+     原件 `.nav-tab:hover{color:var(--text)}` 在日间主题 = 近黑 #1a1a2e，比「选中态的主色」在视觉上更重
+     → 层级倒挂（悬停的那个看起来比选中的那个还"选中"），用户反馈"感觉怪怪的"。
+     现在的语言与列表项 hover 统一：圆角浅面（--hover-bg）+ 文字图标走「主色 48% 与次级文字混出的中间色」
+     （有"向主色靠"的暗示，但不抢选中态）。
+     ⚠️`:not(.active)` 不能省：选中项已经有胶囊底了，再叠一层 --hover-bg 会变成"双底"。 */
+  .nav-tab:not(.active):hover{color:var(--nav-hover-fg);background:var(--hover-bg);}
   .nav-batch:hover{background:var(--nb-surface-hi);}
   .nav-batch.ghost:hover{background:var(--nb-surface);}
   .select-box:hover{border-color:var(--color-primary,#6366f1);}
@@ -12544,10 +12608,12 @@ function renderBottomNav(){
     if(!viewPrefs.visible[v])continue;
     var m=VIEW_META[v]||{label:v,icon:''};
     /* ★R170 每个 tab 挂两套图标：.ni-out 镂空（常态）/ .ni-fill 填充（.active 或拖动高亮 .filling）。
-       span 包裹不影响 .nav-tab svg{width:22px} 那条后代选择器；两份都 display:none 起步，只留一份占位。 */
+       span 包裹不影响 .nav-tab svg{width:22px} 那条后代选择器；两份都 display:none 起步，只留一份占位。
+       ★R172② 文字挂 .nav-label 类：浮起期要用 background-clip:text 给文字做**分段着色**
+       （亮区内的字变主色、亮区外保持灰），单元素方案，不复制两份文本（避免基线/字距亚像素差）。 */
     var fi=VIEW_ICON_FILL[v]||m.icon;
     html+='<button class="nav-tab'+(v===currentView?' active':'')+'" data-view="'+v+'" type="button">'
-      +'<span class="ni ni-out">'+m.icon+'</span><span class="ni ni-fill">'+fi+'</span><span>'+m.label+'</span></button>';
+      +'<span class="ni ni-out">'+m.icon+'</span><span class="ni ni-fill">'+fi+'</span><span class="nav-label">'+m.label+'</span></button>';
   }
   nav.classList.remove('batch-mode');
   _navSwapChildren(html);
@@ -12587,9 +12653,28 @@ var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素
    收敛时长 ≈ 20 帧 ≈ 330ms（用户"太快/死板" → 比原来的 ~180ms 舒缓一档）。 */
 var NAV_SETTLE_K=0.16, NAV_SETTLE_DAMP=0.60;    /* 松手归位弹簧（K 刚度 / DAMP 阻尼） */
 var NAV_SETTLE_MS=1200;                         /* settle 兜底时长 */
-var _navLift={lifting:false,settling:false,idx:-1,startIdx:-1,suppressClick:false,pendingView:null,pendingTop:false};
+/* ★R172① 入场滑行时长（ms）：这段由 CSS 过渡驱动，帧循环超时后交回跟手。
+   取 260ms = 与过渡曲线同长；再长会让"点一下就切"显得拖沓。 */
+var NAV_ENTER_MS=260;
+var _navLift={lifting:false,settling:false,entering:false,enterT0:0,idx:-1,startIdx:-1,suppressClick:false};
 var _navSettle={x:0,tx:0,w:0,tw:0,vx:0,vw:0,t0:0};
+function _navNow(){return (window.performance&&performance.now)?performance.now():Date.now();}
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
+/* ★★R172① 底栏「常态高度」取值器 —— 浮起/归位期底栏会靠 padding 长高 6px（用户要的"导航栏也变大"），
+   但**布局消费者**（body 底部留白 / 日历按视口反算格子高）必须看到**常态**高度：
+   否则浮起期间发生的任何一次 render 都会把这 6px 烘进布局 —— 日历格子被算小一档（7 行各扁 0.7px
+   → 格内容溢出 → `.d-sub` 被 flex 压缩）、页面凭空多一条可滚高度，而且浮起结束后**没有任何东西
+   会把它纠回来**（ResizeObserver 只管胶囊位置，不会重跑 fitCalGrid）。
+   ★为什么现在必须处理：R172① 把「切视图」提到松手瞬间（与归位动画并行跑），render 必然落在浮起期内 ——
+   这个坑从"理论风险"变成"每次点导航都踩"（实测：点日历后再点日期，.d-sub 高 10px → 9.33px，R136① 直接红）。
+   常态以实测为准（批量栏/可见视图数变化都会改高），浮起期回落到缓存值。 */
+var _navRestH=0;
+function navRestHeight(){
+  var nav=document.getElementById('bottomNav');
+  if(!nav)return 0;
+  if(!(_navLift.lifting||_navLift.settling))_navRestH=nav.offsetHeight;
+  return _navRestH||nav.offsetHeight;
+}
 function _navIndexAt(x){
   var tabs=_navTabs(),best=-1,bestD=Infinity;
   for(var i=0;i<tabs.length;i++){
@@ -12605,25 +12690,41 @@ function _navCurrentIndex(){
   for(var i=0;i<tabs.length;i++){if(tabs[i].getAttribute('data-view')===currentView)return i;}
   return -1;
 }
-/* ★R170.3 光照式高亮：不看"谁被选中"，看**泡覆盖到了谁** ——
-   「泡照到哪个，哪个才亮（填充 + 主色）；照不到就镂空 + 常规色；泡横跨两格且都照到 → 两个同时亮」。
-   判定 = 重叠宽度 / 该 tab 宽度 ≥ NAV_LIT_RATIO。必须用比例而不是"沾边就算"：
-   泡常态就比 tab 左右各宽 5px（浮起时更多），按"沾边"会把左右邻居一起点亮。
-   由 rAF 帧循环每帧调用 —— 泡在形变中宽度会变，覆盖范围必须跟着更新。
-   （高亮只加 .filling，不改 .active、不动数据：拖动是"预览"，松手才 setView） */
+/* ★R172② 光照式高亮（**连续版**）：把泡与该 tab 的**重叠区间**交给 CSS 蒙版，照到多少亮多少。
+   旧版（R170.3）只产出一个布尔 .filling：重叠 ≥28% 就整格换填充图标 + 整格变主色 → 用户实测
+   「照到一点点就整个亮完了」。现在：
+     · .filling 仍然按同一个阈值产出（保留"哪几格算被照到"的语义，烟测与外部逻辑都在用）；
+     · 另写 --la / --lb（百分比，相对 tab 自身宽度）= 重叠区间的起止 —— 蒙版据此逐像素揭开，
+       完全没照到 → a=b=1（蒙版判为全灭）。泡横跨两格 → 两格各得一段部分亮区。
+   由 rAF 帧循环每帧调用 —— 泡在形变/超界时宽度位置都在变，亮区必须跟着更新。 */
 var NAV_LIT_RATIO=0.28;
 function _navLitUpdate(pl,pr){
-  var tabs=_navTabs();
-  for(var k=0;k<tabs.length;k++){
-    var r=tabs[k].getBoundingClientRect(),lit=false;
+  var tabs=_navTabs(),n=tabs.length,rec=[];
+  /* 先读完所有 rect 再写样式：读写交错会强制多次同步布局（拖动期每帧都发生）。 */
+  for(var k=0;k<n;k++)rec.push(tabs[k].getBoundingClientRect());
+  for(var i=0;i<n;i++){
+    var r=rec[i],lit=false,a=1,b=1;
     if(r.width){
       var ov=Math.min(pr,r.right)-Math.max(pl,r.left);
       lit=ov>0&&ov/r.width>=NAV_LIT_RATIO;
+      a=Math.max(0,Math.min(1,(pl-r.left)/r.width));
+      b=Math.max(0,Math.min(1,(pr-r.left)/r.width));
+      if(!(b>a)){a=1;b=1;}
     }
-    if(tabs[k].classList.contains('filling')!==lit)tabs[k].classList.toggle('filling',lit);
+    var la=(a*100).toFixed(1)+'%',lb=(b*100).toFixed(1)+'%';
+    if(tabs[i]._la!==la){tabs[i]._la=la;tabs[i].style.setProperty('--la',la);}
+    if(tabs[i]._lb!==lb){tabs[i]._lb=lb;tabs[i].style.setProperty('--lb',lb);}
+    if(tabs[i].classList.contains('filling')!==lit)tabs[i].classList.toggle('filling',lit);
   }
 }
-function _navLitClear(){var tabs=_navTabs();for(var k=0;k<tabs.length;k++)tabs[k].classList.remove('filling');}
+function _navLitClear(){
+  var tabs=_navTabs();
+  for(var k=0;k<tabs.length;k++){
+    tabs[k].classList.remove('filling');
+    tabs[k]._la='100.0%';tabs[k]._lb='100.0%';
+    tabs[k].style.setProperty('--la','100%');tabs[k].style.setProperty('--lb','100%');
+  }
+}
 function _navPlacePill(idx,lift){
   var tabs=_navTabs(),pill=_ensureNavPill();
   if(idx<0||!tabs[idx])return;
@@ -12672,13 +12773,24 @@ function _navMorphFrame(){
   /* ★R170.3 「手停下了没」按**时间**判定，而不是等 vel 自己衰减到阈值以下：
      衰减路线要 ~0.35s 才低于 0.03，用户会看到"手停了泡还赖在圆/椭圆上不动"。
      改判定后：最后一次移动过去 NAV_MORPH_IDLE ms 即视为静止 → 形状立刻弹回常态胶囊（弹簧过冲=Q弹）。 */
-  var now=(window.performance&&performance.now)?performance.now():Date.now();
+  var now=_navNow();
   if(m.lastT&&now-m.lastT>NAV_MORPH_IDLE){m.vel=0;m.lastT=now;}
   var nav=document.getElementById('bottomNav'),pill=_ensureNavPill(),tabs=_navTabs();
   if(nav&&pill&&tabs.length){
     /* ★R170.4 松手后的「果冻归位」阶段：位置与宽度各自跑弹簧（会过冲回弹），动画收尾时才撤浮起态 */
     if(_navLift.settling){
       if(_navSettleFrame(nav,pill))return;        /* 已收尾：不再续帧 */
+      m.raf=requestAnimationFrame(_navMorphFrame);
+      return;
+    }
+    /* ★R172① 入场滑行期：位置/尺寸由 CSS 过渡负责，本帧循环**只读**实时 rect 去更新光照与镜面，
+       绝不写 width/transform —— 一写就把过渡打断成瞬移（正是"泡凭空闪过去"的老毛病）。
+       超时（或手指一动）即交回跟手。 */
+    if(_navLift.entering){
+      var nrE=nav.getBoundingClientRect(),prE=pill.getBoundingClientRect();
+      _navSheen(pill,nrE,prE.left+prE.width/2);
+      _navLitUpdate(prE.left,prE.right);
+      if(now-_navLift.enterT0>=NAV_ENTER_MS){_navLift.entering=false;pill.style.transition='none';}
       m.raf=requestAnimationFrame(_navMorphFrame);
       return;
     }
@@ -12707,13 +12819,23 @@ function _navMorphFrame(){
     pill.style.width=w.toFixed(1)+'px';
     pill.style.transform='translateX('+l.toFixed(1)+'px)';
     _navSheen(pill,nr,nr.left+l+w/2);                         /* 镜面跟着泡流动 */
-    _navLitUpdate(nr.left+l,nr.left+l+w);                     /* ★光照：位置定稿后再按覆盖范围点亮图标 */
+    /* ★R172② 光照：位置定稿后再按覆盖范围点亮图标。
+       `+1` = 底栏自身的 1px 边框：泡的 translateX 坐标系是**padding box**（═ 外框 +1px），
+       传给蒙版的必须是**视口坐标**，否则亮区整体偏左 1px（与 _navSettleFrame 的同名口径对齐）。 */
+    _navLitUpdate(nr.left+1+l,nr.left+1+l+w);
   }
   m.vel*=0.72;                                               /* ★R170.5 0.86→0.72：余速更快归零，去掉"惯性滑行"的拖泥感 */
   m.raf=requestAnimationFrame(_navMorphFrame);
 }
 function _navMorphMove(clientX){
-  var m=_navMorph,now=(window.performance&&performance.now)?performance.now():Date.now();
+  var m=_navMorph,now=_navNow();
+  /* ★R172① 手指一动 = 用户要的是"严格跟手" → 立刻结束入场滑行、掐掉 CSS 过渡，
+     帧循环从这一帧起接管位置（泡直接落到手指下，不再有滑行延迟）。 */
+  if(_navLift.entering){
+    _navLift.entering=false;
+    var pl=_ensureNavPill();
+    if(pl)pl.style.transition='none';
+  }
   if(m.lastT){
     var dt=now-m.lastT;
     if(dt>0){var v=(clientX-m.lastX)/dt;m.vel=m.vel*0.35+v*0.65;}   /* 新speed权重高 = 更跟手（0.5 偏"黏"） */
@@ -12729,8 +12851,13 @@ function _navEnterLift(startIdx){
   if(!tabs0.length)return;
   _navLift.lifting=true;
   _navLift.settling=false;          /* 接管 settle：撤销归位动画，回到跟手 */
-  _navLift.pendingView=null;_navLift.pendingTop=false;
+  _navLift.entering=true;           /* ★R172① 入场滑行：位置/尺寸交给 CSS 过渡（老选中位 → 按下的 tab） */
+  _navLift.enterT0=_navNow();
   _navLift.suppressClick=true;
+  /* ★R172① 接管上一次归位时，必须把 `nav-lift-out`（padding:6px 8px）摘掉：
+     它与 `nav-lift`(9px 10px) 同特异性且声明更靠后 → 不摘的话"归位动画没跑完就又按下去"时
+     栏会一直保持小尺寸（浮起态栏不变大的老 bug）。 */
+  nav.classList.remove('nav-lift-out');
   /* ★长按哪个 tab，泡就从哪个 tab 浮起（不是从当前激活的那个）——
      startIdx 由 pointerdown 命中决定；没命中任何 tab 时兜底为当前视图。 */
   _navLift.idx=(typeof startIdx==='number'&&startIdx>=0)?startIdx:_navCurrentIndex();
@@ -12743,13 +12870,17 @@ function _navEnterLift(startIdx){
   var pill=_ensureNavPill();
   if(pill){
     pill.classList.add('lift');
-    /* ★R170.3 浮起瞬间让泡**直接落位**到按下的 tab，不走 CSS 过渡 ——
-       用户反馈「还是不跟手，能否再快一点」，那 0.13~0.16s 的滑行正是延迟感来源。
-       先 transition:none 再改位置，帧循环从"已经在手指下"接手。 */
-    pill.style.transition='none';
+    /* ★★R172① 点击导航要有**过渡**（用户："希望有个浮起胶囊的过渡，也就是原被选中的地方过渡到当前点击的
+       导航的地方"）。R170.3 那版为了"更跟手"写的是 `transition:none` → 泡**瞬间跳**到按下的 tab，
+       看起来就是"选中态凭空闪到了别处"。
+       现在改成显式列出要动画的属性：泡从**当前（= 原选中）位置**滑到按下的 tab（0.26s 缓出），
+       期间帧循环只读实时 rect 更新光照/镜面、绝不写 width/transform（写一下就成瞬移）。
+       手指一动（_navMorphMove）或松手（_navBeginSettle）立刻切成 transition:none 严格跟手 —— 观感上
+       是"先看到泡滑过去，一按住拖动就立刻粘手"，两者不冲突。 */
+    pill.style.transition='transform .26s cubic-bezier(.22,.61,.36,1),width .26s cubic-bezier(.22,.61,.36,1),'
+      +'top .26s cubic-bezier(.22,.61,.36,1),bottom .26s cubic-bezier(.22,.61,.36,1),box-shadow .26s ease';
   }
   _navPlacePill(_navLift.idx,true);
-  if(pill)void pill.offsetWidth;   /* 强制一次 reflow：让 transition:none 与本次落位同帧生效 */
   _navLitClear();
   /* ★R170.3 进 lift 就启动帧循环 —— 帧循环原来只在 _navMorphMove 里按需启动（拖动才有），
      于是「长按提起但还没动」这一段时间里**光照与形状都不更新**（实测：lit 全空 = 一个图标都不亮）。
@@ -12762,8 +12893,7 @@ function _navEnterLift(startIdx){
    所以紧跟一句 positionNavPill() 把它设回常态值。 */
 function _navTeardown(){
   if(!_navLift.lifting)return;
-  _navLift.lifting=false;_navLift.settling=false;_navLift.idx=-1;
-  _navLift.pendingView=null;_navLift.pendingTop=false;
+  _navLift.lifting=false;_navLift.settling=false;_navLift.entering=false;_navLift.idx=-1;
   _navMorphStop();
   var nav=document.getElementById('bottomNav');
   if(nav)nav.classList.remove('nav-lift-out');
@@ -12787,9 +12917,14 @@ function _navBeginSettle(tab){
   var nav=document.getElementById('bottomNav'),pill=_ensureNavPill(),tabs=_navTabs();
   var t=tab||tabs[_navLift.idx]||null;
   if(!nav||!pill||!t){_navFinishSettle();return;}
+  var nrB=nav.getBoundingClientRect();
+  var entering=_navLift.entering;
+  _navLift.entering=false;
   var mm=/translateX\(([-\d.]+)px\)/.exec(pill.style.transform||'');
   var pr=pill.getBoundingClientRect();
-  _navSettle.x=mm?parseFloat(mm[1]):(pr.left-nav.getBoundingClientRect().left-1);
+  /* ★R172① 入场滑行中途松手时，inline transform 里存的是**过渡终点**（未来值），不是此刻的视觉位置 ——
+     直接拿来当弹簧起点会让泡"瞬间跳到终点"（滑行被吃掉）。所以滑行期一律以**实时 rect** 为起点。 */
+  _navSettle.x=(entering||!mm)?(pr.left-nrB.left-1):parseFloat(mm[1]);
   /* ★★★R170.5 关键修复：归位目标必须**等于常态胶囊的终态**（左边缘=t.offsetLeft、宽=t.offsetWidth），
      而不是"浮起态的 +20 宽"。原来目标停在浮起尺寸上，收尾时 positionNavPill 又把它设成常态值
      → 用户看到的是「先回正 → 再收起 → 栏才变正常大小」三段式。现在归位过程本身就在做"缩回常态"，
@@ -12822,9 +12957,7 @@ function _navSettleFrame(nav,pill){
   return false;
 }
 function _navFinishSettle(){
-  var pv=_navLift.pendingView,pt=_navLift.pendingTop;
-  _navLift.pendingView=null;_navLift.pendingTop=false;
-  _navLift.lifting=false;_navLift.settling=false;_navLift.idx=-1;
+  _navLift.lifting=false;_navLift.settling=false;_navLift.entering=false;_navLift.idx=-1;
   _navMorphStop();
   var nav=document.getElementById('bottomNav');
   if(nav)nav.classList.remove('nav-lift-out');
@@ -12836,9 +12969,8 @@ function _navFinishSettle(){
   }
   _navLitClear();
   /* ⚠️故意**不清** inline width/transform：清了会先塌成 width:0 闪一下；
-     交给下面的 positionNavPill() 直接覆盖成常态值即可。 */
-  if(pv)setView(pv);            /* 切视图（底栏重建后自行定位；胶囊由 _navSwapChildren 保活） */
-  else if(pt){try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}}
+     交给下面的 positionNavPill() 直接覆盖成常态值即可。
+     ★R172① 切视图/回顶部已改为在 up() 里**即时**执行（不再挂在这里等归位收尾），故此处只剩收尾定位。 */
   positionNavPill();
   requestAnimationFrame(function(){positionNavPill();});
   setTimeout(function(){_navLift.suppressClick=false;},0);
@@ -12871,10 +13003,20 @@ function bindNavLift(){
     var idx=_navLift.idx,tabs=_navTabs();
     var t=(idx>=0&&tabs[idx])?tabs[idx]:null;
     var tv=t?t.getAttribute('data-view'):null;
-    /* 记下"归位动画结束后要做的事"：点别的 tab = 切视图；点当前 tab = 平滑回顶部（原 click 分支的语义） */
-    _navLift.pendingView=(tv&&tv!==currentView)?tv:null;
-    _navLift.pendingTop=!!(tv&&tv===currentView);
-    _navBeginSettle(t);   /* ★先让泡用弹簧弹回目标 tab（果冻回弹），收尾时才切视图 —— 避免 render 打断动画 */
+    var pv=(tv&&tv!==currentView)?tv:null;
+    var pt=!!(tv&&tv===currentView);
+    /* ★★R172① 归位动画与视图切换**同时**开始（原来是等归位收尾才切）。
+       旧写法把 setView 推迟到 ~0.33s 后 → 「点一下导航，内容要等一下才换」= 手感发滞；
+       而当时推迟的理由（"怕 render 打断动画"）在当前实现下已不成立：
+         · 归位弹簧每帧用 `_navTabs()` **重新取** tab（见 _navSettleFrame 首行）→ 重建后目标依然正确；
+         · 被选中的胶囊是**常驻单例**，`_navSwapChildren` 只换 tab、不动它 → 弹簧不会丢对象。
+       所以先起跑弹簧（此刻 t 还是切换前的有效元素，起点/目标都能取准），紧接着就切视图。 */
+    _navBeginSettle(t);
+    if(pv)setView(pv);
+    else if(pt){try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}}
+    /* 重建后立刻补一次光照：新 tab 是新元素、没有 --la/--lb，不补会有一帧"全灰"闪一下 */
+    var n2=document.getElementById('bottomNav'),p2=_ensureNavPill();
+    if(n2&&p2){var r2=p2.getBoundingClientRect();_navLitUpdate(r2.left,r2.right);}
   }
   nav.addEventListener('pointerup',up);
   nav.addEventListener('pointercancel',function(){
@@ -13086,7 +13228,7 @@ function setView(v){
     var gap=22;
     var navFloat=nabPx+gap;
     var navVisible=(nav && getComputedStyle(nav).display!=='none');
-    var navH=navVisible?nav.offsetHeight:0;
+    var navH=navVisible?navRestHeight():0;   /* ★R172① 用「常态高度」，浮起期也如此（见 navRestHeight 说明） */
     var barH=(bar && bar.classList.contains('open'))?bar.offsetHeight:0;
     if(bar)bar.style.bottom=(navH+navFloat)+'px';
     // 底部导航是固定栏,需给 body 底部留白(=导航栏高+系统栏),否则滚到最底时「添加新备忘录+批量操作栏」会被固定导航遮住
@@ -18696,7 +18838,7 @@ function fitCalGrid(){
   var panelH=(panel&&!panel.hidden)?panel.getBoundingClientRect().height+10:0;  /* +10 = 面板的 margin-top */
   var top=calendarViewEl.getBoundingClientRect().top;
   var nav=document.getElementById('bottomNav');
-  var navH=nav?nav.getBoundingClientRect().height:0;
+  var navH=navRestHeight();   /* ★R172① 常态高度（浮起期底栏会长高 6px，量实时值会把格子算小一档） */
   var GAP=4;
   var rows=Math.max(1,Math.round((grid.children.length-7)/7));   /* 不含星期标签那一行 */
   var lab=grid.querySelector('.cal-day-label');
