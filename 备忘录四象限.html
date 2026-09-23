@@ -2643,7 +2643,19 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .nav-tab.active .ni-out,.nav-tab.filling .ni-out{display:none!important;}
 .nav-tab.active .ni-fill,.nav-tab.filling .ni-fill{display:block!important;}
 .nav-tab.filling{color:var(--color-primary,#6366f1);}
-.bottom-nav.nav-lift{padding:9px 10px;box-shadow:0 -5px 22px rgba(0,0,0,.16);}
+/* ★R170.3 浮起期改「光照式高亮」：泡照到哪个 tab 哪个才亮（填充 + 主色），照不到的一律镂空 + 常规色；
+   泡横跨两格时两个同时亮。所以 lift 期间必须把 .active 的填充/亮色/投影**一起熄灭**，否则会出现 3 个亮图标。
+   ⚠️`:not(.filling)` 不能省：按下那个 tab 常常同时是 .active 与 .filling，少了它会与本组上面的
+     「.active/.filling → ni-fill 显示」规则对撞，把 ni-out 也点亮 = 两层图标。
+   特异性 `.bottom-nav.nav-lift .nav-tab.active:not(.filling)…` = (0,5,0)，稳胜基础那组 (0,3,0)。 */
+.bottom-nav.nav-lift .nav-tab.active:not(.filling) .ni-fill{display:none!important;}
+.bottom-nav.nav-lift .nav-tab.active:not(.filling) .ni-out{display:block!important;}
+.bottom-nav.nav-lift .nav-tab.active:not(.filling){color:var(--text-secondary);}
+.bottom-nav.nav-lift .nav-tab.active:not(.filling) svg{filter:none;}
+/* ★R170.3 浮起时允许胶囊微微超出底栏左右边界（用户：微微超过一点点、能看到后面的边框）。
+   底栏常态是 overflow-x:clip（R60 用来裁滑动动效的瞬时闪条）→ 不改就永远看不到溢出。
+   ⚠️只在 lift 态放开，且必须用简写 `overflow:visible` 覆盖 overflow-x/y 两个长写（长写特异性相同、看声明顺序）。 */
+.bottom-nav.nav-lift{padding:9px 10px;box-shadow:0 -5px 22px rgba(0,0,0,.16);overflow:visible;}
 .nav-pill.lift{
   top:-6px;bottom:-6px;border-radius:26px;
   box-shadow:
@@ -12495,8 +12507,9 @@ function renderBottomNav(){
    · 与 positionNavPill 的关系：lift 期间胶囊由本模块接管，positionNavPill 必须让位（见其首行守卫），
      否则 ResizeObserver / resize / render 里的任何一次重排都会把浮起态覆盖回常态位置。
    · 长按后浏览器还会补一次 click：用 suppressClick 吃掉，避免连切两次。 */
-var NAV_LIFT_MS=220, NAV_LIFT_SLOP=8;   /* ★R170.2 350→220：用户反馈「长按有延迟，希望瞬间浮起」 */
-var _navLift={armed:false,lifting:false,timer:0,sx:0,sy:0,idx:-1,moved:false,suppressClick:false};
+var NAV_LIFT_MS=150, NAV_LIFT_SLOP=8;   /* ★R170.3 220→150：用户再次反馈「长按浮起还是不跟手，能否再快一点」 */
+var NAV_OVER=13;                        /* ★R170.3 泡允许超出底栏左右边缘的像素（用户：微微超过一点点、能看到后面的边框） */
+var _navLift={armed:false,lifting:false,timer:0,sx:0,sy:0,idx:-1,suppressClick:false};
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
 function _navIndexAt(x){
   var tabs=_navTabs(),best=-1,bestD=Infinity;
@@ -12513,11 +12526,25 @@ function _navCurrentIndex(){
   for(var i=0;i<tabs.length;i++){if(tabs[i].getAttribute('data-view')===currentView)return i;}
   return -1;
 }
-/* 高亮 = 只加 .filling（不改 .active、不动数据）：拖动是"预览"，松手才 setView */
-function _navHighlight(i){
+/* ★R170.3 光照式高亮：不看"谁被选中"，看**泡覆盖到了谁** ——
+   「泡照到哪个，哪个才亮（填充 + 主色）；照不到就镂空 + 常规色；泡横跨两格且都照到 → 两个同时亮」。
+   判定 = 重叠宽度 / 该 tab 宽度 ≥ NAV_LIT_RATIO。必须用比例而不是"沾边就算"：
+   泡常态就比 tab 左右各宽 5px（浮起时更多），按"沾边"会把左右邻居一起点亮。
+   由 rAF 帧循环每帧调用 —— 泡在形变中宽度会变，覆盖范围必须跟着更新。
+   （高亮只加 .filling，不改 .active、不动数据：拖动是"预览"，松手才 setView） */
+var NAV_LIT_RATIO=0.28;
+function _navLitUpdate(pl,pr){
   var tabs=_navTabs();
-  for(var k=0;k<tabs.length;k++)tabs[k].classList.toggle('filling',k===i);
+  for(var k=0;k<tabs.length;k++){
+    var r=tabs[k].getBoundingClientRect(),lit=false;
+    if(r.width){
+      var ov=Math.min(pr,r.right)-Math.max(pl,r.left);
+      lit=ov>0&&ov/r.width>=NAV_LIT_RATIO;
+    }
+    if(tabs[k].classList.contains('filling')!==lit)tabs[k].classList.toggle('filling',lit);
+  }
 }
+function _navLitClear(){var tabs=_navTabs();for(var k=0;k<tabs.length;k++)tabs[k].classList.remove('filling');}
 function _navPlacePill(idx,lift){
   var tabs=_navTabs(),pill=_ensureNavPill();
   if(idx<0||!tabs[idx])return;
@@ -12534,43 +12561,67 @@ function _navPlacePill(idx,lift){
     pill.style.transform='translateX('+l+'px)';
   }
 }
-/* ★R170.2 速度变形（快 = 圆，慢 = 胶囊/椭圆）+ 惯性：
-   · 拖动时算**瞬时速度**（px/ms），平滑成 vel（0.5/0.5 混合保留一点"追不上手"的惯性感）；
-   · 速度归一化后驱动形状：cur=0 → 宽 = tab 宽 + 10（椭圆胶囊）；cur=1 → 宽 ≈ 胶囊**高度**（正方形 + 大圆角＝圆）；
-   · cur 每帧向目标插值 0.22 —— 这就是「快慢之间要有过渡动画」：不会在快慢切换瞬间突跳；
-   · vel 每帧衰减 0.86 —— 手指停下后速度自然回落，形状带着惯性回到椭圆；
-   · 位置始终跟手（按**中心**对齐手指，宽变时左右对称收缩，不会单边抽动）。
-   用 rAF 循环而不是每次 pointermove 直接写样式：频繁事件下需要"帧率一致"的插值才顺滑。 */
-var NAV_MORPH_VMAX=1.15;  /* px/ms：达到这个速度时完全变圆（1.6 偏钝，快速甩动要等十几帧才圆 → 调到 1.15 更跟手） */
-var _navMorph={cur:0,vel:0,lastX:0,lastT:0,raf:0,center:0};
-function _navMorphReset(){_navMorph.cur=0;_navMorph.vel=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
+/* ★R170.3 形态：**方向 + 速度共同决定**（用户口径，对齐 it 之家/酷安那种底栏手感）
+     · 向右拖（vel>0）：慢 = 胶囊状；快 = **稍微宽一点**的胶囊状（被"拉长"）
+     · 向左拖（vel<0）：慢 = **微微椭圆的圆形**；快 = 圆形（被"压圆"）
+     · 停下（|vel| 很小）→ 回到满宽胶囊（常态）
+   形状变化用**弹簧**（K 刚度 / DAMP 阻尼）逼近目标宽度，而不是线性插值：
+   目标在"手停下/松开"那一刻会跳变（圆 → 胶囊），弹簧自然产生**过冲回弹 = Q 弹感**；
+   拖动过程中目标连续变化，弹簧又足够跟手。
+   ⚠️Q 弹只作用在**宽度**上，位置严格跟手（中心对齐手指）—— 位置一旦引入延迟就成了"泡追不上手"。
+   用 rAF 循环而非逐次 pointermove 写样式：频繁事件下要帧率一致的插值才顺滑。 */
+var NAV_MORPH_VMAX=1.15;      /* px/ms：达到这个速度即视为"快拖" */
+var NAV_STRETCH=22;           /* 右向快拖时比满宽再多出的宽度（"稍微宽一点的胶囊"）：14 时实测只多 9px，肉眼几乎看不出 → 提到 22 */
+var NAV_SOFT_EXTRA=26;        /* 左向慢拖时 = 圆态宽度 + 这么多（"微微椭圆的圆形"） */
+var NAV_MORPH_K=0.32, NAV_MORPH_DAMP=0.62;   /* 弹簧刚度 / 阻尼：过冲量即"Q 弹"程度 */
+var NAV_MORPH_IDLE=110;       /* ms：最后一次移动过去这么久即判定"手停了" → 形状弹回常态胶囊 */
+var _navMorph={w:0,dvel:0,vel:0,lastX:0,lastT:0,raf:0,center:0};
+function _navMorphReset(){_navMorph.w=0;_navMorph.dvel=0;_navMorph.vel=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
 function _navMorphStop(){if(_navMorph.raf){cancelAnimationFrame(_navMorph.raf);_navMorph.raf=0;}}
 function _navMorphFrame(){
   var m=_navMorph;
   if(!_navLift.lifting){m.raf=0;return;}
-  var tgt=Math.max(0,Math.min(1,Math.abs(m.vel)/NAV_MORPH_VMAX));
-  m.cur+=(tgt-m.cur)*0.3;       /* 形状过渡（快慢切换的动画本体；0.22 偏慢，快甩时不够圆） */
-  m.vel*=0.86;                  /* 惯性衰减 */
+  /* ★R170.3 「手停下了没」按**时间**判定，而不是等 vel 自己衰减到阈值以下：
+     衰减路线要 ~0.35s 才低于 0.03，用户会看到"手停了泡还赖在圆/椭圆上不动"。
+     改判定后：最后一次移动过去 NAV_MORPH_IDLE ms 即视为静止 → 形状立刻弹回常态胶囊（弹簧过冲=Q弹）。 */
+  var now=(window.performance&&performance.now)?performance.now():Date.now();
+  if(m.lastT&&now-m.lastT>NAV_MORPH_IDLE){m.vel=0;m.lastT=now;}
   var nav=document.getElementById('bottomNav'),pill=_ensureNavPill(),tabs=_navTabs();
   if(nav&&pill&&tabs.length){
-    var h=pill.getBoundingClientRect().height||60;   /* 圆态：宽 = 高 */
-    var wEll=(tabs[_navLift.idx]?tabs[_navLift.idx].offsetWidth:tabs[0].offsetWidth)+10;
-    if(h>wEll)h=wEll;
-    var w=wEll-(wEll-h)*m.cur;
+    var h=pill.getBoundingClientRect().height||60;   /* 圆态：宽 = 高（CSS 的 26px 圆角把方形拉成圆） */
+    var wBase=Math.max((tabs[_navLift.idx]?tabs[_navLift.idx].offsetWidth:tabs[0].offsetWidth)+10,h+10);
+    if(h>wBase)h=wBase;
+    var wRound=h,wSoft=h+NAV_SOFT_EXTRA;
+    var s=Math.min(1,Math.abs(m.vel)/NAV_MORPH_VMAX);
+    var wTgt;
+    if(m.vel>0.03)wTgt=wBase+s*NAV_STRETCH;                  /* 右：胶囊 → 略宽胶囊 */
+    else if(m.vel<-0.03)wTgt=wRound+(1-s)*(wSoft-wRound);    /* 左：微椭圆圆 → 圆 */
+    else wTgt=wBase;                                         /* 停：满宽胶囊 */
+    if(!m.w)m.w=wBase;                                       /* 首帧直接落在满宽，不从 0 涨起来 */
+    m.dvel+=(wTgt-m.w)*NAV_MORPH_K;                          /* 弹簧（过冲 = Q 弹） */
+    m.dvel*=NAV_MORPH_DAMP;
+    m.w+=m.dvel;
+    var w=Math.max(wRound-6,Math.min(wBase+NAV_STRETCH+18,m.w));
     var nr=nav.getBoundingClientRect(),last=tabs[tabs.length-1];
-    var minL=tabs[0].offsetLeft-5, maxL=last.offsetLeft+last.offsetWidth-w+5;
+    /* ★R170.3 边界放宽 NAV_OVER：泡可以微微探出底栏左右边缘（用户要"能看到后面的边框"）。
+       CSS 侧配套：`.bottom-nav.nav-lift{overflow:visible}`（常态是 overflow-x:clip，不改就看不到）。 */
+    var minL=tabs[0].offsetLeft-5-NAV_OVER;
+    var maxL=last.offsetLeft+last.offsetWidth-w+5+NAV_OVER;
+    if(maxL<minL)maxL=minL;
     var l=Math.max(minL,Math.min(maxL,m.center-nr.left-w/2));
     pill.style.transition='none';
     pill.style.width=w.toFixed(1)+'px';
     pill.style.transform='translateX('+l.toFixed(1)+'px)';
+    _navLitUpdate(nr.left+l,nr.left+l+w);                     /* ★光照：位置定稿后再按覆盖范围点亮图标 */
   }
+  m.vel*=0.86;                                               /* 惯性衰减（配合上面的 idle 判定，只负责拖动中的余速） */
   m.raf=requestAnimationFrame(_navMorphFrame);
 }
 function _navMorphMove(clientX){
   var m=_navMorph,now=(window.performance&&performance.now)?performance.now():Date.now();
   if(m.lastT){
     var dt=now-m.lastT;
-    if(dt>0){var v=(clientX-m.lastX)/dt;m.vel=m.vel*0.5+v*0.5;}
+    if(dt>0){var v=(clientX-m.lastX)/dt;m.vel=m.vel*0.35+v*0.65;}   /* 新speed权重高 = 更跟手（0.5 偏"黏"） */
   }
   m.lastX=clientX;m.lastT=now;m.center=clientX;
   if(!m.raf)m.raf=requestAnimationFrame(_navMorphFrame);
@@ -12579,19 +12630,34 @@ function _navEnterLift(startIdx){
   if(_navLift.lifting)return;
   var nav=document.getElementById('bottomNav');
   if(!nav||nav.classList.contains('batch-mode'))return;
-  if(!nav.querySelector('.nav-tab'))return;
+  var tabs0=nav.querySelectorAll('.nav-tab');
+  if(!tabs0.length)return;
   _navLift.lifting=true;
   _navLift.suppressClick=true;
-  _navLift.moved=false;   /* 每次进浮起都重置：区分"提起就松手"与"拖动后松手" */
-  _navMorphReset();
   /* ★长按哪个 tab，泡就从哪个 tab 浮起（不是从当前激活的那个）——
      startIdx 由 pointerdown 命中决定；没命中任何 tab 时兜底为当前视图。 */
   _navLift.idx=(typeof startIdx==='number'&&startIdx>=0)?startIdx:_navCurrentIndex();
+  _navMorphReset();
+  /* 帧循环首帧要用 m.center 摆位置 → 先把"手指落点"初始化成按下的那个 tab 的中心；
+     否则首帧 m.center=0，泡会被左边界钳住闪一下。 */
+  var t0=tabs0[_navLift.idx];
+  if(t0){var nr0=nav.getBoundingClientRect();_navMorph.center=nr0.left+t0.offsetLeft+t0.offsetWidth/2;}
   nav.classList.add('nav-lift');
   var pill=_ensureNavPill();
-  if(pill)pill.classList.add('lift');
+  if(pill){
+    pill.classList.add('lift');
+    /* ★R170.3 浮起瞬间让泡**直接落位**到按下的 tab，不走 CSS 过渡 ——
+       用户反馈「还是不跟手，能否再快一点」，那 0.13~0.16s 的滑行正是延迟感来源。
+       先 transition:none 再改位置，帧循环从"已经在手指下"接手。 */
+    pill.style.transition='none';
+  }
   _navPlacePill(_navLift.idx,true);
-  _navHighlight(_navLift.idx);
+  if(pill)void pill.offsetWidth;   /* 强制一次 reflow：让 transition:none 与本次落位同帧生效 */
+  _navLitClear();
+  /* ★R170.3 进 lift 就启动帧循环 —— 帧循环原来只在 _navMorphMove 里按需启动（拖动才有），
+     于是「长按提起但还没动」这一段时间里**光照与形状都不更新**（实测：lit 全空 = 一个图标都不亮）。
+     光照本来就是"泡在哪就亮谁"，跟有没有在动无关，必须从浮起第一帧就开始算。 */
+  if(!_navMorph.raf)_navMorph.raf=requestAnimationFrame(_navMorphFrame);
 }
 function _navExitLift(){
   if(!_navLift.lifting)return;
@@ -12605,7 +12671,7 @@ function _navExitLift(){
     pill.classList.remove('lift');
     pill.style.transition='';   /* ★清掉跟手期的 transition:none，让 CSS 的 .42s 把它平滑送回目标 tab */
   }
-  _navHighlight(-1);
+  _navLitClear();
   positionNavPill();
   /* 让紧随 pointerup 派发的那次 click 被吃掉（click 与 pointerup 同轮，setTimeout(0) 清标记在 click 之后） */
   setTimeout(function(){_navLift.suppressClick=false;},0);
@@ -12634,20 +12700,19 @@ function bindNavLift(){
       return;
     }
     var i=_navIndexAt(e.clientX);
-    if(i>=0&&i!==_navLift.idx){_navLift.idx=i;_navHighlight(i);}
-    _navLift.moved=true;          /* ★只有真的拖动过，松手才切视图（长按不动松手 = 不切） */
-    _navMorphMove(e.clientX);    /* ★跟手 + 速度变形（快圆慢椭圆，带惯性衰减） */
+    if(i>=0&&i!==_navLift.idx)_navLift.idx=i;   /* 只记"松手切哪个"；亮哪个由帧循环按泡的覆盖范围定 */
+    _navMorphMove(e.clientX);                   /* ★跟手 + 方向/速度形态（带 Q 弹） */
   });
   function up(){
     clearTimeout(_navLift.timer);_navLift.armed=false;
     if(!_navLift.lifting)return;
     var idx=_navLift.idx,tabs=_navTabs();
     var tv=(idx>=0&&tabs[idx])?tabs[idx].getAttribute('data-view'):null;
-    var moved=_navLift.moved;
     _navExitLift();
-    /* ★R170.1 只有**真的拖动过**才切视图：泡现在是从"按下的那个 tab"浮起（用户口径），
-       若把"长按不动就松手"也当成选择，用户按住看看就会莫名跳到按下的那个 tab。 */
-    if(moved&&tv&&tv!==currentView)setView(tv);
+    /* ★R170.3 松手即选（与"点击"同一语义，不再要求"必须拖动过"）：
+       阈值已收到 150ms，若仍坚持"不动松手不切"，那么一次**按住稍久一点的点击**
+       就会既不切视图也不滚顶 = 用户眼里"点了没反应"。松手在同一个 tab 上时 tv===currentView，天然不切。 */
+    if(tv&&tv!==currentView)setView(tv);
   }
   nav.addEventListener('pointerup',up);
   nav.addEventListener('pointercancel',function(){
