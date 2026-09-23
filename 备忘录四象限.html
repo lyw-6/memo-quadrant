@@ -2354,6 +2354,24 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .calendar-view{padding:4px 0;}
 .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;position:relative;}
 .cal-head-title{font-size:15px;font-weight:600;color:var(--text);}
+/* ★R170.5 三页滑动：上/当/下三个月并排放在 inner 里（宽 300%），
+   拖动时移动 inner → **两侧邻月跟着渐显**（用户："能不能左右拖动时能渐显其他月份的日历日期"）。
+   原来只有"当月跟手位移 + 渐隐"→ 拖出来的是一片空白，看不到要去的月份。
+   wrap 负责裁切；inner 的 transform 由 JS 写（跟手期 none + calc 混算 %/px；松手后走 transition 滑到相邻页，
+   滑完再 renderCalendar 把新月份变成中间页 → 视觉完全无缝）。 */
+/* ★wrap 高度固定 = 当月 grid 的高度（由 fitCalGrid 量出来写进 --cal-grid-h）：
+   邻月的行数**天然可能比当月多一行**（如 8 月是 6 行、9 月是 5 行），补空格子也压不下去，
+   不裁就会把 wrap 撑高一行 → 整页又多一条滚动条。裁掉即可（拖动时邻月只露 5 行，视觉正确）。 */
+.cal-slide-wrap{position:relative;overflow:hidden;height:var(--cal-grid-h,auto);}
+/* ⚠️align-items:flex-start 不能省：flex 默认 stretch 会把三个 page **都拉成最高的那个**
+   （6 行的邻月）→ 当月 grid 也被拉高一行 → wrap 按它算高度 → 整页凭空多一条滚动条。 */
+.cal-slide-inner{display:flex;align-items:flex-start;width:300%;transform:translate3d(-33.3333%,0,0);}
+.cal-slide-inner>.cal-month-grid,.cal-slide-inner>.cal-ghost{width:33.3333%;flex:0 0 33.3333%;box-sizing:border-box;padding:0 3px;}
+/* 邻月预览：只有日期数字（简版），淡化 + 不接触指针 */
+.cal-ghost{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;pointer-events:none;opacity:.55;}
+/* ⚠️ghost 内格子都带 other 类，而 .cal-cell.other 自带 opacity:.35 → 不覆盖就会叠成 15%（几乎看不见） */
+.cal-ghost .cal-cell.other{opacity:1;}
+.cal-ghost .cal-day-label{opacity:.85;}
 .cal-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;touch-action:none; /* ★R54:touch-action:none 让滑动手势归月份切换,不触发页面滚动 */
   /* ★R170.4 跟手拖动期由 JS 写 transform（inline 会带 transition:none 覆盖这里），
      松手未达标时 JS 清掉 inline → 由这条过渡平滑回弹。 */
@@ -2370,7 +2388,8 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 @keyframes calSlidePrev{from{opacity:.25;transform:translateX(-24%);}to{opacity:1;transform:translateX(0);}}
 .cal-month-grid.cal-anim-next{animation:calSlideNext .26s cubic-bezier(.22,.61,.36,1);}
 .cal-month-grid.cal-anim-prev{animation:calSlidePrev .26s cubic-bezier(.22,.61,.36,1);}
-.cal-cell{aspect-ratio:1/1;height:var(--dcell,auto); /* ★R170.4 fitCalGrid 按视口算出每格高度写进 --dcell，让整月**一屏显示完**（用户：不要滚动条）；未设变量时回落到正方形 */
+.cal-slide-inner>.cal-month-grid,.cal-slide-inner>.cal-ghost{max-width:var(--cal-grid-w,none);margin-left:auto;margin-right:auto;}
+.cal-cell{aspect-ratio:1/1;height:var(--dcell,auto); /* ★R170.4 fitCalGrid 按视口算出每格高度写进 --dcell（放在 calendarView 上，让 grid 与两侧 ghost 共用），让整月**一屏显示完**；未设变量时回落到正方形 */
   background:var(--card-bg);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;padding:2px;overflow:hidden;}
 .cal-cell:hover{border-color:var(--text-tertiary);}
 .cal-cell.other{opacity:.35;cursor:default;}
@@ -2382,9 +2401,12 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
    · align-self:stretch + width:100%：.cal-cell 是 align-items:center 的 flex column，
      不加这两条子元素会被压到内容宽、ellipsis 也就无从谈起。
    · overflow:hidden 兜底：格子是 aspect-ratio 1/1，标题多了不能撑破格子。 */
-.cal-cell .d-memos{display:flex;flex-direction:column;align-self:stretch;width:100%;min-width:0;gap:1px;margin-top:3px;overflow:hidden;}
+/* ★R170.5 摘要块改为**整体居中**：width:auto + align-self:center → 块宽 = 最宽那行的宽度、块本身水平居中，
+   块内仍左对齐。这样"色点 + 标题"与上面的日期/节气落在同一条中轴上（原来块贴在 x=3，视觉上就是"歪"）。
+   max-width 留 3px 余量，长标题仍会走 ellipsis。 */
+.cal-cell .d-memos{display:flex;flex-direction:column;align-self:center;width:auto;max-width:calc(100% - 3px);min-width:0;gap:1px;margin-top:3px;overflow:hidden;}
 .cal-cell .d-memo{position:relative;min-width:0;font-size:10px;line-height:1.25;color:var(--text-secondary);text-align:left;padding-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
-.cal-cell .d-memo::before{content:'';position:absolute;left:1px;top:.45em;width:4px;height:4px;border-radius:50%;background:var(--mc,#6b7280);}
+.cal-cell .d-memo::before{content:'';position:absolute;left:1px;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:var(--mc,#6b7280);} /* ★R170.5 用 top:50%+translateY 精确压中线（原 top:.45em 依赖字号与行高，换字号就会偏） */
 .cal-cell .d-memo.done{opacity:.5;text-decoration:line-through;}
 .cal-cell .d-more{font-size:9px;line-height:1.2;color:var(--text-tertiary);text-align:left;padding-left:8px;}
 .cal-cell.selected{background:var(--color-primary,#6366f1);border-color:var(--color-primary,#6366f1);}
@@ -2669,41 +2691,55 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    底栏常态是 overflow-x:clip（R60 用来裁滑动动效的瞬时闪条）→ 不改就永远看不到溢出。
    ⚠️只在 lift 态放开，且必须用简写 `overflow:visible` 覆盖 overflow-x/y 两个长写（长写特异性相同、看声明顺序）。 */
 .bottom-nav.nav-lift{padding:9px 10px;box-shadow:0 -5px 22px rgba(0,0,0,.16);overflow:visible;}
+/* ★R170.5 松手归位时加这个类：让栏的 padding 与泡的弹簧**同时**收回（0.3s 缓出），
+   而不是等 settle 结束再靠移除 nav-lift 突然缩回去 —— 那是用户说的
+   「松手后先回正、再收起、然后导航栏才变正常大小」的生硬感来源。
+   注意 padding 变化会带动 tab.offsetLeft → 归位目标每帧重算（见 _navSettleFrame）。 */
+.bottom-nav.nav-lift-out{padding:6px 8px;}
+/* ★R170.5 浮起胶囊 = 「液态玻璃」（**自绘质感**版）。
+   ★为什么不用 backdrop-filter 做折射：底栏背景是不透明实体色 → 玻璃身后是一片纯色，
+     blur/折射/saturate 会**全部生效但肉眼零效果**（技能 html-liquid-glass-metaball 第一前提）。
+     纯色底上的唯一出路就是「自绘质感」：光在边缘、中心通透、厚度靠多层 inset、形体靠外柔晕。
+   ★★R157 定稿口径：**泡缘一律不描边**（border:none）、泡内零环零暗弧 ——
+     上一版那条 2px 深蓝描边正是"描了个圈"的经典错误，用户一眼就说"太丑了"。
+   ★镜面高光位置由 --pill-hx 驱动（JS 每帧写泡在栏内的相对位置）→ 拖动时表面反光跟着**流动**，
+     这是"液态"感的真正来源（静态皮只能做出"玻璃"，做出"液体"要靠反光流动）。 */
 .nav-pill.lift{
   top:-6px;bottom:-6px;border-radius:26px;
-  /* ★R170.4 浮起态做成"看得见轮廓的实体玻璃片"：用户反馈「太透明，怎么都看不到边框」——
-     常态胶囊的 1px 24% 淡边框在浅色/玻璃底上几乎不可见 → 浮起时加粗到 1.5px 且提到 primary 60%，
-     底色也加深一档（20%/11% → 32%/19%），让它和底栏明确分层。 */
-  /* ⚠️1.5px 会被 Chrome 在 DPR=1 下舍入成 1px（实测 computed 仍是 1px，等于白加）→ 直接用 2px */
-  border-width:2px;
-  border-color:color-mix(in srgb, var(--color-primary,#6366f1) 60%, transparent);
-  background:linear-gradient(180deg,
-    color-mix(in srgb, var(--color-primary,#6366f1) 32%, var(--card-bg)) 0%,
-    color-mix(in srgb, var(--color-primary,#6366f1) 19%, var(--card-bg)) 100%);
+  border:none;
+  background:
+    /* ① 弧顶镜面：位置跟手流动 */
+    radial-gradient(130% 96% at var(--pill-hx,50%) -22%, rgba(255,255,255,.92) 0%, rgba(255,255,255,.26) 40%, transparent 66%),
+    /* ② 皮本身：略深于底栏的玻璃色（中心不许比栏暗，所以混的是 card-bg 而不是深色 tint） */
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--color-primary,#6366f1) 23%, var(--card-bg)) 0%,
+      color-mix(in srgb, var(--color-primary,#6366f1) 12%, var(--card-bg)) 56%,
+      color-mix(in srgb, var(--color-primary,#6366f1) 18%, var(--card-bg)) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.85),
-    inset 0 -1px 0 color-mix(in srgb, var(--color-primary,#6366f1) 20%, transparent),
-    0 12px 26px color-mix(in srgb, var(--color-primary,#6366f1) 34%, transparent),
-    0 3px 8px rgba(0,0,0,.10);
-  transition:transform .16s cubic-bezier(.32,1.1,.4,1), width .16s ease-out,
-    top .13s cubic-bezier(.34,1.3,.5,1), bottom .13s cubic-bezier(.34,1.3,.5,1), box-shadow .13s ease;
+    inset 0 1.5px 0 rgba(255,255,255,.98),          /* 顶缘镜面硬线（最亮最锐的那条） */
+    inset 0 -1.5px 0 rgba(255,255,255,.40),         /* 底缘回光 */
+    inset 0 0 20px -9px rgba(255,255,255,.85),      /* 内部厚度柔光（负 spread 把内边界收干净 → 不形成环） */
+    0 15px 32px -10px color-mix(in srgb, var(--color-primary,#6366f1) 46%, transparent),  /* 外柔晕 = 形体的唯一定义者 */
+    0 4px 12px rgba(0,0,0,.09);
+  /* ★动画放慢：用户"感觉动画太快、死板" → 0.13s 的瞬时感改成 0.2~0.22s 的缓出 */
+  transition:transform .2s cubic-bezier(.22,.61,.36,1), width .2s cubic-bezier(.22,.61,.36,1),
+    top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;
 }
-/* 玻璃主题的常态胶囊 = 白色磨砂 + 白边框（border:1px solid rgba(255,255,255,.55)）；
-   浮起后白边框落在浅色玻璃底栏上完全看不出边界 → 改「主色 55% 混白」描边 + 加一圈白色外环，
-   任何主题下都能一眼看清泡的轮廓。 */
+/* 玻璃主题：常态胶囊是白色磨砂 —— 浮起态沿用同一套玻璃多层背景（自带径向高光 + 颗粒），
+   只把「白描边 + 白外环」换成**顶部亮线 + 内部柔光 + 主色外晕**，与上面的自绘口径一致。 */
 [data-theme="glass"] .nav-pill.lift{
-  border-color:color-mix(in srgb, var(--color-primary,#6366f1) 55%, #fff);
+  border:none;
   box-shadow:
-    inset 0 1px 1px rgba(255,255,255,.95),
-    inset 0 -1px 1px rgba(255,255,255,.50),
-    0 0 0 1px rgba(255,255,255,.60),
-    0 12px 26px rgba(31,38,135,.26),
-    0 0 22px color-mix(in srgb, var(--color-primary) 42%, transparent);
+    inset 0 2px 1px rgba(255,255,255,.98),
+    inset 0 -1.5px 1px rgba(255,255,255,.52),
+    inset 0 0 22px -8px rgba(255,255,255,.55),
+    0 16px 34px -10px color-mix(in srgb, var(--color-primary) 52%, transparent),
+    0 0 26px -4px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
    ★transition 必须在这里补全 padding —— 基础规则的 transition 只列了 opacity/transform，
      直接给 .nav-lift 写 transition 会让「退出浮起」时规则消失、padding 瞬间回弹。 */
-.bottom-nav{touch-action:none;transition:padding .13s cubic-bezier(.34,1.3,.5,1),opacity .25s ease,transform .25s ease;}
+.bottom-nav{touch-action:none;transition:padding .3s cubic-bezier(.22,.61,.36,1),opacity .25s ease,transform .25s ease;}
 /* 桌面端(精确指针 + 支持 hover):为列表项与导航提供鼠标 hover 反馈,移动端不触发 */
 @media (hover:hover) and (pointer:fine){
   .memo-item:hover,
@@ -12543,8 +12579,14 @@ function renderBottomNav(){
    · 长按后浏览器还会补一次 click：用 suppressClick 吃掉，避免连切两次。 */
 var NAV_PILL_EXTRA=20;   /* ★R170.4 浮起泡比常态选中胶囊宽出的像素（原 10 → 20；用户："能否和被选中态的胶囊还宽点"） */
 var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素（用户：微微超过一点点、能看到后面的边框） */
-var NAV_SETTLE_K=0.34, NAV_SETTLE_DAMP=0.68;   /* ★R170.4 松手归位弹簧（果冻回弹本体：K 刚度 / DAMP 阻尼） */
-var NAV_SETTLE_MS=700;                          /* settle 兜底时长：任何情况下都不让泡卡在浮起态 */
+/* ★★R170.5 弹簧调参 —— **DAMP 越小阻尼越大**（这个方向我第一版搞反了，实测轨迹一路振荡：
+   197→157→185→166→179，42 帧都没收敛）。阻尼比近似 ζ = −ln(DAMP) / (2·√K)：
+     · 0.34 / 0.68 → ζ≈0.33（过冲 33%，R170.4 的"Q弹过度"）
+     · 0.18 / 0.90 → ζ≈0.12（过冲 67%，**更弹** ← 改反了）
+     · **0.16 / 0.60 → ζ≈0.64（过冲 ~6%，柔而不塌）** ← 现在这组
+   收敛时长 ≈ 20 帧 ≈ 330ms（用户"太快/死板" → 比原来的 ~180ms 舒缓一档）。 */
+var NAV_SETTLE_K=0.16, NAV_SETTLE_DAMP=0.60;    /* 松手归位弹簧（K 刚度 / DAMP 阻尼） */
+var NAV_SETTLE_MS=1200;                         /* settle 兜底时长 */
 var _navLift={lifting:false,settling:false,idx:-1,startIdx:-1,suppressClick:false,pendingView:null,pendingTop:false};
 var _navSettle={x:0,tx:0,w:0,tw:0,vx:0,vw:0,t0:0};
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
@@ -12610,11 +12652,20 @@ function _navPlacePill(idx,lift){
 var NAV_MORPH_VMAX=1.15;      /* px/ms：达到这个速度即视为"快拖" */
 var NAV_STRETCH=22;           /* 右向快拖时比满宽再多出的宽度（"稍微宽一点的胶囊"）：14 时实测只多 9px，肉眼几乎看不出 → 提到 22 */
 var NAV_SOFT_EXTRA=26;        /* 左向慢拖时 = 圆态宽度 + 这么多（"微微椭圆的圆形"） */
-var NAV_MORPH_K=0.32, NAV_MORPH_DAMP=0.62;   /* 弹簧刚度 / 阻尼：过冲量即"Q 弹"程度 */
+/* ★★R170.5 形态弹簧要的是「响应快但不过冲」→ **高刚度 + 大阻尼**（K 大、DAMP 小）。
+   第一版我调成低刚度(0.18)，结果快拖 70ms 内根本追不到"圆"（实测左快只到 102.5，判据要求 ≤87）。
+   K=0.30 / DAMP=0.45 → ζ≈0.73（过冲 ~6%）：既跟得上手的快慢，又不会"Q弹过度"。 */
+var NAV_MORPH_K=0.30, NAV_MORPH_DAMP=0.45;
 var NAV_MORPH_IDLE=110;       /* ms：最后一次移动过去这么久即判定"手停了" → 形状弹回常态胶囊 */
 var _navMorph={w:0,dvel:0,vel:0,lastX:0,lastT:0,raf:0,center:0};
 function _navMorphReset(){_navMorph.w=0;_navMorph.dvel=0;_navMorph.vel=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
 function _navMorphStop(){if(_navMorph.raf){cancelAnimationFrame(_navMorph.raf);_navMorph.raf=0;}}
+/* 镜面高光位置 = 泡中心在栏内的相对位置（0~100%）→ 拖到哪，反光流到哪。
+   这是"液态"与"静态玻璃"的分界：玻璃靠边缘光，液体靠**反光会动**。 */
+function _navSheen(pill,nr,cx){
+  var rel=(cx-nr.left)/(nr.width||1);
+  pill.style.setProperty('--pill-hx',(Math.max(0,Math.min(1,rel))*100).toFixed(1)+'%');
+}
 function _navMorphFrame(){
   var m=_navMorph;
   if(!_navLift.lifting){m.raf=0;return;}
@@ -12655,9 +12706,10 @@ function _navMorphFrame(){
     pill.style.transition='none';
     pill.style.width=w.toFixed(1)+'px';
     pill.style.transform='translateX('+l.toFixed(1)+'px)';
+    _navSheen(pill,nr,nr.left+l+w/2);                         /* 镜面跟着泡流动 */
     _navLitUpdate(nr.left+l,nr.left+l+w);                     /* ★光照：位置定稿后再按覆盖范围点亮图标 */
   }
-  m.vel*=0.86;                                               /* 惯性衰减（配合上面的 idle 判定，只负责拖动中的余速） */
+  m.vel*=0.72;                                               /* ★R170.5 0.86→0.72：余速更快归零，去掉"惯性滑行"的拖泥感 */
   m.raf=requestAnimationFrame(_navMorphFrame);
 }
 function _navMorphMove(clientX){
@@ -12714,6 +12766,7 @@ function _navTeardown(){
   _navLift.pendingView=null;_navLift.pendingTop=false;
   _navMorphStop();
   var nav=document.getElementById('bottomNav');
+  if(nav)nav.classList.remove('nav-lift-out');
   if(nav)nav.classList.remove('nav-lift');
   var pill=_ensureNavPill();
   if(pill){
@@ -12737,15 +12790,24 @@ function _navBeginSettle(tab){
   var mm=/translateX\(([-\d.]+)px\)/.exec(pill.style.transform||'');
   var pr=pill.getBoundingClientRect();
   _navSettle.x=mm?parseFloat(mm[1]):(pr.left-nav.getBoundingClientRect().left-1);
-  _navSettle.tx=t.offsetLeft-NAV_PILL_EXTRA/2;     /* 目标：以 tab 为中心（浮起态比 tab 宽 NAV_PILL_EXTRA，所以左边缘要左移一半） */
+  /* ★★★R170.5 关键修复：归位目标必须**等于常态胶囊的终态**（左边缘=t.offsetLeft、宽=t.offsetWidth），
+     而不是"浮起态的 +20 宽"。原来目标停在浮起尺寸上，收尾时 positionNavPill 又把它设成常态值
+     → 用户看到的是「先回正 → 再收起 → 栏才变正常大小」三段式。现在归位过程本身就在做"缩回常态"，
+     收尾时终态已经一致 → 零跳变，整个归位是一个连续动作。 */
+  _navSettle.tx=t.offsetLeft;
   _navSettle.w=pr.width;
-  _navSettle.tw=t.offsetWidth+NAV_PILL_EXTRA;
+  _navSettle.tw=t.offsetWidth;
   _navSettle.vx=0;_navSettle.vw=0;_navSettle.t0=Date.now();
   _navLift.settling=true;
+  /* 栏的 padding 与泡的弹簧**同时**收回（0.3s 缓出），而不是等 settle 结束再跳变 */
+  nav.classList.add('nav-lift-out');
   if(!_navMorph.raf)_navMorph.raf=requestAnimationFrame(_navMorphFrame);
 }
 function _navSettleFrame(nav,pill){
-  var s=_navSettle;
+  var s=_navSettle,tabs=_navTabs(),t=(_navLift.idx>=0&&tabs[_navLift.idx])?tabs[_navLift.idx]:null;
+  /* ★每帧重算目标：归位期栏的 padding 正在收回 → tab.offsetLeft 一直在动，目标必须跟着走，
+     否则泡会先冲向"旧布局的位置"、再被 positionNavPill 纠正一次（又是一次跳变）。 */
+  if(t){s.tx=t.offsetLeft;s.tw=t.offsetWidth;}
   s.vx+=(s.tx-s.x)*NAV_SETTLE_K; s.vx*=NAV_SETTLE_DAMP; s.x+=s.vx;
   s.vw+=(s.tw-s.w)*NAV_SETTLE_K; s.vw*=NAV_SETTLE_DAMP; s.w+=s.vw;
   var w=Math.max(28,s.w);
@@ -12753,6 +12815,7 @@ function _navSettleFrame(nav,pill){
   pill.style.transition='none';
   pill.style.width=w.toFixed(1)+'px';
   pill.style.transform='translateX('+s.x.toFixed(1)+'px)';
+  _navSheen(pill,nr,s.x+w/2);                      /* 镜面高光跟着泡流动（液态感） */
   _navLitUpdate(nr.left+1+s.x,nr.left+1+s.x+w);    /* +1 = 底栏的 1px 边框 */
   var done=Math.abs(s.tx-s.x)<0.8&&Math.abs(s.vx)<0.12&&Math.abs(s.tw-s.w)<0.8&&Math.abs(s.vw)<0.12;
   if(done||Date.now()-s.t0>NAV_SETTLE_MS){_navFinishSettle();return true;}
@@ -12764,6 +12827,7 @@ function _navFinishSettle(){
   _navLift.lifting=false;_navLift.settling=false;_navLift.idx=-1;
   _navMorphStop();
   var nav=document.getElementById('bottomNav');
+  if(nav)nav.classList.remove('nav-lift-out');
   if(nav)nav.classList.remove('nav-lift');
   var pill=_ensureNavPill();
   if(pill){
@@ -18641,7 +18705,7 @@ function fitCalGrid(){
      那 89px 会计入文档高度 → 只减底栏高的话整页仍然多出 ~56px 可滚（实测 docH 876 > innerH 820）。
      取两者较大值，底栏换主题变高时也安全。 */
   var bodyPad=parseFloat(getComputedStyle(document.body).paddingBottom)||0;
-  var avail=window.innerHeight-top-headH-panelH-Math.max(bodyPad,navH+30)-8;
+  var avail=window.innerHeight-top-headH-panelH-Math.max(bodyPad,navH+30)-16;
   var cellH=Math.floor((avail-labH-GAP*(rows+1))/rows);
   if(!(cellH>0))cellH=58;
   /* ★还要受**列的可用宽度**约束：只按高度算的话，宽屏下会出现宽 99 × 高 104 的竖矩形格子
@@ -18651,10 +18715,45 @@ function fitCalGrid(){
   var maxCellW=Math.floor((wrapW-GAP*6)/7);
   if(maxCellW>0)cellH=Math.min(cellH,maxCellW);
   cellH=Math.max(30,Math.min(cellH,104));
-  grid.style.setProperty('--dcell',cellH+'px');
-  var maxW=cellH*7+GAP*6;
-  grid.style.maxWidth=maxW+'px';
-  grid.style.marginLeft='auto';grid.style.marginRight='auto';
+  /* ★变量挂在 calendarViewEl 上（不是 grid 上）：两侧的邻月 ghost 不是 grid 的子孙，
+     挂 grid 它们取不到 --dcell / --cal-grid-w → 邻月格子尺寸与当月不一致就对不齐了。 */
+  calendarViewEl.style.setProperty('--dcell',cellH+'px');
+  calendarViewEl.style.setProperty('--cal-grid-w',(cellH*7+GAP*6)+'px');
+  /* ★wrap 高度用**算出来的值**，不要量 grid.offsetHeight ——
+     量出来的是**上一次布局**的高度（DOM 刚重建 / --dcell 刚写，读到的还是旧值），
+     实测出现过 wrap 比内容矮一行（10 月底部被裁）或多一行（11 月整页可滚）。
+     算式与 grid 的实际排布一致：标签行 + rows×格高 + rows×gap。 */
+  var gridH=labH+rows*cellH+rows*GAP;
+  calendarViewEl.style.setProperty('--cal-grid-h',Math.round(gridH)+'px');
+  /* ⚠️这里**不能**用「量 document.scrollHeight 超了就缩」的收敛校正：那会让 cellH 依赖
+     页面上其它元素（6 行月 / 小结面板 / 浮层）→ 同一个月在不同时刻算出不同尺寸，
+     R138「打开年月浮层零布局推挤」的保证会被打破（实测 grid 高 470.6 → 481）。
+     改成把底部留白从 8 提到 16（保守覆盖那几像素），尺寸只由视口决定 → 完全稳定。 */
+}
+/* ★R170.5 邻月预览（简版）：只有日期数字 + 表头，足够让用户"看到下一个月长什么样"，
+   不必渲染农历/摘要（拖动时两侧只露一部分，成本与信息量都不划算）。 */
+function calGhostHtml(y,m,off,rows){
+  var d=new Date(y,m+off,1),yy=d.getFullYear(),mm=d.getMonth();
+  var wdLabels=weekStart==='mon'?['一','二','三','四','五','六','日']:['日','一','二','三','四','五','六'];
+  var firstDay=new Date(yy,mm,1).getDay();
+  var lead=weekStart==='mon'?(firstDay+6)%7:firstDay;
+  var days=new Date(yy,mm+1,0).getDate();
+  var h='<div class="cal-ghost">';
+  for(var w=0;w<7;w++)h+='<div class="cal-day-label">'+wdLabels[w]+'</div>';
+  var blank='<div class="cal-cell other"><span class="d-num"></span><span class="d-sub"></span><span class="d-memos"></span></div>';
+  for(var p=0;p<lead;p++)h+=blank;
+  /* ★ghost 里的格子**一律带 other 类**：① 视觉上本来就是"非当月"的淡化样式；
+     ② 更要紧的是 —— 任何"全文档查 .cal-cell:not(.other)"的代码（烟测断言、点日期的测试）
+     都会误命中 ghost 里的格子，带上 other 就天然排除掉了。 */
+  for(var i=1;i<=days;i++)h+='<div class="cal-cell other"><span class="d-num">'+i+'</span><span class="d-sub"></span><span class="d-memos"></span></div>';
+  var total=lead+days,nd=(7-(total%7))%7;
+  for(var q=1;q<=nd;q++)h+=blank;
+  /* ★★★补齐到与当前月**相同的行数**：否则 6 行的邻月会把 .cal-slide-wrap 撑高一行
+     → 整页又多出一条滚动条（"一屏显示完"当场失效）。 */
+  var filled=lead+days+nd,want=(rows||5)*7;
+  for(var z=filled;z<want;z++)h+=blank;
+  h+='</div>';
+  return h;
 }
 function renderCalendar(dir){
   closeYmPicker(); /* ★R138: 重画会重建浮层 DOM，先把 document 上的关闭监听摘掉，避免残留 */
@@ -18668,6 +18767,13 @@ function renderCalendar(dir){
      → 实测浮层落到距标题按钮 798px 处，还把文档滚动高度撑高 125px。 */
   html+='<div class="cal-head"><button class="cal-nav-btn" id="cal-prev2">‹</button><button class="cal-title-btn" id="cal-title-btn">'+year+'年'+(month+1)+'月 ▾</button><button class="cal-nav-btn" id="cal-next2">›</button>'
     +YMPICKER_HTML+'</div>';
+  /* ★R170.5 三页并排：上/当/下 三个月放进 .cal-slide-inner，拖动时整体平移 → 两侧邻月渐显 */
+  html+='<div class="cal-slide-wrap"><div class="cal-slide-inner" id="calSlideInner">';
+  /* 先算当前月的行数，交给两侧 ghost 补齐高度（三个 page 等高，wrap 才不会被最高的那个撑高） */
+  var _fd0=new Date(year,month,1).getDay();
+  var _lead0=weekStart==='mon'?(_fd0+6)%7:_fd0;
+  var _rows0=Math.ceil((_lead0+new Date(year,month+1,0).getDate())/7);
+  html+=calGhostHtml(year,month,-1,_rows0);
   html+='<div class="cal-month-grid">';
   var wdLabels=weekStart==='mon'?['一','二','三','四','五','六','日']:['日','一','二','三','四','五','六'];
   for(var w=0;w<7;w++)html+='<div class="cal-day-label">'+wdLabels[w]+'</div>';
@@ -18694,7 +18800,9 @@ function renderCalendar(dir){
   var total=lead+daysInMonth;
   var nextDays=(7-(total%7))%7;
   for(var n=1;n<=nextDays;n++)html+='<div class="cal-cell other" data-d="'+(new Date(year,month+1,n)).getTime()+'"><span class="d-num">'+n+'</span><span class="d-sub"></span><span class="d-memos"></span></div>';
-  html+='</div>';
+  html+='</div>';                       /* /cal-month-grid */
+  html+=calGhostHtml(year,month,1,_rows0);  /* 下月预览 */
+  html+='</div></div>';                  /* /cal-slide-inner /cal-slide-wrap */
   /* ★R170.4 这里原本还有一份**重复**的 cal-ym-picker（R138 把浮层挪进 .cal-head 时漏删的旧副本）：
      它以 display:block 留在文档流中，在 grid 下方白占 56px 高度 → 整页凭空多出一条滚动条
      （实测 docH 876 > innerH 820，正是它造成的）。已删除，浮层唯一副本在 .cal-head 内。 */
@@ -18769,13 +18877,17 @@ function syncCalTodayBtn(){
    · ⚠️拖动过之后浏览器还会补发一次 click → 用 _calDragMoved 在格子的 click 里吞掉，
      否则"拖一下换个看月份"会顺带把手指下那个日期的小结也点开。 */
 var _calDragMoved=false;
+/* ★R170.5 日历手势：**三页整体平移**（拖 inner），松手滑到相邻页后再换月。
+   · 拖动时两侧邻月跟着被拉进来 → 用户能看到"要去的那一个月"（原来是当月位移+渐隐，拖出来一片空白）。
+   · 松手达标 → inner 用 transition 滑到相邻页，**滑完才** renderCalendar（新月份成为中间页，位置不变）
+     → 视觉上是一次连续的翻页，而不是"旧月消失、新月从侧面挤进来"。 */
 function bindCalGestures(){
   if(calendarViewEl._calGestured)return;calendarViewEl._calGestured=true;
   var st=null;
-  function gridEl(){return calendarViewEl.querySelector('.cal-month-grid');}
-  function resetGrid(){
-    var g=gridEl();if(!g)return;
-    g.style.transition='';g.style.transform='';g.style.opacity='';
+  function innerEl(){return document.getElementById('calSlideInner');}
+  function resetInner(){
+    var it=innerEl();if(!it)return;
+    it.style.transition='';it.style.transform='';
   }
   calendarViewEl.addEventListener('pointerdown',function(e){
     if(e.button!=null&&e.button!==0)return;
@@ -18787,7 +18899,7 @@ function bindCalGestures(){
     if(!st)return;
     var dx=e.clientX-st.x,dy=e.clientY-st.y;
     if(!st.axis){
-      /* 先判主导轴：横向 → 跟手拖月；竖向 → 沿用 R54 的"滑一下切月" */
+      /* 先判主导轴：横向 → 跟手翻月；竖向 → 沿用 R54 的"滑一下切月" */
       if(Math.abs(dx)>8&&Math.abs(dx)>=Math.abs(dy)){st.axis='x';try{calendarViewEl.setPointerCapture(e.pointerId);}catch(err){}}
       else if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){st.axis='y';}
       else return;
@@ -18795,11 +18907,10 @@ function bindCalGestures(){
     if(st.axis==='x'){
       _calDragMoved=true;
       st.dx=dx;
-      var g=gridEl();if(!g)return;
-      var w=g.getBoundingClientRect().width||1;
-      g.style.transition='none';                                  /* 跟手期不能有过渡，否则滞后于手指 */
-      g.style.transform='translateX('+(dx*0.5).toFixed(1)+'px)';  /* ×0.5 = 带一点阻尼，别整块跟着跑 */
-      g.style.opacity=String(Math.max(.3,1-Math.abs(dx)/w*.8));
+      var it=innerEl();if(!it)return;
+      it.style.transition='none';   /* 跟手期不能有过渡，否则滞后于手指 */
+      /* 基线 -33.3333% 显示中间页；加上 dx*0.5 的阻尼位移 → 左右邻月被拉进视野 */
+      it.style.transform='translate3d(calc(-33.3333% + '+(dx*0.5).toFixed(1)+'px),0,0)';
     }else if(st.axis==='y'){
       if(Math.abs(dy)>46){
         _calDragMoved=true;
@@ -18813,24 +18924,28 @@ function bindCalGestures(){
     if(!st)return;
     var wasX=st.axis==='x',dx=st.dx||0,dur=Math.max(1,Date.now()-st.t0);
     st=null;
-    if(!wasX){resetGrid();return;}
-    var g=gridEl();if(!g)return;
-    var w=g.getBoundingClientRect().width||1;
-    /* 达标 = 拖够距离（**15% 宽** 或 56px）或甩得够快（>0.42px/ms 且已过 28px）。
-       15% 是实测调出来的：原来 22%（900px 视口下约 152px）太远，用户"扫一下"根本切不动；
-       而快速甩动那条通道在真实指针下 dur 会被 CDP/浏览器事件间隔拉长，不能当唯一出路。 */
+    var it=innerEl();
+    if(!wasX||!it){resetInner();return;}
+    var w=(it.getBoundingClientRect().width/3)||1;   /* 单页宽（translate 不影响宽度） */
+    /* 达标 = 拖够距离（15% 页宽 或 56px）或甩得够快 */
     var far=Math.abs(dx)>Math.max(56,w*.15)||(Math.abs(dx)/dur>0.42&&Math.abs(dx)>28);
     if(far){
-      var next=dx<0;   /* 向左拖 = 内容左移 = 看下一个月 */
-      currentCalDate=new Date(currentCalDate.getFullYear(),currentCalDate.getMonth()+(next?1:-1),1);
-      renderCalendar(next?'up':'down');   /* renderCalendar 重建 grid —— 拖动留下的 inline 样式自然消失 */
+      var next=dx<0;   /* 向左拖 = 看下月 */
+      it.style.transition='transform .3s cubic-bezier(.22,.61,.36,1)';
+      it.style.transform='translate3d('+(next?'-66.6666%':'0%')+',0,0)';
+      setTimeout(function(){
+        if(!it.isConnected)return;
+        currentCalDate=new Date(currentCalDate.getFullYear(),currentCalDate.getMonth()+(next?1:-1),1);
+        renderCalendar();          /* 重建 → inner 回到 -33.3333%，而内容已是新月份 → 无跳变 */
+      },310);
     }else{
-      g.style.transition='';   /* 清掉跟手期的 none → 由 CSS 的 .22s 过渡平滑回弹归位 */
-      g.style.transform='';g.style.opacity='';
+      it.style.transition='transform .24s cubic-bezier(.22,.61,.36,1)';
+      it.style.transform='translate3d(-33.3333%,0,0)';
+      setTimeout(function(){if(it.isConnected){it.style.transition='';it.style.transform='';}},280);
     }
   }
   calendarViewEl.addEventListener('pointerup',endDrag);
-  calendarViewEl.addEventListener('pointercancel',function(){st=null;resetGrid();});
+  calendarViewEl.addEventListener('pointercancel',function(){st=null;resetInner();});
   calendarViewEl.addEventListener('wheel',function(e){
     if(!e.target.closest||!e.target.closest('.cal-month-grid'))return;
     var now=Date.now();if(now-(calendarViewEl._wl||0)<350||Math.abs(e.deltaY)<8)return; /* 节流防惯性连翻 */
