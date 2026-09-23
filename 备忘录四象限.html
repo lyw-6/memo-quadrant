@@ -2643,7 +2643,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .nav-tab.active .ni-out,.nav-tab.filling .ni-out{display:none!important;}
 .nav-tab.active .ni-fill,.nav-tab.filling .ni-fill{display:block!important;}
 .nav-tab.filling{color:var(--color-primary,#6366f1);}
-.bottom-nav.nav-lift{padding:11px 10px;box-shadow:0 -6px 26px rgba(0,0,0,.18);}
+.bottom-nav.nav-lift{padding:9px 10px;box-shadow:0 -5px 22px rgba(0,0,0,.16);}
 .nav-pill.lift{
   top:-6px;bottom:-6px;border-radius:26px;
   box-shadow:
@@ -2651,13 +2651,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     inset 0 -1px 0 color-mix(in srgb, var(--color-primary,#6366f1) 14%, transparent),
     0 12px 26px color-mix(in srgb, var(--color-primary,#6366f1) 30%, transparent),
     0 3px 8px rgba(0,0,0,.10);
-  transition:transform .3s cubic-bezier(.32,1.1,.4,1), width .3s cubic-bezier(.32,1.1,.4,1),
-    top .22s cubic-bezier(.34,1.3,.5,1), bottom .22s cubic-bezier(.34,1.3,.5,1), box-shadow .22s ease;
+  transition:transform .16s cubic-bezier(.32,1.1,.4,1), width .16s ease-out,
+    top .13s cubic-bezier(.34,1.3,.5,1), bottom .13s cubic-bezier(.34,1.3,.5,1), box-shadow .13s ease;
 }
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
    ★transition 必须在这里补全 padding —— 基础规则的 transition 只列了 opacity/transform，
      直接给 .nav-lift 写 transition 会让「退出浮起」时规则消失、padding 瞬间回弹。 */
-.bottom-nav{touch-action:none;transition:padding .22s cubic-bezier(.34,1.3,.5,1),opacity .25s ease,transform .25s ease;}
+.bottom-nav{touch-action:none;transition:padding .13s cubic-bezier(.34,1.3,.5,1),opacity .25s ease,transform .25s ease;}
 /* 桌面端(精确指针 + 支持 hover):为列表项与导航提供鼠标 hover 反馈,移动端不触发 */
 @media (hover:hover) and (pointer:fine){
   .memo-item:hover,
@@ -11848,13 +11848,23 @@ var VIEW_META={
    ★填充版不是把 outline 加个 fill（线条类图标会变成一坨黑），而是按"实心主体 + 挖空细节"重绘：
    list 实心文档挖 3 条横线、month 实心日历挖「顶部横带 + 3 条列表线」、calendar 实心日历挖「顶部横带 + 一个圆点」，
    与各自 outline 版的语义（横线 / 圆点）逐一对应，形态也不再像"半空心"或"缩小了一圈"。 */
+/* ★R170.2 填充版重做（第二版）：**几何与镂空版逐一对齐**，只把描边换成实心 —— 上一版是"另画了一套图标"
+   （文档换折角、日历换结构），用户一眼就看出"这不是填充，是换了个图标，差别太大"。
+   现在的对应关系（坐标全部照抄 VIEW_META 那套 outline）：
+     list     rect(5,4,14,16) 填充 + 3 条线槽(y=9/13/17, x=8~16 / 8~13)  ← 与 outline 的 3 条 line 同位
+     quadrant 4×(7×7, rx1) 填充                                     ← 与 outline 的 4 个 rect 同坐标
+     today    圆 r=5 填充（= outline 圆的描边外径）+ 8 条射线保持线形   ← 只"填圆心"
+     month    rect(3,4,18,17,rx2) 填充 + 挂耳 + 2 条线槽(y=9/15)      ← 与 outline 同位
+     calendar rect(4,3,16,18,rx2) 填充 + 挂耳 + 线槽(y=8) + 圆槽(12,15,r4)
+     stats    3 根柱 + 底线全部按 outline 坐标填充
+   线槽/圆槽一律用嵌套子路径 + fill-rule:evenodd 挖空（同向子路径在 evenodd 下照样挖空，不必反向）。 */
 var VIEW_ICON_FILL={
-  list:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M6.6 2A2.6 2.6 0 0 0 4 4.6v14.8A2.6 2.6 0 0 0 6.6 22h10.8a2.6 2.6 0 0 0 2.6-2.6V7.3L14.7 2H6.6Zm2 8.9h7a.9.9 0 1 1 0 1.8h-7a.9.9 0 0 1 0-1.8Zm0 3.6h7a.9.9 0 1 1 0 1.8h-7a.9.9 0 0 1 0-1.8Zm0 3.6h4.4a.9.9 0 1 1 0 1.8H8.6a.9.9 0 0 1 0-1.8Z"/></svg>',
-  quadrant:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7.6" height="7.6" rx="2.2"/><rect x="13.4" y="3" width="7.6" height="7.6" rx="2.2"/><rect x="3" y="13.4" width="7.6" height="7.6" rx="2.2"/><rect x="13.4" y="13.4" width="7.6" height="7.6" rx="2.2"/></svg>',
-  today:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4.7"/><g><rect x="11.15" y="1.4" width="1.7" height="3.3" rx=".85"/><rect x="11.15" y="19.3" width="1.7" height="3.3" rx=".85"/><rect x="1.4" y="11.15" width="3.3" height="1.7" rx=".85"/><rect x="19.3" y="11.15" width="3.3" height="1.7" rx=".85"/><rect x="11.15" y="1.4" width="1.7" height="3.3" rx=".85" transform="rotate(45 12 12)"/><rect x="11.15" y="19.3" width="1.7" height="3.3" rx=".85" transform="rotate(45 12 12)"/><rect x="1.4" y="11.15" width="3.3" height="1.7" rx=".85" transform="rotate(45 12 12)"/><rect x="19.3" y="11.15" width="3.3" height="1.7" rx=".85" transform="rotate(45 12 12)"/></g></svg>',
-  month:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M7.5 2a1 1 0 0 1 1 1v1h7V3a1 1 0 1 1 2 0v1.1h.5A2.5 2.5 0 0 1 20.5 6.6V9h-17V6.6A2.5 2.5 0 0 1 6 4.1h.5V3a1 1 0 0 1 1-1Zm-2 9h17v8.4A2.5 2.5 0 0 1 20 21.9H6.5A2.5 2.5 0 0 1 4 19.4V11h1.5Z"/></svg>',
-  calendar:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M7.5 2a1 1 0 0 1 1 1v1h7V3a1 1 0 1 1 2 0v1.1h.5A2.5 2.5 0 0 1 20.5 6.6v12.4A2.5 2.5 0 0 1 18 21.5H6A2.5 2.5 0 0 1 3.5 19V6.6A2.5 2.5 0 0 1 6 4.1h.5V3a1 1 0 0 1 1-1Zm-1.6 4.4v2.3h12.2V6.4H5.9ZM12 18.9a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/></svg>',
-  stats:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="19" width="18" height="2" rx="1"/><rect x="5.6" y="10.5" width="3.4" height="9.5" rx="1.2"/><rect x="10.3" y="5" width="3.4" height="15" rx="1.2"/><rect x="15" y="13.5" width="3.4" height="6.5" rx="1.2"/></svg>'
+  list:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M5 4h14v16H5V4Zm3 4.1h8a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8Zm0 4h8a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8Zm0 4h5a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8Z"/></svg>',
+  quadrant:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  today:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5" stroke="none"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.8" y2="4.2"/></svg>',
+  month:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><rect x="7" y="2" width="2" height="4" rx="1"/><rect x="15" y="2" width="2" height="4" rx="1"/><path d="M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm-1 4.1v1.8h16V8.1H4Zm0 6v1.8h16v-1.8H4Z"/></svg>',
+  calendar:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><rect x="8" y="1" width="2" height="4" rx="1"/><rect x="14" y="1" width="2" height="4" rx="1"/><path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm-1 4.1v1.8h14V7.1H5ZM12 19a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>',
+  stats:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="19" width="16" height="2" rx="1"/><rect x="6" y="11" width="3" height="9" rx=".8"/><rect x="11" y="6" width="3" height="14" rx=".8"/><rect x="16" y="14" width="3" height="6" rx=".8"/></svg>'
 };
 
 // ===== 状态 =====
@@ -12485,7 +12495,7 @@ function renderBottomNav(){
    · 与 positionNavPill 的关系：lift 期间胶囊由本模块接管，positionNavPill 必须让位（见其首行守卫），
      否则 ResizeObserver / resize / render 里的任何一次重排都会把浮起态覆盖回常态位置。
    · 长按后浏览器还会补一次 click：用 suppressClick 吃掉，避免连切两次。 */
-var NAV_LIFT_MS=350, NAV_LIFT_SLOP=8;
+var NAV_LIFT_MS=220, NAV_LIFT_SLOP=8;   /* ★R170.2 350→220：用户反馈「长按有延迟，希望瞬间浮起」 */
 var _navLift={armed:false,lifting:false,timer:0,sx:0,sy:0,idx:-1,moved:false,suppressClick:false};
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
 function _navIndexAt(x){
@@ -12524,22 +12534,46 @@ function _navPlacePill(idx,lift){
     pill.style.transform='translateX('+l+'px)';
   }
 }
-/* ★R170.1 拖动跟手：胶囊连续跟随手指（带左右边界钳制），不再是"离散吸附到最近 tab 直接跳过去"
-   —— 用户反馈「泡在图标之间没有过渡」，正是离散吸附造成的：从第 1 格移到第 3 格中间那一格完全没经过。
-   跟手期 transition:none（瞬时跟随，否则会滞后于手指）；松手时清掉 inline transition，
-   由 CSS 的 .42s 过渡把它从当前位置平滑送回目标 tab。 */
-function _navLiftPillTo(clientX){
-  var nav=document.getElementById('bottomNav'),pill=_ensureNavPill();
-  var tabs=_navTabs();
-  if(!nav||!tabs.length)return;
-  var nr=nav.getBoundingClientRect();
-  var last=tabs[tabs.length-1];
-  var w=(tabs[_navLift.idx]?tabs[_navLift.idx].offsetWidth:tabs[0].offsetWidth)+10;
-  var minL=tabs[0].offsetLeft-5, maxL=last.offsetLeft+last.offsetWidth-w+5;
-  var l=Math.max(minL,Math.min(maxL,clientX-nr.left-w/2));
-  pill.style.transition='none';
-  pill.style.width=w+'px';
-  pill.style.transform='translateX('+l+'px)';
+/* ★R170.2 速度变形（快 = 圆，慢 = 胶囊/椭圆）+ 惯性：
+   · 拖动时算**瞬时速度**（px/ms），平滑成 vel（0.5/0.5 混合保留一点"追不上手"的惯性感）；
+   · 速度归一化后驱动形状：cur=0 → 宽 = tab 宽 + 10（椭圆胶囊）；cur=1 → 宽 ≈ 胶囊**高度**（正方形 + 大圆角＝圆）；
+   · cur 每帧向目标插值 0.22 —— 这就是「快慢之间要有过渡动画」：不会在快慢切换瞬间突跳；
+   · vel 每帧衰减 0.86 —— 手指停下后速度自然回落，形状带着惯性回到椭圆；
+   · 位置始终跟手（按**中心**对齐手指，宽变时左右对称收缩，不会单边抽动）。
+   用 rAF 循环而不是每次 pointermove 直接写样式：频繁事件下需要"帧率一致"的插值才顺滑。 */
+var NAV_MORPH_VMAX=1.15;  /* px/ms：达到这个速度时完全变圆（1.6 偏钝，快速甩动要等十几帧才圆 → 调到 1.15 更跟手） */
+var _navMorph={cur:0,vel:0,lastX:0,lastT:0,raf:0,center:0};
+function _navMorphReset(){_navMorph.cur=0;_navMorph.vel=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
+function _navMorphStop(){if(_navMorph.raf){cancelAnimationFrame(_navMorph.raf);_navMorph.raf=0;}}
+function _navMorphFrame(){
+  var m=_navMorph;
+  if(!_navLift.lifting){m.raf=0;return;}
+  var tgt=Math.max(0,Math.min(1,Math.abs(m.vel)/NAV_MORPH_VMAX));
+  m.cur+=(tgt-m.cur)*0.3;       /* 形状过渡（快慢切换的动画本体；0.22 偏慢，快甩时不够圆） */
+  m.vel*=0.86;                  /* 惯性衰减 */
+  var nav=document.getElementById('bottomNav'),pill=_ensureNavPill(),tabs=_navTabs();
+  if(nav&&pill&&tabs.length){
+    var h=pill.getBoundingClientRect().height||60;   /* 圆态：宽 = 高 */
+    var wEll=(tabs[_navLift.idx]?tabs[_navLift.idx].offsetWidth:tabs[0].offsetWidth)+10;
+    if(h>wEll)h=wEll;
+    var w=wEll-(wEll-h)*m.cur;
+    var nr=nav.getBoundingClientRect(),last=tabs[tabs.length-1];
+    var minL=tabs[0].offsetLeft-5, maxL=last.offsetLeft+last.offsetWidth-w+5;
+    var l=Math.max(minL,Math.min(maxL,m.center-nr.left-w/2));
+    pill.style.transition='none';
+    pill.style.width=w.toFixed(1)+'px';
+    pill.style.transform='translateX('+l.toFixed(1)+'px)';
+  }
+  m.raf=requestAnimationFrame(_navMorphFrame);
+}
+function _navMorphMove(clientX){
+  var m=_navMorph,now=(window.performance&&performance.now)?performance.now():Date.now();
+  if(m.lastT){
+    var dt=now-m.lastT;
+    if(dt>0){var v=(clientX-m.lastX)/dt;m.vel=m.vel*0.5+v*0.5;}
+  }
+  m.lastX=clientX;m.lastT=now;m.center=clientX;
+  if(!m.raf)m.raf=requestAnimationFrame(_navMorphFrame);
 }
 function _navEnterLift(startIdx){
   if(_navLift.lifting)return;
@@ -12549,6 +12583,7 @@ function _navEnterLift(startIdx){
   _navLift.lifting=true;
   _navLift.suppressClick=true;
   _navLift.moved=false;   /* 每次进浮起都重置：区分"提起就松手"与"拖动后松手" */
+  _navMorphReset();
   /* ★长按哪个 tab，泡就从哪个 tab 浮起（不是从当前激活的那个）——
      startIdx 由 pointerdown 命中决定；没命中任何 tab 时兜底为当前视图。 */
   _navLift.idx=(typeof startIdx==='number'&&startIdx>=0)?startIdx:_navCurrentIndex();
@@ -12562,6 +12597,7 @@ function _navExitLift(){
   if(!_navLift.lifting)return;
   _navLift.lifting=false;
   _navLift.idx=-1;
+  _navMorphStop();            /* ★停掉速度变形循环，形状随 CSS 过渡回到椭圆 */
   var nav=document.getElementById('bottomNav');
   if(nav)nav.classList.remove('nav-lift');
   var pill=_ensureNavPill();
@@ -12600,7 +12636,7 @@ function bindNavLift(){
     var i=_navIndexAt(e.clientX);
     if(i>=0&&i!==_navLift.idx){_navLift.idx=i;_navHighlight(i);}
     _navLift.moved=true;          /* ★只有真的拖动过，松手才切视图（长按不动松手 = 不切） */
-    _navLiftPillTo(e.clientX);   /* ★跟手：泡连续跟着手指走（高亮仍是离散吸附） */
+    _navMorphMove(e.clientX);    /* ★跟手 + 速度变形（快圆慢椭圆，带惯性衰减） */
   });
   function up(){
     clearTimeout(_navLift.timer);_navLift.armed=false;
