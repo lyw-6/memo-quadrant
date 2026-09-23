@@ -2805,7 +2805,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
    ★transition 必须在这里补全 padding —— 基础规则的 transition 只列了 opacity/transform，
      直接给 .nav-lift 写 transition 会让「退出浮起」时规则消失、padding 瞬间回弹。 */
-.bottom-nav{touch-action:none;transition:padding .3s cubic-bezier(.22,.61,.36,1),opacity .25s ease,transform .25s ease;}
+.bottom-nav{touch-action:none;transition:padding .2s cubic-bezier(.22,.61,.36,1),opacity .25s ease,transform .25s ease;}
 /* 桌面端(精确指针 + 支持 hover):为列表项与导航提供鼠标 hover 反馈,移动端不触发 */
 @media (hover:hover) and (pointer:fine){
   .memo-item:hover,
@@ -12001,7 +12001,12 @@ var VIEW_META={
    与 VIEW_META 平行存放而不是塞进 VIEW_META —— 那个块每行都很长，改它容易伤到既有图标。
    ★填充版不是把 outline 加个 fill（线条类图标会变成一坨黑），而是按"实心主体 + 挖空细节"重绘：
    list 实心文档挖 3 条横线、month 实心日历挖「顶部横带 + 3 条列表线」、calendar 实心日历挖「顶部横带 + 一个圆点」，
-   与各自 outline 版的语义（横线 / 圆点）逐一对应，形态也不再像"半空心"或"缩小了一圈"。 */
+   与各自 outline 版的语义（横线 / 圆点）逐一对应，形态也不再像"半空心"或"缩小了一圈"。
+   ★★R174② 外沿对齐（用户："光改未选中态，选中态图标你不一起改"）：outline 版是**描边**，
+     描边会向路径两侧各外扩 1px；若填充版照抄路径坐标，它的外沿就比 outline **小一圈**
+     （2x 实测墨迹：month 填充只有镂空的 92%、calendar 94%）。所以填充版的外框/挂耳要**各向外扩 1**
+     （month x3..21,y4..21 → x2..22,y3..22；calendar x4..20,y3..21 → x3..21,y2..22），
+     内部挖空的线槽/圆槽位置不动。★今天/四象限/备忘录实测已是 98~100%，未动。 */
 /* ★R170.2 填充版重做（第二版）：**几何与镂空版逐一对齐**，只把描边换成实心 —— 上一版是"另画了一套图标"
    （文档换折角、日历换结构），用户一眼就看出"这不是填充，是换了个图标，差别太大"。
    现在的对应关系（坐标全部照抄 VIEW_META 那套 outline）：
@@ -12016,8 +12021,8 @@ var VIEW_ICON_FILL={
   list:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M5 4h14v16H5V4Zm3 4.1h8a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8Zm0 4h8a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8Zm0 4h5a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8Z"/></svg>',
   quadrant:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
   today:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5" stroke="none"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.8" y2="4.2"/></svg>',
-  month:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><rect x="7" y="2" width="2" height="4" rx="1"/><rect x="15" y="2" width="2" height="4" rx="1"/><path d="M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm-1 4.1v1.8h16V8.1H4Zm0 6v1.8h16v-1.8H4Z"/></svg>',
-  calendar:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><rect x="8" y="1" width="2" height="4" rx="1"/><rect x="14" y="1" width="2" height="4" rx="1"/><path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm-1 4.1v1.8h14V7.1H5ZM12 19a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>',
+  month:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><rect x="7" y="1" width="2" height="6" rx="1"/><rect x="15" y="1" width="2" height="6" rx="1"/><path d="M4 3h16a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 5.1v1.8h16V8.1H4Zm0 6v1.8h16v-1.8H4Z"/></svg>',
+  calendar:'<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><rect x="8" y="0" width="2" height="6" rx="1"/><rect x="14" y="0" width="2" height="6" rx="1"/><path d="M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm0 5.1v1.8h14V7.1H5ZM12 19a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>',
   stats:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="19" width="16" height="2" rx="1"/><rect x="6" y="11" width="3" height="9" rx=".8"/><rect x="11" y="6" width="3" height="14" rx=".8"/><rect x="16" y="14" width="3" height="6" rx=".8"/></svg>'
 };
 
@@ -12658,8 +12663,16 @@ var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素
      · 0.34 / 0.68 → ζ≈0.33（过冲 33%，R170.4 的"Q弹过度"）
      · 0.18 / 0.90 → ζ≈0.12（过冲 67%，**更弹** ← 改反了）
      · **0.16 / 0.60 → ζ≈0.64（过冲 ~6%，柔而不塌）** ← 现在这组
-   收敛时长 ≈ 20 帧 ≈ 330ms（用户"太快/死板" → 比原来的 ~180ms 舒缓一档）。 */
-var NAV_SETTLE_K=0.16, NAV_SETTLE_DAMP=0.60;    /* 松手归位弹簧（K 刚度 / DAMP 阻尼） */
+   收敛时长 ≈ 20 帧 ≈ 330ms（用户"太快/死板" → 比原来的 ~180ms 舒缓一档）。
+   ★★R174① 松手归位**整体加快**，且位置 / 宽度**分两条参数** —— 用户："松手时收的太慢，
+     很生硬的『泡先对正、然后才收小、同时导航栏收小』"。旧观感的成因：位置与宽度共用一组参数，
+     而宽度的差值只有 ~20px、位置要走完剩余距离，人眼会把"位置先停住"读成一段、
+     "宽度还在慢慢收"读成第二段（= 三段式的翻版）。现在：
+       · 位置 0.16/0.60（ζ≈0.64，~330ms）→ **0.28/0.52（ζ≈0.62，~250ms）**
+       · 宽度单开一组、更硬更快：**0.34/0.50（ζ≈0.59，~170ms）** → 收小与对正**同时开始、更早收完**
+     · 栏的 padding 收回同步改 0.3s → 0.2s（见 .bottom-nav 基础规则），让"泡收小"与"栏收小"同时结束。 */
+var NAV_SETTLE_K=0.28, NAV_SETTLE_DAMP=0.52;    /* 松手归位·位置弹簧 */
+var NAV_SETTLE_WK=0.34, NAV_SETTLE_WDAMP=0.50;  /* ★R174① 松手归位·宽度弹簧（比位置更快） */
 var NAV_SETTLE_MS=1200;                         /* settle 兜底时长 */
 /* ★R172① 入场滑行时长（ms）：这段由 CSS 过渡驱动，帧循环超时后交回跟手。
    取 260ms = 与过渡曲线同长；再长会让"点一下就切"显得拖沓。 */
@@ -12763,8 +12776,12 @@ var NAV_STRETCH=22;           /* 右向快拖时比满宽再多出的宽度（"�
 var NAV_SOFT_EXTRA=26;        /* 左向慢拖时 = 圆态宽度 + 这么多（"微微椭圆的圆形"） */
 /* ★★R170.5 形态弹簧要的是「响应快但不过冲」→ **高刚度 + 大阻尼**（K 大、DAMP 小）。
    第一版我调成低刚度(0.18)，结果快拖 70ms 内根本追不到"圆"（实测左快只到 102.5，判据要求 ≤87）。
-   K=0.30 / DAMP=0.45 → ζ≈0.73（过冲 ~6%）：既跟得上手的快慢，又不会"Q弹过度"。 */
-var NAV_MORPH_K=0.30, NAV_MORPH_DAMP=0.45;
+   K=0.30 / DAMP=0.45 → ζ≈0.73（过冲 ~6%）：既跟得上手的快慢，又不会"Q弹过度"。
+   ★★R174③ 用户新口径："速度变化改宽度**太生硬**，没有惯性慢慢收小/扩展的感觉，就是很生硬的变宽变宽"。
+   → ζ 0.73 的"干脆跟随"正是"生硬"的来源。改为**低刚度 + 小阻尼**（更软、允许过冲 = 惯性感）：
+     K=0.20 / DAMP=0.72 → ζ≈0.37（过冲 ~28%）：形状变化有"甩过头再荡回来"的惯性，
+     手停下后的回弹也从"立刻到位"变成"慢慢收"。★仍保留 NAV_MORPH_IDLE 的时间判定（>110ms 才算停）。 */
+var NAV_MORPH_K=0.20, NAV_MORPH_DAMP=0.72;
 var NAV_MORPH_IDLE=110;       /* ms：最后一次移动过去这么久即判定"手停了" → 形状弹回常态胶囊 */
 var _navMorph={w:0,dvel:0,vel:0,lastX:0,lastT:0,raf:0,center:0};
 function _navMorphReset(){_navMorph.w=0;_navMorph.dvel=0;_navMorph.vel=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
@@ -12942,7 +12959,8 @@ function _navBeginSettle(tab){
   _navSettle.tw=t.offsetWidth;
   _navSettle.vx=0;_navSettle.vw=0;_navSettle.t0=Date.now();
   _navLift.settling=true;
-  /* 栏的 padding 与泡的弹簧**同时**收回（0.3s 缓出），而不是等 settle 结束再跳变 */
+  /* 栏的 padding 与泡的弹簧**同时**收回（★R174① 0.3s → 0.2s，与加快后的宽度弹簧同步收完），
+     而不是等 settle 结束再跳变 */
   nav.classList.add('nav-lift-out');
   if(!_navMorph.raf)_navMorph.raf=requestAnimationFrame(_navMorphFrame);
 }
@@ -12951,8 +12969,10 @@ function _navSettleFrame(nav,pill){
   /* ★每帧重算目标：归位期栏的 padding 正在收回 → tab.offsetLeft 一直在动，目标必须跟着走，
      否则泡会先冲向"旧布局的位置"、再被 positionNavPill 纠正一次（又是一次跳变）。 */
   if(t){s.tx=t.offsetLeft;s.tw=t.offsetWidth;}
+  /* ★R174① 位置与宽度各走一组参数：宽度更硬更快（NAV_SETTLE_WK/WDAMP）→ 收小与对正**同时开始、
+     更早收完**，不再是"先对正、后收小"的两段生硬观感。 */
   s.vx+=(s.tx-s.x)*NAV_SETTLE_K; s.vx*=NAV_SETTLE_DAMP; s.x+=s.vx;
-  s.vw+=(s.tw-s.w)*NAV_SETTLE_K; s.vw*=NAV_SETTLE_DAMP; s.w+=s.vw;
+  s.vw+=(s.tw-s.w)*NAV_SETTLE_WK; s.vw*=NAV_SETTLE_WDAMP; s.w+=s.vw;
   var w=Math.max(28,s.w);
   var nr=nav.getBoundingClientRect();
   pill.style.transition='none';
