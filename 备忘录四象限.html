@@ -2354,13 +2354,24 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .calendar-view{padding:4px 0;}
 .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;position:relative;}
 .cal-head-title{font-size:15px;font-weight:600;color:var(--text);}
-.cal-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;touch-action:none;} /* ★R54:touch-action:none 让竖滑归月份切换,不触发页面滚动 */
+.cal-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;touch-action:none; /* ★R54:touch-action:none 让滑动手势归月份切换,不触发页面滚动 */
+  /* ★R170.4 跟手拖动期由 JS 写 transform（inline 会带 transition:none 覆盖这里），
+     松手未达标时 JS 清掉 inline → 由这条过渡平滑回弹。 */
+  transition:transform .22s cubic-bezier(.22,.61,.36,1),opacity .22s ease;
+  /* ★R170.4 必须禁选字：格子里是文字（日期/农历/标题），按住拖动会被浏览器判定成"选择文本"，
+     随即派发 **pointercancel** 把手势打断 —— 实测表现为"拖动完全无跟手，但松手后月份又莫名变了一个"
+     （因为 cancel 清掉了手势状态，而某条残留路径仍执行了切换）。底栏的长按手势早就加了这条，同理。 */
+  -webkit-user-select:none;user-select:none;}
 /* ★R54: 上下滑切月滑动动画——上滑=下个月(内容从下方滑入),下滑=上个月(从上方滑入),fade+位移不抖动 */
-@keyframes calSlideNext{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-@keyframes calSlidePrev{from{opacity:0;transform:translateY(-16px);}to{opacity:1;transform:translateY(0);}}
-.cal-month-grid.cal-anim-next{animation:calSlideNext .2s ease-out;}
-.cal-month-grid.cal-anim-prev{animation:calSlidePrev .2s ease-out;}
-.cal-cell{aspect-ratio:1/1;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;padding:2px;overflow:hidden;}
+/* ★R170.4 切月过渡：原来是竖向 16px + 0.2s（几乎看不出，用户："不要这么生硬的切换"）
+   → 改成**横向整屏滑入**（新月份从拖动来的方向推进来）+ 0.26s 缓出。
+   方向约定：看下月 = 内容向左走 = 新月从右侧滑入（cal-anim-next）；看上月反之。 */
+@keyframes calSlideNext{from{opacity:.25;transform:translateX(24%);}to{opacity:1;transform:translateX(0);}}
+@keyframes calSlidePrev{from{opacity:.25;transform:translateX(-24%);}to{opacity:1;transform:translateX(0);}}
+.cal-month-grid.cal-anim-next{animation:calSlideNext .26s cubic-bezier(.22,.61,.36,1);}
+.cal-month-grid.cal-anim-prev{animation:calSlidePrev .26s cubic-bezier(.22,.61,.36,1);}
+.cal-cell{aspect-ratio:1/1;height:var(--dcell,auto); /* ★R170.4 fitCalGrid 按视口算出每格高度写进 --dcell，让整月**一屏显示完**（用户：不要滚动条）；未设变量时回落到正方形 */
+  background:var(--card-bg);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;padding:2px;overflow:hidden;}
 .cal-cell:hover{border-color:var(--text-tertiary);}
 .cal-cell.other{opacity:.35;cursor:default;}
 .cal-cell.today{border-color:#3b82f6;color:#3b82f6;}
@@ -2392,12 +2403,14 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .stat-bar > i{display:block;height:100%;background:var(--color-primary,#6366f1);border-radius:4px;}
 /* 当天明细弹窗 */
 .cal-day-panel{margin-top:10px;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;box-shadow:var(--shadow);}
+/* ★R170.4 小结面板里的当天列表限高 + 内部滚动：否则某天备忘一多，面板顶出视口 → 整页又出现滚动条
+   （而 fitCalGrid 是按视口反算格子高度的，"一页显示完"会被面板破坏）。 */
 .cal-day-panel[hidden]{display:none;}
 .cdp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
 .cdp-title{font-weight:600;font-size:14px;}
 .cdp-close{border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;font-size:16px;line-height:1;width:26px;height:26px;border-radius:6px;}
 .cdp-close:hover{background:var(--hover-bg);color:var(--text);}
-.cdp-list{display:flex;flex-direction:column;gap:4px;max-height:42vh;overflow-y:auto;}
+.cdp-list{display:flex;flex-direction:column;gap:4px;max-height:22vh;overflow-y:auto; /* ★R170.4 42vh→22vh：小结面板太高会把日历顶出视口（"一页显示完"靠 fitCalGrid 反算格子高度，面板一高就白算）→ 限高 + 面板内部自己滚 */}
 .cdp-summary{margin-top:8px;}
 .cdp-actions{margin-top:8px;display:flex;gap:8px;}
 .day-detail-box{background:var(--card-bg);border-radius:16px;padding:16px;width:100%;max-width:360px;box-shadow:0 20px 50px rgba(0,0,0,.2);border:1px solid var(--border);max-height:80vh;display:flex;flex-direction:column;}
@@ -2431,7 +2444,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 /* ★R137 踩坑：只有 aspect-ratio + max-height 时，高度被 clamp 后宽高比会**反过来推导宽度**
    （实测格子变成 80×80 而不是 99.4×80，列内右侧留缝）→ 必须显式 width:100% 钉死宽度，
    让 aspect-ratio 只负责"由宽度推高度"、再由 max-height 压低。 */
-.cal-cell{max-height:80px;width:100%;}
+.cal-cell{max-height:var(--dcell,80px);width:100%;}
 /* ★R138 浮层化：原实现把面板写在文档流里、位置在 .cal-month-grid(整月网格)之后 →
    点标题后面板出现在整月日历下方约 500px 处，还把下面内容一起下推，触发点与结果点相隔一整个月历。
    改为锚定在标题按钮正下方的绝对定位浮层：不推挤布局、位置与触发点一致（与项目其它下拉同手感）。
@@ -2658,13 +2671,34 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .bottom-nav.nav-lift{padding:9px 10px;box-shadow:0 -5px 22px rgba(0,0,0,.16);overflow:visible;}
 .nav-pill.lift{
   top:-6px;bottom:-6px;border-radius:26px;
+  /* ★R170.4 浮起态做成"看得见轮廓的实体玻璃片"：用户反馈「太透明，怎么都看不到边框」——
+     常态胶囊的 1px 24% 淡边框在浅色/玻璃底上几乎不可见 → 浮起时加粗到 1.5px 且提到 primary 60%，
+     底色也加深一档（20%/11% → 32%/19%），让它和底栏明确分层。 */
+  /* ⚠️1.5px 会被 Chrome 在 DPR=1 下舍入成 1px（实测 computed 仍是 1px，等于白加）→ 直接用 2px */
+  border-width:2px;
+  border-color:color-mix(in srgb, var(--color-primary,#6366f1) 60%, transparent);
+  background:linear-gradient(180deg,
+    color-mix(in srgb, var(--color-primary,#6366f1) 32%, var(--card-bg)) 0%,
+    color-mix(in srgb, var(--color-primary,#6366f1) 19%, var(--card-bg)) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.75),
-    inset 0 -1px 0 color-mix(in srgb, var(--color-primary,#6366f1) 14%, transparent),
-    0 12px 26px color-mix(in srgb, var(--color-primary,#6366f1) 30%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.85),
+    inset 0 -1px 0 color-mix(in srgb, var(--color-primary,#6366f1) 20%, transparent),
+    0 12px 26px color-mix(in srgb, var(--color-primary,#6366f1) 34%, transparent),
     0 3px 8px rgba(0,0,0,.10);
   transition:transform .16s cubic-bezier(.32,1.1,.4,1), width .16s ease-out,
     top .13s cubic-bezier(.34,1.3,.5,1), bottom .13s cubic-bezier(.34,1.3,.5,1), box-shadow .13s ease;
+}
+/* 玻璃主题的常态胶囊 = 白色磨砂 + 白边框（border:1px solid rgba(255,255,255,.55)）；
+   浮起后白边框落在浅色玻璃底栏上完全看不出边界 → 改「主色 55% 混白」描边 + 加一圈白色外环，
+   任何主题下都能一眼看清泡的轮廓。 */
+[data-theme="glass"] .nav-pill.lift{
+  border-color:color-mix(in srgb, var(--color-primary,#6366f1) 55%, #fff);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.95),
+    inset 0 -1px 1px rgba(255,255,255,.50),
+    0 0 0 1px rgba(255,255,255,.60),
+    0 12px 26px rgba(31,38,135,.26),
+    0 0 22px color-mix(in srgb, var(--color-primary) 42%, transparent);
 }
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
    ★transition 必须在这里补全 padding —— 基础规则的 transition 只列了 opacity/transform，
@@ -12486,7 +12520,7 @@ function renderBottomNav(){
   var tabs=nav.querySelectorAll('.nav-tab');
   for(var t=0;t<tabs.length;t++){(function(tab){tab.addEventListener('click',function(e){
     /* ★R170 长按浮起后松手会紧跟一次 click：那次切换已由 pointerup 里的 setView 完成，
-       这里必须吃掉，否则会连切两次（且第二次用的是旧 target）。标记由 _navExitLift 在 setTimeout(0) 清。 */
+       这里必须吃掉，否则会连切两次（且第二次用的是旧 target）。标记由 _navFinishSettle/_navTeardown 在 setTimeout(0) 清。 */
     if(_navLift.suppressClick){e.preventDefault();e.stopPropagation();return;}
     var _v=tab.getAttribute('data-view');
     // 点击「当前激活」的视图图标 → 平滑回到顶部(微信/微博式交互,替代原右下回到顶部按钮)
@@ -12507,9 +12541,12 @@ function renderBottomNav(){
    · 与 positionNavPill 的关系：lift 期间胶囊由本模块接管，positionNavPill 必须让位（见其首行守卫），
      否则 ResizeObserver / resize / render 里的任何一次重排都会把浮起态覆盖回常态位置。
    · 长按后浏览器还会补一次 click：用 suppressClick 吃掉，避免连切两次。 */
-var NAV_LIFT_MS=150, NAV_LIFT_SLOP=8;   /* ★R170.3 220→150：用户再次反馈「长按浮起还是不跟手，能否再快一点」 */
-var NAV_OVER=13;                        /* ★R170.3 泡允许超出底栏左右边缘的像素（用户：微微超过一点点、能看到后面的边框） */
-var _navLift={armed:false,lifting:false,timer:0,sx:0,sy:0,idx:-1,suppressClick:false};
+var NAV_PILL_EXTRA=20;   /* ★R170.4 浮起泡比常态选中胶囊宽出的像素（原 10 → 20；用户："能否和被选中态的胶囊还宽点"） */
+var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素（用户：微微超过一点点、能看到后面的边框） */
+var NAV_SETTLE_K=0.34, NAV_SETTLE_DAMP=0.68;   /* ★R170.4 松手归位弹簧（果冻回弹本体：K 刚度 / DAMP 阻尼） */
+var NAV_SETTLE_MS=700;                          /* settle 兜底时长：任何情况下都不让泡卡在浮起态 */
+var _navLift={lifting:false,settling:false,idx:-1,startIdx:-1,suppressClick:false,pendingView:null,pendingTop:false};
+var _navSettle={x:0,tx:0,w:0,tw:0,vx:0,vw:0,t0:0};
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
 function _navIndexAt(x){
   var tabs=_navTabs(),best=-1,bestD=Infinity;
@@ -12554,8 +12591,8 @@ function _navPlacePill(idx,lift){
     /* 浮起：宽 +10px（左右各外溢 5px）；高度由 CSS 的 .nav-pill.lift 上下外扩负责。
        ★不再叠 translateY —— 那会让「上边超出栏外的部分」比下边多（用户实测上 7px / 下 2.9px 不对称），
        浮起感改由阴影 + 高光 + 整体变大承担。 */
-    pill.style.width=(w+10)+'px';
-    pill.style.transform='translateX('+(l-5)+'px)';
+    pill.style.width=(w+NAV_PILL_EXTRA)+'px';
+    pill.style.transform='translateX('+(l-NAV_PILL_EXTRA/2)+'px)';
   }else{
     pill.style.width=w+'px';
     pill.style.transform='translateX('+l+'px)';
@@ -12588,8 +12625,14 @@ function _navMorphFrame(){
   if(m.lastT&&now-m.lastT>NAV_MORPH_IDLE){m.vel=0;m.lastT=now;}
   var nav=document.getElementById('bottomNav'),pill=_ensureNavPill(),tabs=_navTabs();
   if(nav&&pill&&tabs.length){
+    /* ★R170.4 松手后的「果冻归位」阶段：位置与宽度各自跑弹簧（会过冲回弹），动画收尾时才撤浮起态 */
+    if(_navLift.settling){
+      if(_navSettleFrame(nav,pill))return;        /* 已收尾：不再续帧 */
+      m.raf=requestAnimationFrame(_navMorphFrame);
+      return;
+    }
     var h=pill.getBoundingClientRect().height||60;   /* 圆态：宽 = 高（CSS 的 26px 圆角把方形拉成圆） */
-    var wBase=Math.max((tabs[_navLift.idx]?tabs[_navLift.idx].offsetWidth:tabs[0].offsetWidth)+10,h+10);
+    var wBase=Math.max((tabs[_navLift.idx]?tabs[_navLift.idx].offsetWidth:tabs[0].offsetWidth)+NAV_PILL_EXTRA,h+10);
     if(h>wBase)h=wBase;
     var wRound=h,wSoft=h+NAV_SOFT_EXTRA;
     var s=Math.min(1,Math.abs(m.vel)/NAV_MORPH_VMAX);
@@ -12627,12 +12670,14 @@ function _navMorphMove(clientX){
   if(!m.raf)m.raf=requestAnimationFrame(_navMorphFrame);
 }
 function _navEnterLift(startIdx){
-  if(_navLift.lifting)return;
+  if(_navLift.lifting&&!_navLift.settling)return;   /* 已在跟手态就别重复进；settle 中途再按下 → 直接接管 */
   var nav=document.getElementById('bottomNav');
   if(!nav||nav.classList.contains('batch-mode'))return;
   var tabs0=nav.querySelectorAll('.nav-tab');
   if(!tabs0.length)return;
   _navLift.lifting=true;
+  _navLift.settling=false;          /* 接管 settle：撤销归位动画，回到跟手 */
+  _navLift.pendingView=null;_navLift.pendingTop=false;
   _navLift.suppressClick=true;
   /* ★长按哪个 tab，泡就从哪个 tab 浮起（不是从当前激活的那个）——
      startIdx 由 pointerdown 命中决定；没命中任何 tab 时兜底为当前视图。 */
@@ -12659,67 +12704,121 @@ function _navEnterLift(startIdx){
      光照本来就是"泡在哪就亮谁"，跟有没有在动无关，必须从浮起第一帧就开始算。 */
   if(!_navMorph.raf)_navMorph.raf=requestAnimationFrame(_navMorphFrame);
 }
-function _navExitLift(){
+/* ★R170.4 立即撤掉浮起态（不做归位动画）—— 只在 pointercancel 这类"手势作废"时用。
+   正常松手走 _navBeginSettle() 的弹簧归位。
+   ⚠️这里**要**清掉 inline width/transform：清了会瞬间塌成 CSS 的 width:0，
+   所以紧跟一句 positionNavPill() 把它设回常态值。 */
+function _navTeardown(){
   if(!_navLift.lifting)return;
-  _navLift.lifting=false;
-  _navLift.idx=-1;
-  _navMorphStop();            /* ★停掉速度变形循环，形状随 CSS 过渡回到椭圆 */
+  _navLift.lifting=false;_navLift.settling=false;_navLift.idx=-1;
+  _navLift.pendingView=null;_navLift.pendingTop=false;
+  _navMorphStop();
   var nav=document.getElementById('bottomNav');
   if(nav)nav.classList.remove('nav-lift');
   var pill=_ensureNavPill();
   if(pill){
     pill.classList.remove('lift');
-    pill.style.transition='';   /* ★清掉跟手期的 transition:none，让 CSS 的 .42s 把它平滑送回目标 tab */
+    pill.style.transition='';
+    pill.style.width='';
+    pill.style.transform='';
   }
   _navLitClear();
   positionNavPill();
-  /* 让紧随 pointerup 派发的那次 click 被吃掉（click 与 pointerup 同轮，setTimeout(0) 清标记在 click 之后） */
+  setTimeout(function(){_navLift.suppressClick=false;},0);
+}
+/* ★R170.4 松手 → 进入归位：把"当前位置/宽度"与"目标 tab 的位置/宽度"交给两个弹簧。
+   为什么不用 CSS transition 收尾：transition 只会平滑地停住，**没有回弹**；
+   用户要的"果冻/弹性动效"必须有"冲过头再弹回来"的那一下 —— 只有弹簧能给出（这正是 spring animation 与补间动画的区别）。
+   ⚠️过冲只允许发生在「松手归位」这一段；拖动过程中位置必须严格跟手，否则就是"泡追不上手指"。 */
+function _navBeginSettle(tab){
+  var nav=document.getElementById('bottomNav'),pill=_ensureNavPill(),tabs=_navTabs();
+  var t=tab||tabs[_navLift.idx]||null;
+  if(!nav||!pill||!t){_navFinishSettle();return;}
+  var mm=/translateX\(([-\d.]+)px\)/.exec(pill.style.transform||'');
+  var pr=pill.getBoundingClientRect();
+  _navSettle.x=mm?parseFloat(mm[1]):(pr.left-nav.getBoundingClientRect().left-1);
+  _navSettle.tx=t.offsetLeft-NAV_PILL_EXTRA/2;     /* 目标：以 tab 为中心（浮起态比 tab 宽 NAV_PILL_EXTRA，所以左边缘要左移一半） */
+  _navSettle.w=pr.width;
+  _navSettle.tw=t.offsetWidth+NAV_PILL_EXTRA;
+  _navSettle.vx=0;_navSettle.vw=0;_navSettle.t0=Date.now();
+  _navLift.settling=true;
+  if(!_navMorph.raf)_navMorph.raf=requestAnimationFrame(_navMorphFrame);
+}
+function _navSettleFrame(nav,pill){
+  var s=_navSettle;
+  s.vx+=(s.tx-s.x)*NAV_SETTLE_K; s.vx*=NAV_SETTLE_DAMP; s.x+=s.vx;
+  s.vw+=(s.tw-s.w)*NAV_SETTLE_K; s.vw*=NAV_SETTLE_DAMP; s.w+=s.vw;
+  var w=Math.max(28,s.w);
+  var nr=nav.getBoundingClientRect();
+  pill.style.transition='none';
+  pill.style.width=w.toFixed(1)+'px';
+  pill.style.transform='translateX('+s.x.toFixed(1)+'px)';
+  _navLitUpdate(nr.left+1+s.x,nr.left+1+s.x+w);    /* +1 = 底栏的 1px 边框 */
+  var done=Math.abs(s.tx-s.x)<0.8&&Math.abs(s.vx)<0.12&&Math.abs(s.tw-s.w)<0.8&&Math.abs(s.vw)<0.12;
+  if(done||Date.now()-s.t0>NAV_SETTLE_MS){_navFinishSettle();return true;}
+  return false;
+}
+function _navFinishSettle(){
+  var pv=_navLift.pendingView,pt=_navLift.pendingTop;
+  _navLift.pendingView=null;_navLift.pendingTop=false;
+  _navLift.lifting=false;_navLift.settling=false;_navLift.idx=-1;
+  _navMorphStop();
+  var nav=document.getElementById('bottomNav');
+  if(nav)nav.classList.remove('nav-lift');
+  var pill=_ensureNavPill();
+  if(pill){
+    pill.classList.remove('lift');
+    pill.style.transition='';   /* 恢复过渡：紧接着 positionNavPill 写的常态 width/transform 会平滑收敛 */
+  }
+  _navLitClear();
+  /* ⚠️故意**不清** inline width/transform：清了会先塌成 width:0 闪一下；
+     交给下面的 positionNavPill() 直接覆盖成常态值即可。 */
+  if(pv)setView(pv);            /* 切视图（底栏重建后自行定位；胶囊由 _navSwapChildren 保活） */
+  else if(pt){try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}}
+  positionNavPill();
+  requestAnimationFrame(function(){positionNavPill();});
   setTimeout(function(){_navLift.suppressClick=false;},0);
 }
 function bindNavLift(){
   var nav=document.getElementById('bottomNav');
   if(!nav||nav._liftBound)return;
   nav._liftBound=true;
+  /* ★R170.4 改为「点按即浮起」：不再有长按等待。按下 → 栏变大 + 泡落到按下的 tab；拖动跟手；松手弹回并切视图。
+     代价与补偿：click 事件被 suppressClick 吃掉（否则松手后浏览器补发的那次 click 会再切一次），
+     所以原先挂在 tab click 上的两件事（切视图 / 点当前 tab 回顶部）都搬到 up() 里处理。 */
   nav.addEventListener('pointerdown',function(e){
     if(e.button!=null&&e.button!==0)return;
     if(nav.classList.contains('batch-mode'))return;
-    _navLift.armed=true;
-    _navLift.sx=e.clientX;_navLift.sy=e.clientY;
-    /* 记住按下的那个 tab：长按到点后泡要从这里浮起 */
     var tab=e.target.closest?e.target.closest('.nav-tab'):null;
     _navLift.startIdx=tab?_navIndexAt(tab.getBoundingClientRect().left+tab.getBoundingClientRect().width/2):-1;
-    clearTimeout(_navLift.timer);
-    _navLift.timer=setTimeout(function(){_navLift.armed=false;_navEnterLift(_navLift.startIdx);},NAV_LIFT_MS);
+    /* 指针捕获：按下后拖到底栏外面再松手，pointerup 也一定会派发到 nav ——
+       否则（桌面端鼠标尤其明显）手势收不到结尾，泡会永远卡在浮起态。 */
+    try{if(nav.setPointerCapture)nav.setPointerCapture(e.pointerId);}catch(err){}
+    _navEnterLift(_navLift.startIdx);
   });
   nav.addEventListener('pointermove',function(e){
-    if(!_navLift.lifting){
-      /* 待命期移动超过 slop = 用户在按/划，不是长按 → 撤掉定时器（当普通点击处理） */
-      if(_navLift.armed&&(Math.abs(e.clientX-_navLift.sx)>NAV_LIFT_SLOP||Math.abs(e.clientY-_navLift.sy)>NAV_LIFT_SLOP)){
-        clearTimeout(_navLift.timer);_navLift.armed=false;
-      }
-      return;
-    }
+    if(!_navLift.lifting||_navLift.settling)return;   /* 归位动画期间不接受跟手 */
     var i=_navIndexAt(e.clientX);
     if(i>=0&&i!==_navLift.idx)_navLift.idx=i;   /* 只记"松手切哪个"；亮哪个由帧循环按泡的覆盖范围定 */
     _navMorphMove(e.clientX);                   /* ★跟手 + 方向/速度形态（带 Q 弹） */
   });
   function up(){
-    clearTimeout(_navLift.timer);_navLift.armed=false;
-    if(!_navLift.lifting)return;
+    if(!_navLift.lifting||_navLift.settling)return;
     var idx=_navLift.idx,tabs=_navTabs();
-    var tv=(idx>=0&&tabs[idx])?tabs[idx].getAttribute('data-view'):null;
-    _navExitLift();
-    /* ★R170.3 松手即选（与"点击"同一语义，不再要求"必须拖动过"）：
-       阈值已收到 150ms，若仍坚持"不动松手不切"，那么一次**按住稍久一点的点击**
-       就会既不切视图也不滚顶 = 用户眼里"点了没反应"。松手在同一个 tab 上时 tv===currentView，天然不切。 */
-    if(tv&&tv!==currentView)setView(tv);
+    var t=(idx>=0&&tabs[idx])?tabs[idx]:null;
+    var tv=t?t.getAttribute('data-view'):null;
+    /* 记下"归位动画结束后要做的事"：点别的 tab = 切视图；点当前 tab = 平滑回顶部（原 click 分支的语义） */
+    _navLift.pendingView=(tv&&tv!==currentView)?tv:null;
+    _navLift.pendingTop=!!(tv&&tv===currentView);
+    _navBeginSettle(t);   /* ★先让泡用弹簧弹回目标 tab（果冻回弹），收尾时才切视图 —— 避免 render 打断动画 */
   }
   nav.addEventListener('pointerup',up);
   nav.addEventListener('pointercancel',function(){
-    clearTimeout(_navLift.timer);_navLift.armed=false;
-    if(_navLift.lifting)_navExitLift();
+    if(_navLift.lifting)_navTeardown();
   });
-  /* 长按期间禁掉长按选字/右键菜单（底栏是控制区，不需要文本选择） */
+  /* 兜底：若指针捕获没生效（老浏览器），仍然能收到结尾 */
+  window.addEventListener('pointerup',up);
+  /* 浮起期间禁掉长按选字/右键菜单（底栏是控制区，不需要文本选择） */
   nav.addEventListener('contextmenu',function(e){if(_navLift.lifting)e.preventDefault();});
 }
 // 底部导航「液态玻璃」选中胶囊：常驻单例元素
@@ -12752,7 +12851,7 @@ function positionNavPill(retry){
   pill.style.transform='translateX('+l+'px)';
   pill.style.opacity='1';
 }
-window.addEventListener('resize',function(){positionNavPill();});
+window.addEventListener('resize',function(){positionNavPill();if(typeof fitCalGrid==='function'&&document.getElementById('calendarView')&&document.getElementById('calendarView').style.display!=='none')fitCalGrid();});
 window.addEventListener('focus',function(){positionNavPill();});
 document.addEventListener('visibilitychange',function(){if(!document.hidden)positionNavPill();});
 /* ★R143 底栏宽度还会被「页面纵向滚动条出现/消失」改掉（固定元素宽度是百分比 → 视口内容宽变 15px），
@@ -18519,6 +18618,44 @@ function updateStats(){var total=memos.length;var todo=0,done=0;for(var i=0;i<me
 /* ★R138 年月浮层 markup：必须挂在 .cal-head 内 → 绝对定位的包含块就是标题那一行，
    才能用 top:calc(100% + 6px) 紧贴触发按钮正下方（见 renderCalendar 内注释） */
 var YMPICKER_HTML='<div class="cal-ym-picker" id="calYmPicker"><div class="cal-ym-head"><button class="cal-nav-btn" id="ym-prev-year">‹</button><span id="ym-year-label"></span><button class="cal-nav-btn" id="ym-next-year">›</button></div><div class="cal-ym-months" id="ym-months"></div></div>';
+/* ★R170.4 让整月**一屏显示完**（用户："一页显示完，不要加滚动条"）。
+   做法：量出可用高度 → 算出每格高度写进 --dcell；同时把 grid 宽度限制成 7*格高+间隔并居中
+   （只设高度不改宽度的话，列宽仍由 1fr 决定 → 格子被压成横向矩形，就不是日历格了）。
+   触发点：每次 renderCalendar / 小结面板开合 / 窗口 resize。 */
+function fitCalGrid(){
+  var grid=calendarViewEl.querySelector('.cal-month-grid');
+  if(!grid||grid.children.length<8)return;
+  if(calendarViewEl.style.display==='none')return;
+  var head=calendarViewEl.querySelector('.cal-head');
+  var panel=document.getElementById('calDayPanel');
+  var headH=head?head.getBoundingClientRect().height:0;
+  var panelH=(panel&&!panel.hidden)?panel.getBoundingClientRect().height+10:0;  /* +10 = 面板的 margin-top */
+  var top=calendarViewEl.getBoundingClientRect().top;
+  var nav=document.getElementById('bottomNav');
+  var navH=nav?nav.getBoundingClientRect().height:0;
+  var GAP=4;
+  var rows=Math.max(1,Math.round((grid.children.length-7)/7));   /* 不含星期标签那一行 */
+  var lab=grid.querySelector('.cal-day-label');
+  var labH=lab?lab.getBoundingClientRect().height:20;
+  /* ⚠️必须减 **body 的 padding-bottom**（89px，为固定底栏预留的空间），而不是 navH+22：
+     那 89px 会计入文档高度 → 只减底栏高的话整页仍然多出 ~56px 可滚（实测 docH 876 > innerH 820）。
+     取两者较大值，底栏换主题变高时也安全。 */
+  var bodyPad=parseFloat(getComputedStyle(document.body).paddingBottom)||0;
+  var avail=window.innerHeight-top-headH-panelH-Math.max(bodyPad,navH+30)-8;
+  var cellH=Math.floor((avail-labH-GAP*(rows+1))/rows);
+  if(!(cellH>0))cellH=58;
+  /* ★还要受**列的可用宽度**约束：只按高度算的话，宽屏下会出现宽 99 × 高 104 的竖矩形格子
+     （列宽由 1fr 决定，不受 --dcell 影响）→ 取两者较小值才能保持正方形。 */
+  var wrapPad=parseFloat(getComputedStyle(calendarViewEl).paddingLeft||0)+parseFloat(getComputedStyle(calendarViewEl).paddingRight||0);
+  var wrapW=(calendarViewEl.clientWidth||0)-wrapPad;
+  var maxCellW=Math.floor((wrapW-GAP*6)/7);
+  if(maxCellW>0)cellH=Math.min(cellH,maxCellW);
+  cellH=Math.max(30,Math.min(cellH,104));
+  grid.style.setProperty('--dcell',cellH+'px');
+  var maxW=cellH*7+GAP*6;
+  grid.style.maxWidth=maxW+'px';
+  grid.style.marginLeft='auto';grid.style.marginRight='auto';
+}
 function renderCalendar(dir){
   closeYmPicker(); /* ★R138: 重画会重建浮层 DOM，先把 document 上的关闭监听摘掉，避免残留 */
   calendarViewEl.style.display='block';
@@ -18558,7 +18695,9 @@ function renderCalendar(dir){
   var nextDays=(7-(total%7))%7;
   for(var n=1;n<=nextDays;n++)html+='<div class="cal-cell other" data-d="'+(new Date(year,month+1,n)).getTime()+'"><span class="d-num">'+n+'</span><span class="d-sub"></span><span class="d-memos"></span></div>';
   html+='</div>';
-  html+='<div class="cal-ym-picker" id="calYmPicker"><div class="cal-ym-head"><button class="cal-nav-btn" id="ym-prev-year">‹</button><span id="ym-year-label"></span><button class="cal-nav-btn" id="ym-next-year">›</button></div><div class="cal-ym-months" id="ym-months"></div></div>';
+  /* ★R170.4 这里原本还有一份**重复**的 cal-ym-picker（R138 把浮层挪进 .cal-head 时漏删的旧副本）：
+     它以 display:block 留在文档流中，在 grid 下方白占 56px 高度 → 整页凭空多出一条滚动条
+     （实测 docH 876 > innerH 820，正是它造成的）。已删除，浮层唯一副本在 .cal-head 内。 */
   html+='<div class="cal-day-panel" id="calDayPanel" hidden>'
     +'<div class="cdp-head"><span class="cdp-title" id="cdpTitle"></span><button class="cdp-close" id="cdpClose" type="button">✕</button></div>'
     +'<div class="cdp-list" id="cdpList"></div>'
@@ -18572,32 +18711,48 @@ function renderCalendar(dir){
   var _ctb=document.getElementById('calTodayBtn');
   if(_ctb)_ctb.onclick=function(){var _now=new Date();currentCalDate=new Date(_now.getFullYear(),_now.getMonth(),1);selectedCalDate=new Date();renderCalendar();};
   bindCalGestures();
-  document.getElementById('cal-prev2').addEventListener('click',function(){currentCalDate=new Date(year,month-1,1);renderCalendar();});
-  document.getElementById('cal-next2').addEventListener('click',function(){currentCalDate=new Date(year,month+1,1);renderCalendar();});
+  /* ★R170.4 补上 dir：原来按钮切换调 renderCalendar() 无参 → 没有滑入动画（用户感觉"生硬"就是这里） */
+  document.getElementById('cal-prev2').addEventListener('click',function(){currentCalDate=new Date(year,month-1,1);renderCalendar('down');});
+  document.getElementById('cal-next2').addEventListener('click',function(){currentCalDate=new Date(year,month+1,1);renderCalendar('up');});
   document.getElementById('cal-title-btn').addEventListener('click',function(){var p=document.getElementById('calYmPicker');if(p&&p.classList.contains('show')){closeYmPicker();}else{openYmPicker(year,month);}});
-  var cells=calendarViewEl.querySelectorAll('.cal-cell:not(.other)');
+  var cells=calendarViewEl.querySelectorAll('.cal-cell');
   for(var ci=0;ci<cells.length;ci++){
     (function(cell){
       cell.addEventListener('click',function(e){
         if(e.target.closest('#calYmPicker'))return;
+        /* ★R170.4 刚拖动过 → 这次 click 是"拖动的尾巴"（松手后浏览器补发），吞掉即可 */
+        if(_calDragMoved){_calDragMoved=false;return;}
+        if(cell.classList.contains('other')){
+          var ot=parseInt(cell.getAttribute('data-d'));
+          if(!isNaN(ot)){currentCalDate=new Date(ot);renderCalendar();openQuickAdd(0,dateKey(currentCalDate));}
+          return;
+        }
         var d=parseInt(cell.getAttribute('data-day'));
-        selectedCalDate=new Date(year,month,d);
-        renderCalendar();
-        openDayDetail(selectedCalDate);
+        var date=new Date(year,month,d);
+        var panel=document.getElementById('calDayPanel');
+        var same=!!(selectedCalDate&&selectedCalDate.getFullYear()===year&&selectedCalDate.getMonth()===month&&selectedCalDate.getDate()===d);
+        var open=!!(panel&&!panel.hidden);
+        /* ★R170.4 点已选中的日期 = 关闭小结（toggle，用户："再点一次就是关闭"）。
+           这里**不重渲染整月** —— 只切 selected 类与面板显隐：原来每次点击都 renderCalendar() 重建整月，
+           等于点一下闪一下，而且会连带把拖动动画/滚动位置打断。 */
+        if(same&&open){
+          selectedCalDate=null;
+          closeDayDetail();
+          var sel=calendarViewEl.querySelectorAll('.cal-cell.selected');
+          for(var si=0;si<sel.length;si++)sel[si].classList.remove('selected');
+          syncCalTodayBtn();fitCalGrid();
+          return;
+        }
+        selectedCalDate=date;
+        var all=calendarViewEl.querySelectorAll('.cal-cell.selected');
+        for(var ai=0;ai<all.length;ai++)all[ai].classList.remove('selected');
+        cell.classList.add('selected');
+        openDayDetail(date);
+        syncCalTodayBtn();fitCalGrid();
       });
     })(cells[ci]);
   }
-  // 空白格（其他月份日期）：跳转并打开快速添加
-  var others=calendarViewEl.querySelectorAll('.cal-cell.other');
-  for(var oi=0;oi<others.length;oi++){
-    (function(cell){
-      cell.addEventListener('click',function(e){
-        if(e.target.closest('#calYmPicker'))return;
-        var t=parseInt(cell.getAttribute('data-d'));
-        if(!isNaN(t)){currentCalDate=new Date(t);renderCalendar();openQuickAdd(0,dateKey(currentCalDate));}
-      });
-    })(others[oi]);
-  }
+  fitCalGrid();
 }
 /* ★R55: 「今」按钮显隐规则——查看今天所在月份且(未选中或已选中今天)=已在今天,隐藏;否则显示 */
 function syncCalTodayBtn(){
@@ -18607,25 +18762,75 @@ function syncCalTodayBtn(){
   var selToday=!!selectedCalDate&&selectedCalDate.getFullYear()===_now.getFullYear()&&selectedCalDate.getMonth()===_now.getMonth()&&selectedCalDate.getDate()===_now.getDate();
   _tb.style.display=(sameMonth&&(selToday||!selectedCalDate))?'none':'flex';
 }
-/* ★R54: 日历无限切月手势——网格上竖滑(上滑=下月,下滑=上月) + 桌面滚轮；只绑一次(绑在 calendarViewEl 上,innerHTML 重建不影响) */
+/* ★R170.4 日历手势：**左右拖动切上下月**（跟手位移 → 松手判定 → 新月份滑入）。
+   · 从 touch 事件改成 pointer 事件：桌面端鼠标也能拖（原来桌面上完全没有手势，只能点 ‹ › 按钮）。
+   · 保留 R54 的"竖向快速滑一下切月"与滚轮 —— 三个入口共用 renderCalendar(dir) 的滑入动画。
+   · .cal-month-grid 上的 touch-action:none 保证横滑不会被浏览器当成页面滚动抢走。
+   · ⚠️拖动过之后浏览器还会补发一次 click → 用 _calDragMoved 在格子的 click 里吞掉，
+     否则"拖一下换个看月份"会顺带把手指下那个日期的小结也点开。 */
+var _calDragMoved=false;
 function bindCalGestures(){
   if(calendarViewEl._calGestured)return;calendarViewEl._calGestured=true;
-  var gx=0,gy=0,on=false;
-  calendarViewEl.addEventListener('touchstart',function(e){
+  var st=null;
+  function gridEl(){return calendarViewEl.querySelector('.cal-month-grid');}
+  function resetGrid(){
+    var g=gridEl();if(!g)return;
+    g.style.transition='';g.style.transform='';g.style.opacity='';
+  }
+  calendarViewEl.addEventListener('pointerdown',function(e){
+    if(e.button!=null&&e.button!==0)return;
     if(!e.target.closest||!e.target.closest('.cal-month-grid'))return;
-    var t=e.touches[0];gx=t.clientX;gy=t.clientY;on=true;
-  },{passive:true});
-  calendarViewEl.addEventListener('touchmove',function(e){
-    if(!on)return;
-    var t=e.touches[0],dx=t.clientX-gx,dy=t.clientY-gy;
-    if(Math.abs(dy)>46&&Math.abs(dy)>Math.abs(dx)*1.2){ /* 竖向主导且超过阈值才切月,避免误触 */
-      on=false;
-      currentCalDate=new Date(currentCalDate.getFullYear(),currentCalDate.getMonth()+(dy<0?1:-1),1);
-      renderCalendar(dy<0?'up':'down');
+    st={x:e.clientX,y:e.clientY,axis:null,dx:0,t0:Date.now()};
+    _calDragMoved=false;
+  });
+  calendarViewEl.addEventListener('pointermove',function(e){
+    if(!st)return;
+    var dx=e.clientX-st.x,dy=e.clientY-st.y;
+    if(!st.axis){
+      /* 先判主导轴：横向 → 跟手拖月；竖向 → 沿用 R54 的"滑一下切月" */
+      if(Math.abs(dx)>8&&Math.abs(dx)>=Math.abs(dy)){st.axis='x';try{calendarViewEl.setPointerCapture(e.pointerId);}catch(err){}}
+      else if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){st.axis='y';}
+      else return;
     }
-  },{passive:true});
-  calendarViewEl.addEventListener('touchend',function(){on=false;},{passive:true});
-  calendarViewEl.addEventListener('touchcancel',function(){on=false;},{passive:true});
+    if(st.axis==='x'){
+      _calDragMoved=true;
+      st.dx=dx;
+      var g=gridEl();if(!g)return;
+      var w=g.getBoundingClientRect().width||1;
+      g.style.transition='none';                                  /* 跟手期不能有过渡，否则滞后于手指 */
+      g.style.transform='translateX('+(dx*0.5).toFixed(1)+'px)';  /* ×0.5 = 带一点阻尼，别整块跟着跑 */
+      g.style.opacity=String(Math.max(.3,1-Math.abs(dx)/w*.8));
+    }else if(st.axis==='y'){
+      if(Math.abs(dy)>46){
+        _calDragMoved=true;
+        var up=dy<0;st=null;
+        currentCalDate=new Date(currentCalDate.getFullYear(),currentCalDate.getMonth()+(up?1:-1),1);
+        renderCalendar(up?'up':'down');
+      }
+    }
+  });
+  function endDrag(){
+    if(!st)return;
+    var wasX=st.axis==='x',dx=st.dx||0,dur=Math.max(1,Date.now()-st.t0);
+    st=null;
+    if(!wasX){resetGrid();return;}
+    var g=gridEl();if(!g)return;
+    var w=g.getBoundingClientRect().width||1;
+    /* 达标 = 拖够距离（**15% 宽** 或 56px）或甩得够快（>0.42px/ms 且已过 28px）。
+       15% 是实测调出来的：原来 22%（900px 视口下约 152px）太远，用户"扫一下"根本切不动；
+       而快速甩动那条通道在真实指针下 dur 会被 CDP/浏览器事件间隔拉长，不能当唯一出路。 */
+    var far=Math.abs(dx)>Math.max(56,w*.15)||(Math.abs(dx)/dur>0.42&&Math.abs(dx)>28);
+    if(far){
+      var next=dx<0;   /* 向左拖 = 内容左移 = 看下一个月 */
+      currentCalDate=new Date(currentCalDate.getFullYear(),currentCalDate.getMonth()+(next?1:-1),1);
+      renderCalendar(next?'up':'down');   /* renderCalendar 重建 grid —— 拖动留下的 inline 样式自然消失 */
+    }else{
+      g.style.transition='';   /* 清掉跟手期的 none → 由 CSS 的 .22s 过渡平滑回弹归位 */
+      g.style.transform='';g.style.opacity='';
+    }
+  }
+  calendarViewEl.addEventListener('pointerup',endDrag);
+  calendarViewEl.addEventListener('pointercancel',function(){st=null;resetGrid();});
   calendarViewEl.addEventListener('wheel',function(e){
     if(!e.target.closest||!e.target.closest('.cal-month-grid'))return;
     var now=Date.now();if(now-(calendarViewEl._wl||0)<350||Math.abs(e.deltaY)<8)return; /* 节流防惯性连翻 */
