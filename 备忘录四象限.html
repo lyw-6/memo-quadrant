@@ -1208,6 +1208,11 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 .countdown.done{background:rgba(16,185,129,.1);color:var(--color-success);}
 .more-btn{width:26px;height:26px;border-radius:var(--radius-xs);border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:15px;line-height:1;flex-shrink:0;position:relative;}
 .more-btn::before{content:'';position:absolute;inset:-8px;border-radius:inherit;}
+/* ★R179 两套图标切换：横排为默认，紧凑视图才用竖排（与卡片变矮后“侧向空间紧张”的直觉一致） */
+.more-btn svg{width:16px;height:16px;display:block;}
+.more-btn .mb-v{display:none;}
+.memo-list.compact .more-btn .mb-h{display:none;}
+.memo-list.compact .more-btn .mb-v{display:block;}
 .more-btn:hover{background:var(--hover-bg);color:var(--text);}
 .pin-btn{width:26px;height:26px;border-radius:var(--radius-xs);border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:14px;line-height:1;flex-shrink:0;position:relative;}
 .pin-btn::before{content:'';position:absolute;inset:-8px;border-radius:inherit;}
@@ -1239,16 +1244,15 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 .memo-group{display:block;margin:7px 0;padding:4px 6px 5px;border:none;border-radius:10px;background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 7%,var(--card-bg));user-select:none;}
 /* ★玻璃主题的分组底衬不写在这里！玻璃主题块内另有一条 `[data-theme="glass"] .memo-group`
    声明在本行之后、特异性相同，会把这里的写法整条反杀。改玻璃底衬请去那一条改。 */
-/* ★87 组头去掉原 3px 左边框（边框遇圆角会在左侧形成"月牙"，且满高度，与卡片的胶囊色条观感割裂）。
-   ★88 曾改用与卡片同款的「卡内贴左缘」细色条。
-   ★★R178 **把组头色条整个删掉**（用户："我感觉分组的色条怪怪的，你觉得分组名称这栏应该有色条吗？"）：
-   组头已经有**三重**分组标识 —— ① 整块分组色底（13% 混色）② 右侧色圆点 ③ 名称文字，
-   再加一条左侧色条就是第四重；而且它与组内卡片的色条形成**两根平行竖线**（中间还夹着行距），
-   读起来像两根栏杆、层级反而乱。卡片色条有意义（卡片是内容主体，需要色标识），
-   组头只是"标题容器"，色底已经足够。
-   ⚠️如果以后要恢复，正确写法是 R177 的「完整轮廓 + mask 只露一条」（见上方 .memo-item.qb::before 的注释），
-   别再写成 "width:var(--rail-w) + 大圆角"（会被按比例压成椭圆角）。 */
-.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px;margin-bottom:3px;cursor:pointer;background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 13%,var(--card-bg));border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
+/* ★★R179 组头回到「标题」身份：**去掉色底**（用户："分组的色条去了也看起来怪怪的，怎么优化更美观点？"）。
+   诊断：组头原来是一块 13% 分组色的**实心横条**，而整组本来就有 7% 分组色底衬（.memo-group）——
+   于是组头成了"底衬上的深色块"＝双层色块；再加上它沿用卡片的 12px 圆角，看起来像"一条被压扁的卡片"，
+   但它又不是卡片 → 身份模糊，这才是"怪"的真正来源（色条只是最显眼的那一层）。
+   现在：透明底 → 露出组底衬，组头与组内卡片**同处一块底衬**（整组的范围感更强）；
+        层级变成 组底衬(最淡) → 组头(无块面·仅标题) → 卡片(白块 + 色条)。
+   分组标识仍在：色圆点（.mgh-color-btn）＋ 名称 ＋ 条数。悬停/按下给一层淡底做点击反馈。 */
+.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px;margin-bottom:3px;cursor:pointer;background:transparent;border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
+.mgh-head:hover{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 8%,transparent);}
 /* ★R89 分组置顶：组头加琥珀内描边 + 标题右侧图钉徽标，与卡片置顶(#f59e0b)同色系；
    底色仍保留分组色底，只是往琥珀方向偏一档，保证"这是置顶的分组"一眼可辨。 */
 .mgh-head.gp-pinned{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 9%, color-mix(in srgb,#f59e0b 16%,var(--card-bg)));box-shadow:inset 0 0 0 1px rgba(245,158,11,.45);}
@@ -1256,7 +1260,8 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 .mgh-pin{width:14px;height:14px;color:#f59e0b;display:flex;align-items:center;justify-content:center;flex-shrink:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
 .mgh-pin svg{width:13px;height:13px;flex:none;}
 [data-theme="dark"] .mgh-pin{color:#fbbf24;}
-.mgh-head:active{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 20%,var(--card-bg));}
+/* ★R179 底衬透明化后按下反馈降一档（原来 20% 是压在 13% 色底上的叠加量，现在只有底衬 7%）。 */
+.mgh-head:active{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 16%,transparent);}
 .mgh-caret{border:none;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:11px;line-height:1;width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;}
 .mgh-title{font-weight:600;font-size:13px;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} /* ★R68 长组名省略号，不挤压右侧条数 */
 .mgh-count{font-size:11px;color:var(--text-tertiary);margin-left:auto;white-space:nowrap;flex-shrink:0;} /* ★R68 nowrap:重命名输入框挤压时「N 条」不再折成两行 */
@@ -1470,9 +1475,9 @@ body.view-quadrant #add-btn,body.view-quadrant #bottomBar{display:none!important
   border-color:var(--color-primary);
   box-shadow:inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 var(--glass-edge-bot);
 }
-/* 深色背景(自动 glass-text-dark)下:面板渐变收尾改用深色玻璃色,避免浅色图标落在变亮的底部而糊掉 */
-html.glass-text-dark [data-theme="glass"] .search-bar .search-input,
-html.glass-text-dark [data-theme="glass"] .mgh-head{
+/* 深色背景(自动 glass-text-dark)下:面板渐变收尾改用深色玻璃色,避免浅色图标落在变亮的底部而糊掉
+   ★R179 .mgh-head 已改透明底（无渐变可收尾）→ 从本条里摘掉，避免又给它糊上一层深色玻璃。 */
+html.glass-text-dark [data-theme="glass"] .search-bar .search-input{
   background:linear-gradient(180deg, var(--glass-tint) 0%, var(--glass-tint-3) 100%), var(--glass-grain);
 }
 /* 深色背景下:玻璃控制按钮(下拉/搜索/图标)渐变收尾改用深色(var(--glass-tint-3)),避免底部发白显得发浅、浅色文字被透出的亮底吃掉 */
@@ -1590,7 +1595,8 @@ html.glass-text-dark [data-theme="glass"] .cal-cell .d-sub.jq{color:#34d399;font
    会把底衬整条反杀成 transparent —— 故 R92 的玻璃化底衬必须写在这里。
    用 inset 阴影做发丝描边（不用 border：border 会改变盒尺寸，破坏「组内卡片窄 12px」的口径）。 */
 [data-theme="glass"] .memo-group{background:linear-gradient(color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 17%,transparent),color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 17%,transparent));border:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);backdrop-filter:none;-webkit-backdrop-filter:none;}
-[data-theme="glass"] .mgh-head{background:linear-gradient(180deg, rgba(255,255,255,0.26), rgba(255,255,255,0.14)), var(--glass-grain);background-size:auto,180px 180px;border-left:none;backdrop-filter:blur(calc(var(--glass-blur) * 0.8)) saturate(var(--glass-sat));-webkit-backdrop-filter:blur(calc(var(--glass-blur) * 0.8)) saturate(var(--glass-sat));}
+[data-theme="glass"] .mgh-head{background:transparent;border-left:none;}
+/* ★R179 组头在此主题也透明（原来是一层白玻璃 + 颗粒）——与其它主题统一，露出组底衬。 */
 /* ★R178 组头色条已整套删除（含玻璃主题这条覆盖）—— 理由见 .mgh-head 规则上方的注释。 */
 /* ★R89 玻璃主题置顶组头：琥珀渐变取代中性白玻璃，并补内描边 */
 [data-theme="glass"] .mgh-head.gp-pinned{background:linear-gradient(180deg, rgba(245,158,11,.34), rgba(245,158,11,.20)), var(--glass-grain);background-size:auto,180px 180px;box-shadow:inset 0 0 0 1px rgba(245,158,11,.5);}
@@ -14174,7 +14180,10 @@ function createMemoElement(memo,index,groupId){
   html+='</div>'; // 结束 memo-meta
   html+='<div style="flex:1;min-width:2px;"></div>';
   if(memo.pinned){html+='<span class="pin-badge" title="已置顶">'+ICON_PIN+'</span>';}
-  html+='<div class="more-wrap"><button class="more-btn" type="button" data-id="'+memo.id+'" title="更多操作">⋮</button></div>';
+  /* ★★R179 两套 SVG：**正常视图用横排三点、紧凑(省略)视图用竖排三点**（用户："正常视图里右下角的更多改为横着的三个点，省略视图的仍是竖向三个点"）。
+     两套同时渲染、用 CSS 按 .memo-list.compact 切换（与视图密度两态图标同一套做法）。
+     旧写法是一个 `⋮` 字符：字体度量因机而异、不能跟随主题色的细节，且无法做两态。 */
+  html+='<div class="more-wrap"><button class="more-btn" type="button" data-id="'+memo.id+'" title="更多操作">'+MORE_ICON_H+MORE_ICON_V+'</button></div>';
   html+='</div>'; // 结束 memo-after-row
   html+='</div>'; // 结束 memo-after
   html+='</div></div></div>';
@@ -15920,6 +15929,10 @@ var FS_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 var FS_ICON_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4"/><path d="M15 4v5h5"/><path d="M9 20v-5H4"/><path d="M15 20v-5h5"/></svg>';
 var TRASH_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
 var MORE_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';
+/* ★R179 列表项「更多」的两套图标：H=横排（正常视图）/ V=竖排（紧凑·省略视图）。
+   半径/间距与顶部工具栏的 more-btn(3177 行) 一致 → 同一套图标语言。 */
+var MORE_ICON_H='<svg class="mb-h" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>';
+var MORE_ICON_V='<svg class="mb-v" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg>';
 var RENAME_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 var DELGRP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 7l-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7"/></svg>';
 // Esc 退出象限全屏；Ctrl/⌘+Z 撤销、Ctrl/⌘+Shift+Z 或 Ctrl+Y 重做
