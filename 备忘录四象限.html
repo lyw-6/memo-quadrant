@@ -409,7 +409,7 @@ body.kb-edit .hist-actions{display:inline-flex;}
 /* ★R92 紧凑视图组头从「整行 banner」压成「矮条」：原 34px+6px 吃掉近半行(一行卡片才 78px)，
    压到 ~17px+3px 省下约 20px。仍占整行、仍是一块明显的组头——不改成「占一格的卡片」，
    因为那样组头会退化成普通卡，与 R92 第①条「分组要能一眼看出」的目标互相打架。 */
-.memo-list.compact .mgh-head{padding:1px 8px 1px 0;margin-bottom:3px;gap:6px;} /* ★R180 左内距归零，与常规视图一致（短色块靠边） */
+.memo-list.compact .mgh-head{padding:1px 8px;margin-bottom:3px;gap:6px;}
 .memo-list.compact .mgh-caret{width:14px;height:14px;font-size:10px;}
 .memo-list.compact .mgh-title{font-size:11px;}
 .memo-list.compact .mgh-count{font-size:10px;}
@@ -1251,11 +1251,9 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
    现在：透明底 → 露出组底衬，组头与组内卡片**同处一块底衬**（整组的范围感更强）；
         层级变成 组底衬(最淡) → 组头(无块面·仅标题) → 卡片(白块 + 色条)。
    分组标识仍在：色圆点（.mgh-color-btn）＋ 名称 ＋ 条数。悬停/按下给一层淡底做点击反馈。 */
-/* ★R180 padding-left 归零：短色块要与**卡片色条**排在同一条竖线上（卡片色条贴卡片左缘＝组内容左缘）。
-   文字的左留白改由 caret 自身提供（caret 宽 20px）→ 名称位置与改前几乎一致。 */
-.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 0;margin-bottom:3px;cursor:pointer;background:transparent;border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
-/* ★R180 短色块：14px 高 / 3px 宽 / 2px 圆角（同样不用绝对定位，避开包含块与圆角那堆坑，gap 里用负 margin 收紧） */
-.mgh-rail{width:var(--rail-w);height:14px;border-radius:2px;background:var(--gh-color,var(--color-primary,#6366f1));flex:none;margin-left:calc(-1 * var(--card-bw));margin-right:-4px;}
+
+.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px;margin-bottom:3px;cursor:pointer;background:transparent;border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
+
 .mgh-head:hover{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 8%,transparent);}
 /* ★R89 分组置顶：组头加琥珀内描边 + 标题右侧图钉徽标，与卡片置顶(#f59e0b)同色系；
    底色仍保留分组色底，只是往琥珀方向偏一档，保证"这是置顶的分组"一眼可辨。 */
@@ -2848,7 +2846,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
    ★transition 必须在这里补全 padding —— 基础规则的 transition 只列了 opacity/transform，
      直接给 .nav-lift 写 transition 会让「退出浮起」时规则消失、padding 瞬间回弹。 */
-.bottom-nav{touch-action:none;transition:padding .2s cubic-bezier(.22,.61,.36,1),opacity .25s ease,transform .25s ease;}
+.bottom-nav{touch-action:none;transition:padding .28s cubic-bezier(.22,.61,.36,1),opacity .25s ease,transform .25s ease;} /* ★R181 与泡同步（0.2s 会比泡先收完） */
 /* 桌面端(精确指针 + 支持 hover):为列表项与导航提供鼠标 hover 反馈,移动端不触发 */
 @media (hover:hover) and (pointer:fine){
   .memo-item:hover,
@@ -12724,8 +12722,15 @@ var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素
        · 位置 0.16/0.60（ζ≈0.64，~330ms）→ **0.28/0.52（ζ≈0.62，~250ms）**
        · 宽度单开一组、更硬更快：**0.34/0.50（ζ≈0.59，~170ms）** → 收小与对正**同时开始、更早收完**
      · 栏的 padding 收回同步改 0.3s → 0.2s（见 .bottom-nav 基础规则），让"泡收小"与"栏收小"同时结束。 */
-var NAV_SETTLE_K=0.28, NAV_SETTLE_DAMP=0.52;    /* 松手归位·位置弹簧 */
-var NAV_SETTLE_WK=0.34, NAV_SETTLE_WDAMP=0.50;  /* ★R174① 松手归位·宽度弹簧（比位置更快） */
+/* ★★R181 松手归位再放缓 + 加大回弹（用户："没有那种惯性、慢慢回弹的感觉，现在就是快速收缩"）。
+   病因：上一版为了治 R174①的"先对正后收小"把宽度弹簧提到 0.34/0.50（ζ≈0.59，极少过冲）
+   → 收得快且平，看不到回弹。现在按同一个 ζ 反解：**只降 K 会变得更弹，而不是更慢**（与 R178 同一条铁律）。
+   · 宽度 0.34/0.50 → **0.20/0.73**（ζ≈0.35，过冲 ~30%，收敛 ~250ms）→ "冲过头再弹回来"
+   · 几何(—lp) 同参 0.20/0.73（必须与宽度完全同参，否则又出现“几何落后一截”）
+   · 位置 0.28/0.52 → **0.24/0.58**（ζ≈0.58，~270ms）→ 与宽度时长接近、不再“一快一慢”
+   · 栏的 padding 收回 0.2s → **0.28s**，与泡同步收完。 */
+var NAV_SETTLE_K=0.24, NAV_SETTLE_DAMP=0.58;    /* 松手归位·位置弹簧 */
+var NAV_SETTLE_WK=0.20, NAV_SETTLE_WDAMP=0.73;  /* 松手归位·宽度弹簧（慢 + 回弹） */
 /* ★★R175① 松手归位·「浮起度」弹簧（--lp：1=完全浮起 → 0=常态）。
    ★为什么必须补这一条：R174① 只把「位置 / 宽度」分了参数，但浮起的**几何量**（上下外扩 top/bottom、
    圆角、外晕）还挂在 `.nav-pill.lift` 类上 —— 归位期间帧循环每帧写 `transition:none`，类上的几何
@@ -12734,7 +12739,7 @@ var NAV_SETTLE_WK=0.34, NAV_SETTLE_WDAMP=0.50;  /* ★R174① 松手归位·宽�
    「能明显看到先回正等一会然后再收起来」。现在几何也进弹簧，三者同起同止。
    ★参数必须与**宽度弹簧一致**（0.34/0.50）：试过 0.30/0.55，几何比宽度晚 ~115ms 收完（4 tab 布局实测），
      于是又冒出一条新的"分段尾巴"（宽度先停、几何还在收）。同参数 = 同起点同速度 = 同时收完。 */
-var NAV_SETTLE_LK=0.34, NAV_SETTLE_LDAMP=0.50;
+var NAV_SETTLE_LK=0.20, NAV_SETTLE_LDAMP=0.73;   /* ★R181 与宽度同参（0.34/0.50 → 0.20/0.73） */
 var NAV_SETTLE_MS=1200;                         /* settle 兜底时长 */
 /* ★R172① 入场滑行时长（ms）：这段由 CSS 过渡驱动，帧循环超时后交回跟手。
    取 260ms = 与过渡曲线同长；再长会让"点一下就切"显得拖沓。 */
@@ -14456,11 +14461,12 @@ function createGroupHeader(grp){
   /* ★R93 「重命名」按钮从右侧按钮组移到标题区末尾：
      它默认 width:0 隐藏，若留在右侧会把 count 与「+」之间顶出 8+22+8=38px 的空白；
      移到标题区后由 .mgh-count 的 margin-left:auto 吸收宽度差 → 出现/消失时右侧按钮与条数完全不跳。 */
-  /* ★R180 组头左侧短色块（用户选了方案②）：14px 高·3px 宽的圆角短块，
-     **不是** R87~R178 那种通高色条（通高条会与组内卡片的色条成两根平行竖线）；
-     短块只作为“这一行的色锚点”，与卡片色条排在同一条竖线上（见 .mgh-head{padding-left:0} 那条）。 */
-  head.innerHTML='<span class="mgh-rail" aria-hidden="true"></span>'
-    +'<button type="button" class="mgh-caret" aria-label="展开/收起">'+caret+'</button>'
+  /* ★★R181 短色块已删（用户发截图："分组看起来依旧怪怪的"）。
+     上一版把 14px 短块与卡片色条对齐到**同一列**，结果两者成了"一条被切断的竖线"
+     （短块 → 空隙 → 卡片色条 → 空隙 → 卡片色条）—— 眼睛会自动去接续它，反而更刺眼。
+     现在组头只用两个颜色标识：① 名称分组色  ② 右侧色圆点（改色按钮），都在组头内部、
+     不与卡片色条产生任何对齐联想。 */
+  head.innerHTML='<button type="button" class="mgh-caret" aria-label="展开/收起">'+caret+'</button>'
     +'<span class="mgh-title">'+escapeHtml(grp.name)+'</span>'
     +(grp.pinned?'<span class="mgh-pin" title="已置顶">'+ICON_PIN+'</span>':'')
     +'<button type="button" class="mgh-ren-btn" aria-label="重命名分组" title="重命名">'+RENAME_ICON+'</button>'
