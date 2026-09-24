@@ -11,16 +11,23 @@
   --shadow-hover:0 4px 6px rgba(0,0,0,0.04),0 10px 24px rgba(0,0,0,0.08);
   --shadow-popup:0 10px 30px rgba(0,0,0,0.12); --radius:14px; --radius-sm:10px; --radius-xs:6px;
   /* ★R89 卡片圆角令牌：只作用于「备忘录卡片族」——卡片本体 / 滑动裁剪层(clip,actions,done-hint) /
-     时间进度层 / 分组头。弹层、筛选栏、设置面板等仍走 --radius-sm(10px)，不受影响。 */
-  --radius-card:6px;
+     时间进度层 / 分组头。弹层、筛选栏、设置面板等仍走 --radius-sm(10px)，不受影响。
+     ★★R177 6px → 12px：卡里的控件（分类下拉 / 标签 chip / 小按钮）都是 8~20px 圆角，
+     6px 的卡片比内部元素还方 = "外圆角小于内圆角"，层级倒挂（用户两次反馈"圆角不和谐"，还发了截图）。
+     12px 落在「内部控件 8px < 卡片 12px < 弹层 14px」这条链上；卡片族全部引用同一个令牌，一起变才不错位。 */
+  --radius-card:12px;
   --overlay-bg:rgba(0,0,0,0.35); --input-bg:#fff; --hover-bg:#f3f4f6; --picker-tab-bg:#f3f4f6;
   --q0:#e74c3c; --q1:#f39c12; --q2:#3498db; --q3:#2ecc71;
   --q0-bg:#fde8e8; --q1-bg:#fef9e7; --q2-bg:#e8f4fd; --q3-bg:#e8f8ef;
   /* ★R90 左侧色条令牌：卡片内贴左缘的圆角边条（宽 / 上下内缩）。
      色条画在卡片内部，不需要 gutter → 列表左右内边距都是 0，卡片与标题栏/筛选栏左缘严格对齐。
-     ★--rail-inset:0 = 色条上下满高、两端延伸到底（读起来是"卡片的一条边"）；
-     设成非 0 会让两端内缩成一根悬浮胶囊（R88 的形态，用户反馈偏短）。 */
-  --rail-w:4px; --rail-inset:0;
+     ★--rail-inset:0px（**必须带单位**） = 色条上下满高、两端延伸到底（读起来是"卡片的一条边"）；
+     设成非 0 会让两端内缩成一根悬浮胶囊（R88 的形态，用户反馈偏短）。
+     ⚠️★★R177 踩坑：这里原来写的是无单位 `0`，一旦它参与 `calc(var(--rail-inset) - var(--card-bw))`，
+     就是"数字与长度相减"= **类型不匹配 → 整条声明静默失效**（Chrome 不报错），top/bottom 退化成 auto，
+     绝对定位的色条直接塌成静态位置、高度 0（实测 top 读到 8px / bottom 59px / height 0px，色条完全不见）。
+     所有会被 calc 当长度用的自定义属性都要写单位。 */
+  --rail-w:4px; --rail-inset:0px;
   /* ★R89 卡片左边框宽度：色条要「完全贴左边缘」必须向左出血覆盖这条边框
      （绝对定位子元素的包含块是 padding box，left:0 会落在边框内侧 → 留 1px 缝隙）。 */
   --card-bw:1px;
@@ -537,24 +544,33 @@ body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50
    而不是"卡片的颜色"——用户反馈"感觉怪怪的"。R88 收回卡内：对齐恢复，且与紧凑视图同一形态。
    色条颜色走 --qb-color 变量链：象限色 → 分组色覆盖，四主题一套规则。
    ★left:0 相对 padding 盒，色条左侧仍保留卡片自身 1px 边框，卡片轮廓四周完整。
-   ★R90 满高后的角部越界与验证数据，见下方 .memo-item.qb::before 规则处的说明。 */
+   ★R90 色条改为上下满高（--rail-inset:0）；
+   ★R177 改为「完整卡片轮廓 + mask 只露左边一条」，角部与卡片逐像素吻合（原理见下方 .memo-item.qb::before）。 */
 /* ★R88：色条画在卡内，左侧会紧邻卡片自己的 1px 边框（left:0 相对 padding 盒）。
    选中态 `.memo-item.selected-merge{border-color:primary}` 会把这条 1px 边框染成主色，
    在彩色色条旁多出一条紫线 → 这里用 [data-theme] 前缀(0,3,0)压过它，左框恒为主题边框色，
    选中反馈由外层 2px 主色描边承担。 */
 .memo-item.qb,[data-theme] .memo-item.qb{border-left-width:1px;border-left-color:var(--border);}
-/* ★R89 色条向左出血一个边框宽（--card-bw），与卡片**外缘**严格齐平。
-   绝对定位子元素的包含块是 padding box，left:0 会落在 1px 边框之内 → 目视上色条与卡片
-   左边之间留着一条 1px 边框 + 投影的"缝"（用户反馈"没有完全贴左边框"）。
-   left:-1px 让色条左缘正好压在卡片外沿，1px 边框被色条覆盖。
-   ★R90 色条改为上下满高（--rail-inset:0），左侧圆角跟随卡片 --radius-card：
-   色条成为"卡片左边的一条边"，而不是贴在边上的一根短胶囊。
-   ★角部越界实测（卡片圆角 6px，色条 4px 宽）：满高后色条左上角会有极小一块落在卡片圆角
-   轮廓外——带左圆角时为 8 个物理 px（≈2×2 CSS px，肉眼不可见）；不加圆角(直角)则为 24 个，
-   能看出"戳角"；加宽到 6px 则为 0。
-   ★不要给色条加上下出血（top/bottom:calc(-1*var(--card-bw))）：实测越界从 8 涨到 23 个物理 px，
-   且顶端只多覆盖 1px，得不偿失。 */
-.memo-item.qb::before{content:'';position:absolute;left:calc(-1 * var(--card-bw));top:var(--rail-inset);bottom:var(--rail-inset);width:var(--rail-w);border-radius:var(--radius-card) 0 0 var(--radius-card);background:var(--qb-color,var(--color-primary,#6366f1));pointer-events:none;}
+/* ★★R177 色条必须与卡片**同一条外轮廓**（用户："圆角看起来还是不和谐"，附截图）。
+   旧写法 `width:4px; border-radius:var(--radius-card) 0 0 var(--radius-card)` 有两个问题：
+   ① CSS 规定"圆角半径之和 > 盒子尺寸时按比例压缩" —— 4px 宽的条配 6px 水平半径 → 水平半径被压到 4、
+      垂直半径仍是 6 → 左角变成 **4×6 的椭圆**，与卡片的正圆角（6×6）不是一条弧；圆角越大偏差越明显
+      （12px 时椭圆弧在 x=4 处 y=0 而真实圆弧 y≈0.7px）。
+   ② 色条上下没出血，圆角圆心比卡片外轮廓的圆心低 1px（padding box vs border box）。
+   现在改成「**画成完整卡片轮廓 + 只露出左边一条**」：
+     · 宽高 = 卡片 border box（左右上下各出血 --card-bw）→ 四角圆角轮廓与卡片**逐像素重合**；
+     · 再用 `mask-image` 的 90deg 硬边渐变把 x > rail-w+card-bw 的部分裁掉 → 视觉上仍是一条 4px 色边。
+   这样无论 --radius-card 调到多少，色条左角永远贴合卡片，不存在"戳角/椭圆角"。
+   ⚠️mask 是相对**色条自身**坐标（色条左缘 = 卡片外缘），所以裁切位置 = rail-w + card-bw（含 1px 出血）。
+   ⚠️不要退回"直角 + 加宽到 radius"的老路（那会把色条从 4px 撑到 6~12px 宽，用户要的是细边）。 */
+.memo-item.qb::before{content:'';position:absolute;
+  left:calc(-1 * var(--card-bw));top:calc(var(--rail-inset) - var(--card-bw));bottom:calc(var(--rail-inset) - var(--card-bw));
+  width:calc(100% + 2 * var(--card-bw));
+  border-radius:var(--radius-card);
+  background:var(--qb-color,var(--color-primary,#6366f1));
+  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(var(--rail-w) + var(--card-bw)),transparent calc(var(--rail-w) + var(--card-bw)));
+  mask-image:linear-gradient(90deg,#000 0,#000 calc(var(--rail-w) + var(--card-bw)),transparent calc(var(--rail-w) + var(--card-bw)));
+  pointer-events:none;}
 .memo-item.qb.q0{--qb-color:var(--q0);}
 .memo-item.qb.q1{--qb-color:var(--q1);}
 .memo-item.qb.q2{--qb-color:var(--q2);}
@@ -1226,7 +1242,13 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 /* ★R87 组头去掉原 3px 左边框（边框遇 8px 圆角会在左侧形成"月牙"，且满高度，与卡片的胶囊色条观感割裂）。
    ★R88 起改用与卡片同款「卡内贴左缘」胶囊色条，两者排在同一条竖线上。 */
 .mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px;margin-bottom:3px;cursor:pointer;background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 13%,var(--card-bg));border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
-.mgh-head::before{content:'';position:absolute;left:0;top:0;bottom:0;width:var(--rail-w);border-radius:var(--radius-card) 0 0 var(--radius-card);background:var(--gh-color,var(--color-primary,#6366f1));pointer-events:none;}
+/* ★★R177 与卡片色条同一套写法（完整轮廓 + mask 只露左边一条）：旧写法 4px 宽配 12px 水平圆角会被
+   CSS 的"半径之和超尺寸按比例压缩"压成 4×12 椭圆，与组头自身 12px 正圆角不是一条弧 → 改后逐像素吻合。
+   组头没有边框，所以不需要 --card-bw 出血（left:0 + width:100% 即等于 border box）。 */
+.mgh-head::before{content:'';position:absolute;left:0;top:0;bottom:0;width:100%;border-radius:var(--radius-card);background:var(--gh-color,var(--color-primary,#6366f1));
+  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 var(--rail-w),transparent var(--rail-w));
+  mask-image:linear-gradient(90deg,#000 0,#000 var(--rail-w),transparent var(--rail-w));
+  pointer-events:none;}
 /* ★R89 分组置顶：组头加琥珀内描边 + 标题右侧图钉徽标，与卡片置顶(#f59e0b)同色系；
    底色仍保留分组色底，只是往琥珀方向偏一档，保证"这是置顶的分组"一眼可辨。 */
 .mgh-head.gp-pinned{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 9%, color-mix(in srgb,#f59e0b 16%,var(--card-bg)));box-shadow:inset 0 0 0 1px rgba(245,158,11,.45);}
