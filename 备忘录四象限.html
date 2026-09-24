@@ -409,7 +409,7 @@ body.kb-edit .hist-actions{display:inline-flex;}
 /* ★R92 紧凑视图组头从「整行 banner」压成「矮条」：原 34px+6px 吃掉近半行(一行卡片才 78px)，
    压到 ~17px+3px 省下约 20px。仍占整行、仍是一块明显的组头——不改成「占一格的卡片」，
    因为那样组头会退化成普通卡，与 R92 第①条「分组要能一眼看出」的目标互相打架。 */
-.memo-list.compact .mgh-head{padding:1px 8px;margin-bottom:3px;gap:6px;}
+.memo-list.compact .mgh-head{padding:1px 8px 1px 0;margin-bottom:3px;gap:6px;} /* ★R180 左内距归零，与常规视图一致（短色块靠边） */
 .memo-list.compact .mgh-caret{width:14px;height:14px;font-size:10px;}
 .memo-list.compact .mgh-title{font-size:11px;}
 .memo-list.compact .mgh-count{font-size:10px;}
@@ -1251,7 +1251,11 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
    现在：透明底 → 露出组底衬，组头与组内卡片**同处一块底衬**（整组的范围感更强）；
         层级变成 组底衬(最淡) → 组头(无块面·仅标题) → 卡片(白块 + 色条)。
    分组标识仍在：色圆点（.mgh-color-btn）＋ 名称 ＋ 条数。悬停/按下给一层淡底做点击反馈。 */
-.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px;margin-bottom:3px;cursor:pointer;background:transparent;border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
+/* ★R180 padding-left 归零：短色块要与**卡片色条**排在同一条竖线上（卡片色条贴卡片左缘＝组内容左缘）。
+   文字的左留白改由 caret 自身提供（caret 宽 20px）→ 名称位置与改前几乎一致。 */
+.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 0;margin-bottom:3px;cursor:pointer;background:transparent;border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
+/* ★R180 短色块：14px 高 / 3px 宽 / 2px 圆角（同样不用绝对定位，避开包含块与圆角那堆坑，gap 里用负 margin 收紧） */
+.mgh-rail{width:var(--rail-w);height:14px;border-radius:2px;background:var(--gh-color,var(--color-primary,#6366f1));flex:none;margin-left:calc(-1 * var(--card-bw));margin-right:-4px;}
 .mgh-head:hover{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 8%,transparent);}
 /* ★R89 分组置顶：组头加琥珀内描边 + 标题右侧图钉徽标，与卡片置顶(#f59e0b)同色系；
    底色仍保留分组色底，只是往琥珀方向偏一档，保证"这是置顶的分组"一眼可辨。 */
@@ -1263,7 +1267,7 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 /* ★R179 底衬透明化后按下反馈降一档（原来 20% 是压在 13% 色底上的叠加量，现在只有底衬 7%）。 */
 .mgh-head:active{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 16%,transparent);}
 .mgh-caret{border:none;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:11px;line-height:1;width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;}
-.mgh-title{font-weight:600;font-size:13px;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} /* ★R68 长组名省略号，不挤压右侧条数 */
+.mgh-title{font-weight:600;font-size:13px;color:var(--gh-color,var(--color-primary,#6366f1));min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} /* ★R180 名称用分组色着色（用户方案①）：一眼看出哪个组，与短色块同色呼应 */ /* ★R68 长组名省略号，不挤压右侧条数 */
 .mgh-count{font-size:11px;color:var(--text-tertiary);margin-left:auto;white-space:nowrap;flex-shrink:0;} /* ★R68 nowrap:重命名输入框挤压时「N 条」不再折成两行 */
 .mgh-color-btn{width:16px;height:16px;border-radius:50%;border:2px solid var(--card-bg);box-shadow:0 0 0 1px rgba(0,0,0,.18);cursor:pointer;padding:0;flex-shrink:0;transition:transform .12s;}
 .mgh-color-btn:active{transform:scale(.9);}
@@ -14452,7 +14456,11 @@ function createGroupHeader(grp){
   /* ★R93 「重命名」按钮从右侧按钮组移到标题区末尾：
      它默认 width:0 隐藏，若留在右侧会把 count 与「+」之间顶出 8+22+8=38px 的空白；
      移到标题区后由 .mgh-count 的 margin-left:auto 吸收宽度差 → 出现/消失时右侧按钮与条数完全不跳。 */
-  head.innerHTML='<button type="button" class="mgh-caret" aria-label="展开/收起">'+caret+'</button>'
+  /* ★R180 组头左侧短色块（用户选了方案②）：14px 高·3px 宽的圆角短块，
+     **不是** R87~R178 那种通高色条（通高条会与组内卡片的色条成两根平行竖线）；
+     短块只作为“这一行的色锚点”，与卡片色条排在同一条竖线上（见 .mgh-head{padding-left:0} 那条）。 */
+  head.innerHTML='<span class="mgh-rail" aria-hidden="true"></span>'
+    +'<button type="button" class="mgh-caret" aria-label="展开/收起">'+caret+'</button>'
     +'<span class="mgh-title">'+escapeHtml(grp.name)+'</span>'
     +(grp.pinned?'<span class="mgh-pin" title="已置顶">'+ICON_PIN+'</span>':'')
     +'<button type="button" class="mgh-ren-btn" aria-label="重命名分组" title="重命名">'+RENAME_ICON+'</button>'
