@@ -1239,16 +1239,16 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 .memo-group{display:block;margin:7px 0;padding:4px 6px 5px;border:none;border-radius:10px;background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 7%,var(--card-bg));user-select:none;}
 /* ★玻璃主题的分组底衬不写在这里！玻璃主题块内另有一条 `[data-theme="glass"] .memo-group`
    声明在本行之后、特异性相同，会把这里的写法整条反杀。改玻璃底衬请去那一条改。 */
-/* ★R87 组头去掉原 3px 左边框（边框遇 8px 圆角会在左侧形成"月牙"，且满高度，与卡片的胶囊色条观感割裂）。
-   ★R88 起改用与卡片同款「卡内贴左缘」胶囊色条，两者排在同一条竖线上。 */
+/* ★87 组头去掉原 3px 左边框（边框遇圆角会在左侧形成"月牙"，且满高度，与卡片的胶囊色条观感割裂）。
+   ★88 曾改用与卡片同款的「卡内贴左缘」细色条。
+   ★★R178 **把组头色条整个删掉**（用户："我感觉分组的色条怪怪的，你觉得分组名称这栏应该有色条吗？"）：
+   组头已经有**三重**分组标识 —— ① 整块分组色底（13% 混色）② 右侧色圆点 ③ 名称文字，
+   再加一条左侧色条就是第四重；而且它与组内卡片的色条形成**两根平行竖线**（中间还夹着行距），
+   读起来像两根栏杆、层级反而乱。卡片色条有意义（卡片是内容主体，需要色标识），
+   组头只是"标题容器"，色底已经足够。
+   ⚠️如果以后要恢复，正确写法是 R177 的「完整轮廓 + mask 只露一条」（见上方 .memo-item.qb::before 的注释），
+   别再写成 "width:var(--rail-w) + 大圆角"（会被按比例压成椭圆角）。 */
 .mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px;margin-bottom:3px;cursor:pointer;background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 13%,var(--card-bg));border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
-/* ★★R177 与卡片色条同一套写法（完整轮廓 + mask 只露左边一条）：旧写法 4px 宽配 12px 水平圆角会被
-   CSS 的"半径之和超尺寸按比例压缩"压成 4×12 椭圆，与组头自身 12px 正圆角不是一条弧 → 改后逐像素吻合。
-   组头没有边框，所以不需要 --card-bw 出血（left:0 + width:100% 即等于 border box）。 */
-.mgh-head::before{content:'';position:absolute;left:0;top:0;bottom:0;width:100%;border-radius:var(--radius-card);background:var(--gh-color,var(--color-primary,#6366f1));
-  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 var(--rail-w),transparent var(--rail-w));
-  mask-image:linear-gradient(90deg,#000 0,#000 var(--rail-w),transparent var(--rail-w));
-  pointer-events:none;}
 /* ★R89 分组置顶：组头加琥珀内描边 + 标题右侧图钉徽标，与卡片置顶(#f59e0b)同色系；
    底色仍保留分组色底，只是往琥珀方向偏一档，保证"这是置顶的分组"一眼可辨。 */
 .mgh-head.gp-pinned{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 9%, color-mix(in srgb,#f59e0b 16%,var(--card-bg)));box-shadow:inset 0 0 0 1px rgba(245,158,11,.45);}
@@ -1591,7 +1591,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell .d-sub.jq{color:#34d399;font
    用 inset 阴影做发丝描边（不用 border：border 会改变盒尺寸，破坏「组内卡片窄 12px」的口径）。 */
 [data-theme="glass"] .memo-group{background:linear-gradient(color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 17%,transparent),color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 17%,transparent));border:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);backdrop-filter:none;-webkit-backdrop-filter:none;}
 [data-theme="glass"] .mgh-head{background:linear-gradient(180deg, rgba(255,255,255,0.26), rgba(255,255,255,0.14)), var(--glass-grain);background-size:auto,180px 180px;border-left:none;backdrop-filter:blur(calc(var(--glass-blur) * 0.8)) saturate(var(--glass-sat));-webkit-backdrop-filter:blur(calc(var(--glass-blur) * 0.8)) saturate(var(--glass-sat));}
-[data-theme="glass"] .mgh-head::before{background:var(--gh-color,rgba(255,255,255,0.6));}
+/* ★R178 组头色条已整套删除（含玻璃主题这条覆盖）—— 理由见 .mgh-head 规则上方的注释。 */
 /* ★R89 玻璃主题置顶组头：琥珀渐变取代中性白玻璃，并补内描边 */
 [data-theme="glass"] .mgh-head.gp-pinned{background:linear-gradient(180deg, rgba(245,158,11,.34), rgba(245,158,11,.20)), var(--glass-grain);background-size:auto,180px 180px;box-shadow:inset 0 0 0 1px rgba(245,158,11,.5);}
 [data-theme="glass"] .mgh-head.gp-pinned .mgh-pin{color:#fff;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45));}
@@ -12849,15 +12849,23 @@ var NAV_MORPH_IDLE=110;       /* ms：最后一次移动过去这么久即判定
      现在行程砍掉一半，同样的过冲量看起来就是"利落的一荡"而不是"甩飞"）。
      实测再修：K_UP=0.34 时首帧就吃掉 34% 的行程 → 一帧跳 37px，观感是"猛地一缩"（过头了）。
      降到 0.24：首帧 ~16px，过冲改在**尾部**出现（这才是"惯性"，首帧猛冲只是"跳"）。
-     · 涨 K=0.24 / DAMP=0.72 → ζ≈0.335，过冲 ~33%（集中在收尾段）
-     · 收 K=0.20 / DAMP=0.74 → ζ≈0.337，刚度略低 = 收回比涨慢一点点（"慢慢荡回来"的方向保留，但不拖沓） */
-var NAV_MORPH_RK_UP=0.24, NAV_MORPH_RUP_DAMP=0.72;
-var NAV_MORPH_RK_DOWN=0.20, NAV_MORPH_RDN_DAMP=0.74;
+     ★★R178 再降一档（用户："导航栏左右拖动的泡能否让它的宽窄变化时慢一点"）：
+     0.24/0.20 → **0.12/0.09**，同时按 ζ 不变把阻尼调大（0.72/0.74 → 0.793/0.818）。
+     ⚠️**必须保值 ζ 而不是只降 K**：只降 K 会让它变得更弹（ζ 变小），用户要的是"慢"不是"更 Q"。
+     ζ = −ln(DAMP)/(2√K) ≈ 0.335（过冲 ~33%，与上一版同款手感），只是整体时间尺度拉长 ~2×。
+     · 涨 K=0.12 / DAMP=0.793（实测"变宽"从 1 帧拉满 → 9 帧渐入）
+     · 收 K=0.07 / DAMP=0.838（比涨更慢：收窄是"慢慢收回来"的那一侧，用户对它的时长最敏感）
+   ★★R178 还有一处补漏：**右向"拉长"原来没走弹簧**（`wTgt += s*NAV_STRETCH`，s 直接来自低通速度）
+     → 实测从满宽到最宽只用了 **1 帧**（159 → 181）。现在拉长量也由弹簧量 `m.st` 驱动（同组参数），
+     宽窄**两侧**都变成"慢慢展开 / 慢慢收回"。 */
+var NAV_MORPH_RK_UP=0.12, NAV_MORPH_RUP_DAMP=0.793;
+var NAV_MORPH_RK_DOWN=0.07, NAV_MORPH_RDN_DAMP=0.838;
 var NAV_MORPH_VEPS=0.03;      /* |速度| 低于此值即视为静止（原代码里散落的 0.03 收到常量） */
 var NAV_MORPH_SMOOTH=0.32;    /* ★速度一阶低通系数：瞬时 dx/dt 抖动很大，滤波后再驱动形态。
                                  0.45 实测"起步即满速" → 形变第一步就冲到底；0.32 让速度用 ~3 帧建立起来 */
-var _navMorph={vel:0,vf:0,r:0,vr:0,lastX:0,lastT:0,raf:0,center:0};   /* ★R175② 删掉 w/dvel（宽度不再单独跑弹簧） */
-function _navMorphReset(){_navMorph.vel=0;_navMorph.vf=0;_navMorph.r=0;_navMorph.vr=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
+/* ★R175② 删掉 w/dvel（宽度不再单独跑弹簧）；★R178 加 st/vs（右向"拉长"量也走弹簧，原来它直接跟速度 = 1 帧拉满） */
+var _navMorph={vel:0,vf:0,r:0,vr:0,st:0,vs:0,lastX:0,lastT:0,raf:0,center:0};
+function _navMorphReset(){_navMorph.vel=0;_navMorph.vf=0;_navMorph.r=0;_navMorph.vr=0;_navMorph.st=0;_navMorph.vs=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
 function _navMorphStop(){if(_navMorph.raf){cancelAnimationFrame(_navMorph.raf);_navMorph.raf=0;}}
 /* 镜面高光位置 = 泡中心在栏内的相对位置（0~100%）→ 拖到哪，反光流到哪。
    这是"液态"与"静态玻璃"的分界：玻璃靠边缘光，液体靠**反光会动**。 */
@@ -12907,18 +12915,26 @@ function _navMorphFrame(){
     var span=wBase-wRound;
     var rSoft=span>0?Math.max(0.2,Math.min(1,(wBase-wSoft)/span)):0.7;
     var rTgt=(vf<-NAV_MORPH_VEPS)?(rSoft+(1-rSoft)*s):0;
-    /* 不对称弹簧：涨快、收略慢（但两者都是高刚度 → 都不拖沓，惯性靠过冲而不是靠慢） */
+    /* ★R178 右向拉长量同组弹簧：旧写法 `wTgt += s*NAV_STRETCH` 里 s 是低通速度的**即时**映射
+       → 满宽到最宽只花 1 帧（实测 159→181），"变宽"这一侧完全没有过渡。 */
+    var stTgt=(vf>NAV_MORPH_VEPS)?s:0;
+    /* 不对称弹簧：涨快、收略慢（两侧都是同一档 ζ，惯性靠过冲而不是靠慢） */
     var rUp=(rTgt>m.r);
     m.vr+=(rTgt-m.r)*(rUp?NAV_MORPH_RK_UP:NAV_MORPH_RK_DOWN);
     m.vr*=(rUp?NAV_MORPH_RUP_DAMP:NAV_MORPH_RDN_DAMP);
     m.r+=m.vr;
     if(m.r<0){m.r=0;if(m.vr<0)m.vr=0;} else if(m.r>1.25){m.r=1.25;if(m.vr>0)m.vr=0;}
+    var stUp=(stTgt>m.st);
+    m.vs+=(stTgt-m.st)*(stUp?NAV_MORPH_RK_UP:NAV_MORPH_RK_DOWN);
+    m.vs*=(stUp?NAV_MORPH_RUP_DAMP:NAV_MORPH_RDN_DAMP);
+    m.st+=m.vs;
+    if(m.st<0){m.st=0;if(m.vs<0)m.vs=0;} else if(m.st>1.25){m.st=1.25;if(m.vs>0)m.vs=0;}
     var r=Math.max(0,Math.min(1,m.r));
+    var st=Math.max(0,Math.min(1,m.st));
     /* ★R175② 单级弹簧：宽度**直接**取 r 算出的目标（r 本身已被弹簧平滑过）。
        原来是「r → wTgt → 宽度弹簧」两级串联 = 两个二阶系统相乘，响应迟钝、行程又长 → 正是"过渡时间太长"。
        现在一层就够：惯性由 r 的过冲提供，宽度立刻响应。 */
-    var wTgt=wBase+(wRound-wBase)*r;                                  /* 连续：满宽胶囊 ↔ 收短 */
-    if(vf>NAV_MORPH_VEPS)wTgt+=s*NAV_STRETCH;                         /* 右：再被"拉长"一点（连续） */
+    var wTgt=wBase+(wRound-wBase)*r+st*NAV_STRETCH;                   /* 连续：拉长 ↔ 满宽胶囊 ↔ 收短（三项都由弹簧驱动） */
     var w=Math.max(wRound-6,Math.min(wBase+NAV_STRETCH+18,wTgt));
     var nr=nav.getBoundingClientRect(),last=tabs[tabs.length-1];
     /* ★R170.3 边界放宽 NAV_OVER：泡可以微微探出底栏左右边缘（用户要"能看到后面的边框"）。
