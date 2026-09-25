@@ -2319,7 +2319,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
      在窄容器里总宽超限被 overflow-x 挤压成团。改为 flex:1 1 0 均分容器+min-width:0,永不溢出;
      图标/文字等比缩小,整体更紧凑不挤 */
   .bottom-nav{padding:4px 6px;gap:1px;width:calc(100% - 12px);}
-  .nav-tab{min-width:0;flex:1 1 0;padding:5px 1px 3px;font-size:12px;gap:1px;border-radius:8px;
+  .nav-tab{min-width:0;flex:1 1 0;padding:5px 1px 3px;font-size:12px;gap:1px;border-radius:22px;
            overflow:hidden;align-items:center;justify-content:center;text-align:center;}
   .nav-tab svg{width:19px;height:19px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.1;font-size:12px;transform:scale(0.78);transform-origin:center top;}
@@ -2352,7 +2352,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
      但 5 个 9 字 nav-tab(备忘录四象限/今日月日历)仍溢出。
      缩 svg 18 + font 8 + height auto，让 5 tab 真正均分 */
   .bottom-nav{padding:3px 4px;gap:1px;width:calc(100% - 8px);}
-  .nav-tab{padding:4px 1px 3px;font-size:12px;gap:1px;border-radius:7px;}
+  .nav-tab{padding:4px 1px 3px;font-size:12px;gap:1px;border-radius:22px;}
   .nav-tab svg{width:20px;height:20px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:none!important;} /* ★ 手机端 nav 只显示图标，彻底解决中文最小字号粘连 */
   .header-actions .btn-icon{width:26px;height:26px;}
@@ -2592,7 +2592,8 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
   /* ★R145 底栏是控制区、不是可读文本：禁掉长按选字（别让长按弹出文字选择手柄/文本放大镜）
      ★注：touch-action:pan-y（原 R145，为长按拖拽保留横向 pointer 流）已随 ★R165 的整套
      「长按液态玻璃泡」一并删除 —— 底栏不再有横向手势要吃，回落继承默认值即可。 */
-  -webkit-user-select:none;user-select:none;transition:opacity .25s ease, transform .25s ease;}
+  -webkit-user-select:none;user-select:none;transition:opacity .25s ease, transform .25s ease,
+    box-shadow .28s ease,border-color .28s ease;/* ★R182② 与下方 2849 行那条保持同一份清单（那条才是生效的） */}
 /* 向上滑浏览内容时底栏渐隐;向下滑/回到可导航位置时渐显 */
 .bottom-nav.nav-hidden{opacity:0;transform:translateX(-50%) translateY(160%);pointer-events:none;}
 /* ★R67 宽屏：导航栏宽度跟随备忘录容器（基础规则 max-width:640 恒定 → ≥769 屏比 720 容器窄 80px）。
@@ -2606,7 +2607,14 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
 }
 /* 编辑备忘录时隐藏切换视图导航(用户需求:输入时切换导航消失,避免遮挡);键盘弹起时聚焦备忘已被滚到键盘上方 */
 .kb-edit #bottomNav{display:none!important;}
-.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:10px;font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;}
+/* ★★R182① hover 底的外形必须与「选中胶囊」同形（用户："导航栏 hover 怎么是方的灰色背景，太不和谐了吧"）。
+   病根 = tab 自己的圆角只有 10px，而它旁边那条选中胶囊是 22px 半圆端（底栏本身也是 22px 圆角的胶囊）——
+   于是 hover 一出现就是"胶囊里塞了一块圆角矩形"，是**同一组件内两套圆角语言**。
+   现在把 tab 圆角直接取成胶囊的 22px（不写 999px：22px 与 .nav-pill 的 border-radius 是同一个值，
+   两处共用一个数字才好维护；且 tab 高 48px 时 22px 与胶囊端头的视觉弧线一致）。
+   ⚠️三个断点各有一条 .nav-tab 规则（本行 + ≤560 的 8px + ≤480 的 7px），**三处必须同改**，
+     否则窄窗口 hover 又变回方角。 */
+.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:22px;font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;}
 /* ===== 批量操作按钮（★R59 重新设计）=====
    批量操作并入底部导航槽位：复用同一固定条，零额外占用。
    设计要点（四主题统一自适应）：
@@ -2693,15 +2701,49 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    ★R142 胶囊保持 primary 渐变观感（用户定稿：不一定要透明玻璃）。
    ★R165 原先「拖动期由玻璃泡接管、真 pill 藏起防双泡」的 liq-drag 交接规则已随泡一并删除。 */
 .nav-pill{position:absolute;top:5px;bottom:5px;left:0;width:0;border-radius:22px;pointer-events:none;z-index:0;opacity:0;
-  background:linear-gradient(180deg,
-    color-mix(in srgb, var(--color-primary,#6366f1) 20%, var(--card-bg)) 0%,
-    color-mix(in srgb, var(--color-primary,#6366f1) 11%, var(--card-bg)) 100%);
-  border:1px solid color-mix(in srgb, var(--color-primary,#6366f1) 24%, transparent);
+  --lp:0;   /* ★R182② 浮起度：0=常态皮 / 1=玻璃皮。由归位弹簧每帧 inline 写（同 .nav-pill.lift 的 --lp:1） */
+  /* ★★R182② 皮肤改成**全部由 --lp 连续驱动**（原来只在 .nav-pill.lift 里另写一套，摘类那一帧整块换装）。
+     两个理由：
+     ① 视觉上：摘 .lift 那一刻「弧顶镜面 + 半透皮 + 外柔晕 → 实心渐变 + 紧贴外晕」是**一帧跳变**，
+        慢速归位（R181）之后这最后一下特别扎眼；
+     ② 技术上：**box-shadow 只要层数/inset 标记逐层对不上就完全不插值**（实测：旧 base 3 层全 inset 序
+        [in, in, out] vs lift 5 层 [in, in, in, out, out]，索引 2 处标记相反 → getAnimations() 里
+        根本没有 box-shadow 过渡，取值直接从 12px 跳到 18px）—— 所以光加 transition 是治不好的。
+     改法：把皮写成 --lp 的函数，浮起的形态变化由弹簧逐帧推进，压根不需要靠 CSS 过渡补。 */
+  background:
+    /* ① 弧顶镜面（液态感来源）：alpha 随 --lp（常态 0 = 完全不可见；浮起 0.92/0.26） */
+    radial-gradient(130% 96% at var(--pill-hx,50%) -22%,
+      rgba(255,255,255,calc(.92 * var(--lp))) 0%,
+      rgba(255,255,255,calc(.26 * var(--lp))) 40%,
+      transparent 66%),
+    /* ② 皮本身：也走 alpha 版（lp=0 时混 transparent 叠在栏的 card-bg 上与旧的"混 card-bg"**逐像素等价**，
+       但浮起时能让栏的描边/圆角透上来 —— 见 R172④）。三段停靠点保证 lp=0 与旧的 2 段 20%→11% 线性完全一致：
+       20%@0 / 15%@56 / 11%@100（在 56% 处 20-9*.56=14.96≈15）。 */
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--color-primary,#6366f1) calc(20% + 3% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, var(--color-primary,#6366f1) calc(15% - 3% * var(--lp)), transparent) 56%,
+      color-mix(in srgb, var(--color-primary,#6366f1) calc(11% + 7% * var(--lp)), transparent) 100%);
+  /* ★★R182② **常态胶囊不再描边**。原规则是 `border:1px solid color-mix(primary 24%,transparent)`（一条淡蓝紫细边），
+     而浮起态是 .nav-pill.lift{border:none} —— 两者一描一边不描，收尾摘掉 .lift 的那一帧
+     就凭空冒出一条蓝色描边。R181 把归位放慢放大回弹之后，这条"末帧弹出来的蓝边"变得特别扎眼
+     （用户："浮起胶囊泡收起来时怎么有蓝色边框出现？"）。
+     去掉描边同时也和 R157 的定稿口径一致：**泡缘一律不描边**（形体的边界交给外柔晕 + 内部厚度光，
+     描边会给玻璃"描个圈"）。胶囊的可见度靠渐变本身 + 阴影，实测足够。
+     ⚠️玻璃主题的常态胶囊仍保留它的白描边（[data-theme="glass"] .nav-pill，那是玻璃的边缘高光，
+       不是这条蓝边）—— 收尾时靠 border-color 过渡淡出（见下方 transition 与玻璃主题的 .lift 覆盖）。 */
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.55),
     inset 0 -1px 0 color-mix(in srgb, var(--color-primary,#6366f1) 10%, transparent),
-    0 6px 18px color-mix(in srgb, var(--color-primary,#6366f1) 22%, transparent);
-  transition:transform .42s cubic-bezier(.34,1.28,.5,1), width .42s cubic-bezier(.34,1.28,.5,1), opacity .26s ease;
+    /* ⚠️下面两条是**占位层**（完全透明、长度为 0，肉眼零影响），只为让层数与 inset 标记与 .lift 的
+       5 层逐一对齐 —— 见本条开头理由②：对不齐就完全不插值。别删！ */
+    inset 0 0 0 0 transparent,
+    0 6px 18px color-mix(in srgb, var(--color-primary,#6366f1) 22%, transparent),
+    0 0 0 0 transparent;
+  /* ★★R182② 皮肤过渡：声明必须写在**基础规则**上（父状态被撤掉时靠它兜住），写成 `.lift` 里的话
+     摘类那一刻规则一起消失 → 又是一次瞬跳（同 R170 的"状态类里别写 transition"）。
+     ⚠️不列 background-image：皮是 --lp 驱动的，列了反而会在 --pill-hx 每帧变化时反复重启过渡。 */
+  transition:transform .42s cubic-bezier(.34,1.28,.5,1), width .42s cubic-bezier(.34,1.28,.5,1), opacity .26s ease,
+    box-shadow .3s ease, border-color .3s ease, border-width .3s ease;
 }
 .bottom-nav.batch-mode .nav-pill{opacity:0;}
 /* ===== ★R170 底栏长按浮起：导航栏变大 + 胶囊浮起 + 选中项换填充图标 =====
@@ -2805,21 +2847,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
   --lp:1;
   top:calc(5px - 8px * var(--lp));bottom:calc(5px - 8px * var(--lp));
   border-radius:calc(22px + 3px * var(--lp));
-  border:none;
-  background:
-    /* ① 弧顶镜面：位置跟手流动 */
-    radial-gradient(130% 96% at var(--pill-hx,50%) -22%, rgba(255,255,255,.92) 0%, rgba(255,255,255,.26) 40%, transparent 66%),
-    /* ② 皮本身：略深于底栏的玻璃色。
-       ★★R172④ 从「不透明混色」改为**同比例 alpha**（color-mix 混 transparent）——
-         混 card-bg 时泡是不透明实体：它压在底栏 1px 描边上就把那条线**完全吃掉**，
-         用户一眼看出"看不到导航栏的边框"（泡像贴纸浮在外面，和栏没有关系）。
-         alpha 版在栏内的观感与之**逐像素等价**（0.23 alpha over card-bg ≡ mix 23% card-bg），
-         但栏的描边、圆角、甚至泡探出栏外那截下面的页面底色都能透上来 —— 这才是"玻璃"。
-       ⚠️不要给这里加 backdrop-filter：它会把那条 1px 描边**糊没**，正好抵消本次要的效果。 */
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--color-primary,#6366f1) 23%, transparent) 0%,
-      color-mix(in srgb, var(--color-primary,#6366f1) 12%, transparent) 56%,
-      color-mix(in srgb, var(--color-primary,#6366f1) 18%, transparent) 100%);
+  /* ★★R182② 不再在这里另写一套 background / border：皮已经全部搬进基础规则、由 --lp 连续驱动
+     （弧顶镜面 alpha = .92*--lp、三段 alpha 渐变 = 20+3*lp / 15-3*lp / 11+7*lp，
+       lp=1 时正好等于原来这套 23%/12%/18%）。这样「浮起 ↔ 常态」根本没有"换装"动作，
+     也就没有可跳变的那一帧。`border:none` 也一并删掉（常态已无描边，留着只会误导）。
+     ⚠️下面 box-shadow 的 5 层结构必须与基础规则那 5 层**逐层对齐**（含 inset 标记），否则整条 box-shadow
+       都不插值（实测 getAnimations() 里连过渡都不生成）—— 基础规则里的两条透明占位层就是为这个存在的。 */
   box-shadow:
     inset 0 1.5px 0 rgba(255,255,255,.98),          /* 顶缘镜面硬线（最亮最锐的那条） */
     inset 0 -1.5px 0 rgba(255,255,255,.40),         /* 底缘回光 */
@@ -2829,12 +2862,16 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     0 calc(4px * var(--lp)) calc(12px * var(--lp)) rgba(0,0,0,.09);
   /* ★动画放慢：用户"感觉动画太快、死板" → 0.13s 的瞬时感改成 0.2~0.22s 的缓出 */
   transition:transform .2s cubic-bezier(.22,.61,.36,1), width .2s cubic-bezier(.22,.61,.36,1),
-    top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;
+    top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;   /* ★R182② 皮肤由 --lp 驱动，这里只留几何/阴影 */
 }
 /* 玻璃主题：常态胶囊是白色磨砂 —— 浮起态沿用同一套玻璃多层背景（自带径向高光 + 颗粒），
-   只把「白描边 + 白外环」换成**顶部亮线 + 内部柔光 + 主色外晕**，与上面的自绘口径一致。 */
+   只把「白描边 + 白外环」换成**顶部亮线 + 内部柔光 + 主色外晕**，与上面的自绘口径一致。
+   ★★R182② 这里原来写 `border:none`，但常态胶囊（[data-theme="glass"] .nav-pill）是
+   `1px solid rgba(255,255,255,.55)` —— `none` 会把 border-style 也改掉，而 **border-style 变化时
+   border-width/color 一律不插值**（规范行为）→ 收尾那一刻白描边仍是"一帧跳出来"。
+   改成只把颜色收到全透明（style/width 不变）→ 描边能随 transition 平滑淡出/淡入。 */
 [data-theme="glass"] .nav-pill.lift{
-  border:none;
+  border-color:rgba(255,255,255,0);
   box-shadow:
     inset 0 2px 1px rgba(255,255,255,.98),
     inset 0 -1.5px 1px rgba(255,255,255,.52),
@@ -2846,7 +2883,10 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
    ★transition 必须在这里补全 padding —— 基础规则的 transition 只列了 opacity/transform，
      直接给 .nav-lift 写 transition 会让「退出浮起」时规则消失、padding 瞬间回弹。 */
-.bottom-nav{touch-action:none;transition:padding .28s cubic-bezier(.22,.61,.36,1),opacity .25s ease,transform .25s ease;} /* ★R181 与泡同步（0.2s 会比泡先收完） */
+.bottom-nav{touch-action:none;transition:padding .28s cubic-bezier(.22,.61,.36,1),opacity .25s ease,transform .25s ease,
+  /* ★R182② 栏自己的皮肤也要过渡：摘掉 .nav-lift 时 border-color（浮起期压深一档）与 box-shadow
+     （浮起期加重）以前是**一帧跳回**的 —— 与泡的皮肤在同一帧跳，叠加起来就是"收尾时闪一下"。 */
+  box-shadow .28s ease,border-color .28s ease;} /* ★R181 与泡同步（0.2s 会比泡先收完） */
 /* 桌面端(精确指针 + 支持 hover):为列表项与导航提供鼠标 hover 反馈,移动端不触发 */
 @media (hover:hover) and (pointer:fine){
   .memo-item:hover,
@@ -2856,7 +2896,10 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      → 层级倒挂（悬停的那个看起来比选中的那个还"选中"），用户反馈"感觉怪怪的"。
      现在的语言与列表项 hover 统一：圆角浅面（--hover-bg）+ 文字图标走「主色 48% 与次级文字混出的中间色」
      （有"向主色靠"的暗示，但不抢选中态）。
-     ⚠️`:not(.active)` 不能省：选中项已经有胶囊底了，再叠一层 --hover-bg 会变成"双底"。 */
+     ⚠️`:not(.active)` 不能省：选中项已经有胶囊底了，再叠一层 --hover-bg 会变成"双底"。
+     ★★R182① 形状也统一到胶囊：tab 的 border-radius 10px→**22px**（= .nav-pill 的圆角），
+       所以 hover 底与选中胶囊**同形同footprint**（同一个 tab 宽、同样的半圆端），读起来就是
+       "选中态在这里，只是还没选中"。改前实测：hover 底 139×48 圆角 10px（方块）vs 胶囊圆角 22px。 */
   .nav-tab:not(.active):hover{color:var(--nav-hover-fg);background:var(--hover-bg);}
   .nav-batch:hover{background:var(--nb-surface-hi);}
   .nav-batch.ghost:hover{background:var(--nb-surface);}
@@ -13025,8 +13068,11 @@ function _navEnterLift(startIdx){
        期间帧循环只读实时 rect 更新光照/镜面、绝不写 width/transform（写一下就成瞬移）。
        手指一动（_navMorphMove）或松手（_navBeginSettle）立刻切成 transition:none 严格跟手 —— 观感上
        是"先看到泡滑过去，一按住拖动就立刻粘手"，两者不冲突。 */
+    /* ★R182② 皮肤不再列入（background-image）：皮已由 --lp 驱动，列了反而会在 --pill-hx（镜面位置）
+       每帧变化时把这条过渡反复重启；几何/阴影/描边仍需要过渡（top/bottom/radius/box-shadow/border-*）。 */
     pill.style.transition='transform .26s cubic-bezier(.22,.61,.36,1),width .26s cubic-bezier(.22,.61,.36,1),'
-      +'top .26s cubic-bezier(.22,.61,.36,1),bottom .26s cubic-bezier(.22,.61,.36,1),box-shadow .26s ease';
+      +'top .26s cubic-bezier(.22,.61,.36,1),bottom .26s cubic-bezier(.22,.61,.36,1),box-shadow .26s ease,'
+      +'border-color .26s ease,border-width .26s ease';
     /* ★R175① 浮起度必须**重置回 1**：上次归位把它收敛到 0 并留在 inline 上，而 inline 优先级高于
        `.nav-pill.lift{--lp:1}` —— 不重置的话第二次点按底栏，泡会一直是"常态大小"（浮不起来）。
        放在 transition 之后写：入场时 --lp 0→1 与加类同帧发生，top/bottom 走 .26s 过渡 = 泡"涨"起来。 */
