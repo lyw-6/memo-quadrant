@@ -405,7 +405,7 @@ body.kb-edit .hist-actions{display:inline-flex;}
    菜单类弹窗（.more-menu/.cat-dropdown）均已挂到 body，不受影响。 */
 .memo-list.compact .memo-item{height:78px;max-height:78px;min-height:78px;padding:8px 9px;overflow:hidden!important;box-sizing:border-box;min-width:0;}
 /* ★R88：紧凑/普通视图共用基础色条形态，无需在紧凑视图单独改内缩（原 R87 的 8px 覆盖已删除）。 */
-.memo-list.compact .memo-group{grid-column:1/-1;width:auto;margin:3px 0;padding:0 4px;}   /* ★R186 间距随基础规则同步收紧（底衬没了，竖直 padding 全是空隙） */
+.memo-list.compact .memo-group{grid-column:1/-1;width:auto;margin:2.5px 0;padding:0 4px;}   /* ★R187 随基础规则同步（compact 组↔组可见 16px，卡片小一档比例合适） */
 /* ★R92 紧凑视图组头从「整行 banner」压成「矮条」：原 34px+6px 吃掉近半行(一行卡片才 78px)，
    压到 ~17px+3px 省下约 20px。仍占整行、仍是一块明显的组头——不改成「占一格的卡片」，
    因为那样组头会退化成普通卡，与 R92 第①条「分组要能一眼看出」的目标互相打架。 */
@@ -1242,8 +1242,9 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
    这里只有分组内容内缩、组外卡片仍在 left:0，是**故意的层级缩进**，不是整列偏移。
    ★R186 底衬移除后旧间距全部变成"悬空空隙"：margin 7+7 + 上下 padding 4/5 + 列 gap 8 = 组↔组 **31px**（实测），
    用户："这个分组之间怎么隔这么远啊"。改为 margin 4px + 竖直 padding 0（横向 6px 缩进保留）
-   → 组↔组 16px、组↔普通卡 12px：仍比卡片间 8px 拉开层级，但不再像断开的两块。 */
-.memo-group{display:block;margin:4px 0;padding:0 6px;border:none;border-radius:10px;background:transparent;user-select:none;}
+   ★R187 用户选方案 1：组↔组**可见间距**定在 18px —— 组头自带 mb 3px，margin 取 3.5px（3+3.5+gap8+3.5=18）；
+   组头卡↔散卡 12px、卡↔卡 8px 不动，梯度 8/12/18。 */
+.memo-group{display:block;margin:3.5px 0;padding:0 6px;border:none;border-radius:10px;background:transparent;user-select:none;}
 /* ★玻璃主题的分组底衬不写在这里！玻璃主题块内另有一条 `[data-theme="glass"] .memo-group`
    声明在本行之后、特异性相同，会把这里的写法整条反杀。改玻璃底衬请去那一条改。 */
 /* ★★R185 组头改成「标题卡」—— **去掉整组底衬，组头自己成为一张浅分组色的卡**。
