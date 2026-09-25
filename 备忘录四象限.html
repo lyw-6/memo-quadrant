@@ -409,7 +409,7 @@ body.kb-edit .hist-actions{display:inline-flex;}
 /* ★R92 紧凑视图组头从「整行 banner」压成「矮条」：原 34px+6px 吃掉近半行(一行卡片才 78px)，
    压到 ~17px+3px 省下约 20px。仍占整行、仍是一块明显的组头——不改成「占一格的卡片」，
    因为那样组头会退化成普通卡，与 R92 第①条「分组要能一眼看出」的目标互相打架。 */
-.memo-list.compact .mgh-head{padding:1px 8px 1px 0;margin-bottom:3px;gap:6px;}
+.memo-list.compact .mgh-head{padding:1px 8px 1px 4px;margin-left:-4px;margin-bottom:3px;gap:6px;}
 .memo-list.compact .mgh-caret{width:14px;height:14px;font-size:10px;}
 .memo-list.compact .mgh-title{font-size:11px;}
 .memo-list.compact .mgh-count{font-size:10px;}
@@ -1256,9 +1256,16 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
      必须共用一条竖轴。色条按 R88/R177 的定稿是**紧贴卡片左缘**的（4px 宽、左缘出血 1px），
      所以它的轴线只离容器左缘 ~1px —— 箭头只能往左靠，不能反过来把色条往右挪（那会破坏"贴左缘"）。
      配合 .mgh-caret 的 justify-content:flex-start（字形左对齐），让箭头墨迹贴着容器左缘起笔。
-     ⚠️别省这一条：留着 10px 的话箭头轴线离色条轴线 19px（实测），就是用户看到的那道"错位的台阶"。 */
+     ⚠️别省这一条：留着 10px 的话箭头轴线离色条轴线 19px（实测），就是用户看到的那道"错位的台阶"。
+   ★★R184 但箭头被推出**组头自己的盒子**之后，hover/按下那层淡底就盖不住它了
+     （用户："这箭头都在胶囊外了，也难看"）→ 把组头的**盒子**也往左扩 4px：
+     `margin-left:-4px` + `padding-left:4px`（内容盒仍在原位 → 箭头/标题位置一个像素都不动），
+     盒子左缘从 96 变 92，箭头盒 93~109、墨迹 94.75~101.75 全部落在淡底之内 ✓。
+     ⚠️只扩 4px 不扩 6px：组头圆角 12px，而分组底衬 .memo-group 的圆角是 10px 且左内距 6px；
+       扩到 6px 会让两者的圆角在四角错开 2px（置顶组的琥珀底近不透明，会露馅）。
+     ⚠️基础（本条）与紧凑（.memo-list.compact .mgh-head）**两处都要改**。 */
 
-.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 0;margin-bottom:3px;cursor:pointer;background:transparent;border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
+.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 4px;margin-left:-4px;margin-bottom:3px;cursor:pointer;background:transparent;border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
 
 .mgh-head:hover{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 8%,transparent);}
 /* ★R89 分组置顶：组头加琥珀内描边 + 标题右侧图钉徽标，与卡片置顶(#f59e0b)同色系；
@@ -1276,8 +1283,8 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
    ② `margin-left:-3px` 抵掉字形自带的前导边距（'▼' 在 11px 下的左侧 bearing ≈1.75px，
       再加上墨迹宽 7px → 墨迹中心原本落在 +5.25px，减 3px 后 ≈ +2.25px = 色条中心）。
    ★实测：墨迹中心 − 色条中心 = **−0.1px**（改前 +19.0px）。
-   ⚠️负 margin 是**光学对齐**（字形边距没法用别的方式吃掉）；盒子会伸进分组底衬的 6px 左内边距里
-     （.memo-group padding-left:6px），既不会被裁也不会有视觉副作用 —— 祖先都是 overflow:visible。
+   ⚠️负 margin 是**光学对齐**（字形边距没法用别的方式吃掉）；盒子伸进组头自己的盒子里
+     （R184 组头也往左扩了 4px → 盒子 92~810），既不会被裁也不会露在淡底之外 —— 祖先都是 overflow:visible。
    ⚠️盒子仍留 16×20 做点击热区（整个组头行本来也能点，但这一格是"立即折叠"的快捷区）。 */
 .mgh-caret{border:none;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:11px;line-height:1;width:16px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-start;padding:0;margin-left:-3px;}
 .mgh-title{font-weight:600;font-size:13px;color:var(--gh-color,var(--color-primary,#6366f1));min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} /* ★R180 名称用分组色着色（用户方案①）：一眼看出哪个组，与短色块同色呼应 */ /* ★R68 长组名省略号，不挤压右侧条数 */
@@ -1821,7 +1828,8 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
 [data-theme="glass"] .nav-pill{
   border-radius:22px;
   background:
-    radial-gradient(130% 150% at 50% -32%, rgba(255,255,255,.80) 0%, rgba(255,255,255,.30) 46%, rgba(255,255,255,.08) 100%),
+    /* ★R184 与主主题同一条运动学：镜面沿运动方向偏移 + 被拉长（静止时 --mv/--mva 均为 0 → 逐像素不变） */
+    radial-gradient(calc(130% + 60% * var(--mva,0)) calc(150% + 40% * var(--mva,0)) at calc(50% + var(--mv,0) * 11%) -32%, rgba(255,255,255,.80) 0%, rgba(255,255,255,.30) 46%, rgba(255,255,255,.08) 100%),
     linear-gradient(180deg, var(--glass-tint-2) 0%, rgba(255,255,255,calc(var(--glass-alpha) * 0.82)) 100%),
     var(--glass-grain);
   background-size:auto, auto, 180px 180px;
@@ -2726,12 +2734,20 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
         根本没有 box-shadow 过渡，取值直接从 12px 跳到 18px）—— 所以光加 transition 是治不好的。
      改法：把皮写成 --lp 的函数，浮起的形态变化由弹簧逐帧推进，压根不需要靠 CSS 过渡补。 */
   background:
-    /* ① 弧顶镜面（液态感来源）：alpha 随 --lp（常态 0 = 完全不可见；浮起 0.92/0.26） */
-    radial-gradient(130% 96% at var(--pill-hx,50%) -22%,
+    /* ① 弧顶镜面（液态感来源）：alpha 随 --lp（常态 0 = 完全不可见；浮起 0.92/0.26）
+       ★★R184 移动时把镜面**沿运动方向偏移 + 横向拉长**（`--mv` 有符号 −1..1、`--mva` 无符号 0..1）：
+       液体被手带着走时，反光是"被拉过去、被拉长"的 —— 这是"左右移动有份量"的关键线索之一。
+       静止时两个量都是 0 → 与 R182 的写法逐像素一致。 */
+    radial-gradient(calc(130% + 60% * var(--mva,0)) 96% at calc(var(--pill-hx,50%) + var(--mv,0) * 11%) -22%,
       rgba(255,255,255,calc(.92 * var(--lp))) 0%,
       rgba(255,255,255,calc(.26 * var(--lp))) 40%,
       transparent 66%),
-    /* ② 皮本身：也走 alpha 版（lp=0 时混 transparent 叠在栏的 card-bg 上与旧的"混 card-bg"**逐像素等价**，
+    /* ② ★R184 底部焦散：光穿过玻璃在底缘汇聚出的那道亮弧 —— 静态就在暗示"泡有厚度"。
+       alpha 与 --lp 同乘 → 常态完全透明（不浮起时的观感一字未改），只有浮起/归位段看得见。 */
+    radial-gradient(86% 44% at 50% 116%,
+      rgba(255,255,255,calc(.40 * var(--lp))) 0%,
+      rgba(255,255,255,0) 62%),
+    /* ③ 皮本身：也走 alpha 版（lp=0 时混 transparent 叠在栏的 card-bg 上与旧的"混 card-bg"**逐像素等价**，
        但浮起时能让栏的描边/圆角透上来 —— 见 R172④）。三段停靠点保证 lp=0 与旧的 2 段 20%→11% 线性完全一致：
        20%@0 / 15%@56 / 11%@100（在 56% 处 20-9*.56=14.96≈15）。 */
     linear-gradient(180deg,
@@ -2872,9 +2888,18 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     inset 0 1.5px 0 rgba(255,255,255,.98),          /* 顶缘镜面硬线（最亮最锐的那条） */
     inset 0 -1.5px 0 rgba(255,255,255,.40),         /* 底缘回光 */
     inset 0 0 20px -9px rgba(255,255,255,.85),      /* 内部厚度柔光（负 spread 把内边界收干净 → 不形成环） */
-    /* ★R175① 外晕同样随 --lp 缩放：否则"泡已经收小了、影子还是浮起那么大" = 又一次分段观感 */
-    0 calc(15px * var(--lp)) calc(32px * var(--lp)) calc(-10px * var(--lp)) color-mix(in srgb, var(--color-primary,#6366f1) 46%, transparent),  /* 外柔晕 = 形体的唯一定义者 */
-    0 calc(4px * var(--lp)) calc(12px * var(--lp)) rgba(0,0,0,.09);
+    /* ★R175① 外晕随 --lp 缩放；★★R184 透明度**必须同乘 --lp** ——
+       只缩模糊/扩散而 alpha 恒 46% 时，收尾中段会从"柔晕"收紧成一圈饱和蓝环
+       （lp=0.12 实测 blur 3.84px / spread -1.2px / alpha 46%）→ 用户看到的"收起来时有蓝色边框出现"。
+       乘上 lp 后它随形体一起淡出，常态那层 22% 的紧贴阴影由基础规则经 box-shadow 过渡淡入（层结构已对齐，R182）。
+       ★R184 再加两个运动项：**水平偏移 = 运动反方向**（影子拖在身后 = 重量感）、
+         模糊随速度变大（0.5×mva）= 快移时影子糊开、像真的在甩动。
+       ⚠️⚠️模糊半径必须 `max(0px, …)` 包住：归位弹簧会让 --lp 下冲到 **−0.25**（三段式果冻感需要它），
+         此时 `calc(32px * -0.25)` = **负模糊** → 规范判定非法 → **整条 box-shadow 声明被丢弃**
+         （实测计算值掉回基础规则那套 = 收尾下冲时"玻璃皮突然变常态皮"闪一下）。
+         颜色里的负百分比不用管（color-mix 的百分比会被钳到 0，实测 `calc(46%*-0.25)` → alpha 0 合法）。 */
+    calc(var(--mv,0) * -9px) calc(15px * var(--lp)) max(0px, calc(32px * var(--lp) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp)) color-mix(in srgb, var(--color-primary,#6366f1) calc(46% * var(--lp)), transparent),  /* 外柔晕 = 形体的唯一定义者 */
+    calc(var(--mv,0) * -4px) calc(4px * var(--lp)) max(0px, calc(12px * var(--lp))) rgba(0,0,0,calc(.09 * var(--lp)));
   /* ★动画放慢：用户"感觉动画太快、死板" → 0.13s 的瞬时感改成 0.2~0.22s 的缓出 */
   transition:transform .2s cubic-bezier(.22,.61,.36,1), width .2s cubic-bezier(.22,.61,.36,1),
     top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;   /* ★R182② 皮肤由 --lp 驱动，这里只留几何/阴影 */
@@ -2891,9 +2916,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     inset 0 2px 1px rgba(255,255,255,.98),
     inset 0 -1.5px 1px rgba(255,255,255,.52),
     inset 0 0 22px -8px rgba(255,255,255,.55),
-    /* ★R175① 同主主题：外晕随 --lp 缩放，与几何同步收回 */
-    0 calc(16px * var(--lp,1)) calc(34px * var(--lp,1)) calc(-10px * var(--lp,1)) color-mix(in srgb, var(--color-primary) 52%, transparent),
-    0 0 calc(26px * var(--lp,1)) calc(-4px * var(--lp,1)) color-mix(in srgb, var(--color-primary) 30%, transparent);
+    /* ★R175① 同主主题：外晕随 --lp 缩放，与几何同步收回
+       ★R184 与主主题同三条修正：① alpha 同乘 --lp（否则收尾时同样的"饱和蓝环"）；
+         ② 水平偏移取运动反方向（影子拖尾 = 重量）；③ 模糊随速度放大。
+         ⚠️模糊同样必须 `max(0px, …)` 兜住负 --lp（否则整条 box-shadow 被丢弃）。 */
+    calc(var(--mv,0) * -9px) calc(16px * var(--lp,1)) max(0px, calc(34px * var(--lp,1) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp,1)) color-mix(in srgb, var(--color-primary) calc(52% * var(--lp,1)), transparent),
+    calc(var(--mv,0) * -5px) 0 max(0px, calc(26px * var(--lp,1))) calc(-4px * var(--lp,1)) color-mix(in srgb, var(--color-primary) calc(30% * var(--lp,1)), transparent);
 }
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
    ★transition 必须在这里补全 padding —— 基础规则的 transition 只列了 opacity/transform，
@@ -12946,6 +12974,18 @@ function _navSheen(pill,nr,cx){
   var rel=(cx-nr.left)/(nr.width||1);
   pill.style.setProperty('--pill-hx',(Math.max(0,Math.min(1,rel))*100).toFixed(1)+'%');
 }
+/* ★★R184 把"速度"变成 CSS 能读的两个量，让左右移动**有重量**：
+     · `--mv`  有符号（−1..1）：影子往运动**反方向**偏 → 拖尾；镜面也往运动方向偏（液体被带着走）
+     · `--mva` 无符号（0..1）：镜面被拉长、影子虚化变大 → 速度感/糊化
+   用户原话："浮动胶囊左右移动还是没有质感咋办啊，感觉还是轻飘飘的"——
+   纯色底上做不出折射，能表达"有重量"的只有**影子与高光对运动的反应**（静态皮永远只能是玻璃，做不出液体）。
+   ⚠️只影响 .nav-pill.lift 的那几层（--mv/--mva 只在那条规则里被引用），静止时两值都是 0 → 静态外观零变化。 */
+function _navMotion(pill,v){
+  if(!pill)return;
+  var n=Math.max(-1,Math.min(1,v||0));
+  pill.style.setProperty('--mv',n.toFixed(3));
+  pill.style.setProperty('--mva',Math.abs(n).toFixed(3));
+}
 function _navMorphFrame(){
   var m=_navMorph;
   if(!_navLift.lifting){m.raf=0;return;}
@@ -12968,6 +13008,7 @@ function _navMorphFrame(){
     if(_navLift.entering){
       var nrE=nav.getBoundingClientRect(),prE=pill.getBoundingClientRect();
       _navSheen(pill,nrE,prE.left+prE.width/2);
+      _navMotion(pill,0);                                     /* ★R184 入场滑行期不做运动学处理（尺寸由 CSS 过渡负责） */
       _navLitUpdate(prE.left,prE.right);
       if(now-_navLift.enterT0>=NAV_ENTER_MS){_navLift.entering=false;pill.style.transition='none';}
       m.raf=requestAnimationFrame(_navMorphFrame);
@@ -13020,6 +13061,7 @@ function _navMorphFrame(){
     pill.style.width=w.toFixed(1)+'px';
     pill.style.transform='translateX('+l.toFixed(1)+'px)';
     _navSheen(pill,nr,nr.left+l+w/2);                         /* 镜面跟着泡流动 */
+    _navMotion(pill,m.vf/NAV_MORPH_VMAX);                     /* ★R184 运动量：影子拖尾 + 镜面拉伸/偏移 */
     /* ★R172② 光照：位置定稿后再按覆盖范围点亮图标。
        `+1` = 底栏自身的 1px 边框：泡的 translateX 坐标系是**padding box**（═ 外框 +1px），
        传给蒙版的必须是**视口坐标**，否则亮区整体偏左 1px（与 _navSettleFrame 的同名口径对齐）。 */
@@ -13092,6 +13134,7 @@ function _navEnterLift(startIdx){
        `.nav-pill.lift{--lp:1}` —— 不重置的话第二次点按底栏，泡会一直是"常态大小"（浮不起来）。
        放在 transition 之后写：入场时 --lp 0→1 与加类同帧发生，top/bottom 走 .26s 过渡 = 泡"涨"起来。 */
     pill.style.setProperty('--lp','1');
+    _navMotion(pill,0);   /* ★R184 顺手把运动量清零：别让上一次手势的拖尾残留到这一帧 */
   }
   _navPlacePill(_navLift.idx,true);
   _navLitClear();
@@ -13118,6 +13161,7 @@ function _navTeardown(){
     pill.style.width='';
     pill.style.transform='';
     pill.style.removeProperty('--lp');   /* ★R175① 手势作废时连浮起度一起清，别留脏值给下次 */
+    pill.style.removeProperty('--mv');pill.style.removeProperty('--mva');   /* ★R184 运动量同清 */
   }
   _navLitClear();
   positionNavPill();
@@ -13178,6 +13222,7 @@ function _navSettleFrame(nav,pill){
   pill.style.transform='translateX('+s.x.toFixed(1)+'px)';
   pill.style.setProperty('--lp',s.lp.toFixed(3));   /* ★几何（top/bottom/radius/外晕）跟着一起收 */
   _navSheen(pill,nr,s.x+w/2);                      /* 镜面高光跟着泡流动（液态感） */
+  _navMotion(pill,s.vx/12);                        /* ★R184 收尾段也保留拖尾（12px/帧 ≈ 满速），一条连续的运动线索 */
   _navLitUpdate(nr.left+1+s.x,nr.left+1+s.x+w);    /* +1 = 底栏的 1px 边框 */
   var done=Math.abs(s.tx-s.x)<0.8&&Math.abs(s.vx)<0.12&&Math.abs(s.tw-s.w)<0.8&&Math.abs(s.vw)<0.12
     &&Math.abs(s.tlp-s.lp)<0.01&&Math.abs(s.vlp)<0.01;   /* ★R175① 几何没收完就不许收尾 */
@@ -13194,6 +13239,7 @@ function _navFinishSettle(){
   if(pill){
     pill.classList.remove('lift');
     pill.style.transition='';   /* 恢复过渡：紧接着 positionNavPill 写的常态 width/transform 会平滑收敛 */
+    _navMotion(pill,0);         /* ★R184 收尾清零：常态皮不引用 --mv/--mva，但别留脏值给下次浮起的第一帧 */
   }
   _navLitClear();
   /* ⚠️故意**不清** inline width/transform：清了会先塌成 width:0 闪一下；
