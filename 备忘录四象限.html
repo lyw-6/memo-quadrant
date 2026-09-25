@@ -409,7 +409,7 @@ body.kb-edit .hist-actions{display:inline-flex;}
 /* ★R92 紧凑视图组头从「整行 banner」压成「矮条」：原 34px+6px 吃掉近半行(一行卡片才 78px)，
    压到 ~17px+3px 省下约 20px。仍占整行、仍是一块明显的组头——不改成「占一格的卡片」，
    因为那样组头会退化成普通卡，与 R92 第①条「分组要能一眼看出」的目标互相打架。 */
-.memo-list.compact .mgh-head{padding:2px 8px;margin:0 0 3px;gap:6px;}
+.memo-list.compact .mgh-head{padding:2px 8px;margin:0 -4px 3px;gap:6px;}   /* ★R189 随基础规则通宽（compact 组内衬 4px） */
 .memo-list.compact .mgh-caret{width:16px;height:16px;}
 .memo-list.compact .mgh-title{font-size:11px;}
 .memo-list.compact .mgh-count{font-size:10px;}
@@ -1268,7 +1268,10 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
    ⚠️玻璃主题的底衬在 `[data-theme="glass"] .memo-group` 另有一条，**必须一起改**。
    ⚠️基础（本条）与紧凑（.memo-list.compact .mgh-head）**两处都要改**。 */
 
-.mgh-head{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:0 0 3px;cursor:pointer;background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 9%,var(--card-bg));border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
+   /* ★R189 用户："分组栏和常规备忘录相比缩进了些，有点难受，但又要和备忘录有所区别"——
+   组头 margin 0 -6px 抵消组横向内衬 → 组头与散卡**逐像素同宽同缘**；组内成员保持 6px 缩进。
+   区别不靠宽度：组头=浅分组色卡+箭头+计数，成员=色条+缩进（"宽的浅色卡统领窄的成员卡"）。 */
+.mgh-head{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:0 -6px 3px;cursor:pointer;background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 9%,var(--card-bg));border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
 
 .mgh-head:hover{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 13%,var(--card-bg));}
 /* ★R89 分组置顶：组头加琥珀内描边 + 标题右侧图钉徽标，与卡片置顶(#f59e0b)同色系；
