@@ -405,7 +405,7 @@ body.kb-edit .hist-actions{display:inline-flex;}
    菜单类弹窗（.more-menu/.cat-dropdown）均已挂到 body，不受影响。 */
 .memo-list.compact .memo-item{height:78px;max-height:78px;min-height:78px;padding:8px 9px;overflow:hidden!important;box-sizing:border-box;min-width:0;}
 /* ★R88：紧凑/普通视图共用基础色条形态，无需在紧凑视图单独改内缩（原 R87 的 8px 覆盖已删除）。 */
-.memo-list.compact .memo-group{grid-column:1/-1;width:auto;margin:6px 0;padding:3px 4px 4px;}
+.memo-list.compact .memo-group{grid-column:1/-1;width:auto;margin:3px 0;padding:0 4px;}   /* ★R186 间距随基础规则同步收紧（底衬没了，竖直 padding 全是空隙） */
 /* ★R92 紧凑视图组头从「整行 banner」压成「矮条」：原 34px+6px 吃掉近半行(一行卡片才 78px)，
    压到 ~17px+3px 省下约 20px。仍占整行、仍是一块明显的组头——不改成「占一格的卡片」，
    因为那样组头会退化成普通卡，与 R92 第①条「分组要能一眼看出」的目标互相打架。 */
@@ -1240,8 +1240,10 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
    这是「这张卡在组里」最强的信号。配三层间距把「组」框出来：组头↔首条 3px / 组内 4px / 组外≈15px。
    ★务必与 R87 区分：R87 是给 .memo-list 加 padding-left，把**所有**卡片一起推右 → 整列与标题栏错位（已推翻）；
    这里只有分组内容内缩、组外卡片仍在 left:0，是**故意的层级缩进**，不是整列偏移。
-   margin:7px 0 与 .memo-list 的 gap:8px 叠加 → 组↔普通卡 ≈15px、组↔组 ≈23px，与卡片间的 8px 拉开层级。 */
-.memo-group{display:block;margin:7px 0;padding:4px 6px 5px;border:none;border-radius:10px;background:transparent;user-select:none;}
+   ★R186 底衬移除后旧间距全部变成"悬空空隙"：margin 7+7 + 上下 padding 4/5 + 列 gap 8 = 组↔组 **31px**（实测），
+   用户："这个分组之间怎么隔这么远啊"。改为 margin 4px + 竖直 padding 0（横向 6px 缩进保留）
+   → 组↔组 16px、组↔普通卡 12px：仍比卡片间 8px 拉开层级，但不再像断开的两块。 */
+.memo-group{display:block;margin:4px 0;padding:0 6px;border:none;border-radius:10px;background:transparent;user-select:none;}
 /* ★玻璃主题的分组底衬不写在这里！玻璃主题块内另有一条 `[data-theme="glass"] .memo-group`
    声明在本行之后、特异性相同，会把这里的写法整条反杀。改玻璃底衬请去那一条改。 */
 /* ★★R185 组头改成「标题卡」—— **去掉整组底衬，组头自己成为一张浅分组色的卡**。
@@ -13031,9 +13033,14 @@ var NAV_MORPH_SMOOTH=0.13;    /* ★速度一阶低通系数：瞬时 dx/dt 抖�
 /* ★R185 运动学量（影子拖尾 / 镜面拉伸）用自己的速度尺度：它与"形变幅度"是两件事，
    共用 NAV_MORPH_VMAX 会让改形变手感时连带把质感的强度一起改掉。 */
 var NAV_MOTION_VMAX=1.15;
+/* ★R186 位置的"跟手软度"：泡中心 pc 用「速度前馈 + 指数平滑」逼近手指 ——
+   · 稳态匀速拖：前馈 vf*TAU 正好抵消指数平滑的固有滞后 → 泡不拖在手指后面（跟手）；
+   · 加速/反向/急停：pc 短暂落后再追上 → 有"质量"的顺滑感，而不是 1:1 硬贴（"死板"的根源）。
+   ★指数平滑**天生不过冲**（无 Q 弹）；TAU 越小越贴手指（用户口径："不要 Q 弹，要跟手要丝滑"）。 */
+var NAV_POS_TAU=36;
 /* ★R175② 删掉 w/dvel（宽度不再单独跑弹簧）；★R178 加 st/vs（右向"拉长"量也走弹簧，原来它直接跟速度 = 1 帧拉满） */
-var _navMorph={vel:0,vf:0,r:0,vr:0,st:0,vs:0,lastX:0,lastT:0,raf:0,center:0};
-function _navMorphReset(){_navMorph.vel=0;_navMorph.vf=0;_navMorph.r=0;_navMorph.vr=0;_navMorph.st=0;_navMorph.vs=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
+var _navMorph={vel:0,vf:0,r:0,vr:0,st:0,vs:0,lastX:0,lastT:0,raf:0,center:0,pc:0,fT:0,ff:0};
+function _navMorphReset(){_navMorph.vel=0;_navMorph.vf=0;_navMorph.r=0;_navMorph.vr=0;_navMorph.st=0;_navMorph.vs=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;_navMorph.pc=0;_navMorph.fT=0;_navMorph.ff=0;}
 function _navMorphStop(){if(_navMorph.raf){cancelAnimationFrame(_navMorph.raf);_navMorph.raf=0;}}
 /* 镜面高光位置 = 泡中心在栏内的相对位置（0~100%）→ 拖到哪，反光流到哪。
    这是"液态"与"静态玻璃"的分界：玻璃靠边缘光，液体靠**反光会动**。 */
@@ -13061,6 +13068,16 @@ function _navMorphFrame(){
      改判定后：最后一次移动过去 NAV_MORPH_IDLE ms 即视为静止 → 形状立刻弹回常态胶囊（弹簧过冲=Q弹）。 */
   var now=_navNow();
   if(m.lastT&&now-m.lastT>NAV_MORPH_IDLE){m.vel=0;m.vf=0;m.lastT=now;}
+  /* ★R186 停手但还没到 IDLE 的窗口里，速度估计要**快速死亡**：位置前馈拿旧速度继续冲会让泡
+   "滑过停点再被 IDLE 拽回来"（实测 0.8 时滑出 5.9px 又退回 1px = 一次小 Q 弹，用户明确不要）。
+   改 0.5 → 顺滑减速滑停（滑出 ~2px 且基本停住），既无过冲也无回拉。
+   只在">25ms 没有新 move 事件"时衰减 —— 正在拖（事件密集）完全不受影响，
+   R185"速度单一来源"的形状语义（IDLE 前保持粘黏）也不被破坏。 */
+  if(m.lastT&&now-m.lastT>25)m.vel*=0.5;
+  /* ★R186 前馈速度走**快速通道**（0.5 低通，2~3 帧收敛）：拖动时 ≈ 真实速度（滞后照常被抵消），
+     停手时 2~3 帧内归零 → 泡顺滑减速滑停、不冲过停点。不能用 vf 当前馈 —— 它的低通 0.13
+     死得太慢（实测停手后仍推着泡滑出 5.1px 再被 IDLE 拽回 = 一次小 Q 弹）。 */
+  m.ff+=(m.vel-m.ff)*0.5;
   var nav=document.getElementById('bottomNav'),pill=_ensureNavPill(),tabs=_navTabs();
   if(nav&&pill&&tabs.length){
     /* ★R170.4 松手后的「果冻归位」阶段：位置与宽度各自跑弹簧（会过冲回弹），动画收尾时才撤浮起态 */
@@ -13129,7 +13146,17 @@ function _navMorphFrame(){
     var minL=tabs[0].offsetLeft-5-NAV_OVER;
     var maxL=last.offsetLeft+last.offsetWidth-w+5+NAV_OVER;
     if(maxL<minL)maxL=minL;
-    var l=Math.max(minL,Math.min(maxL,m.center-nr.left-w/2));
+    /* ★R186 位置 = 「速度前馈 + 指数平滑」逼近手指（替代 1:1 硬贴）：
+       目标 pt = 手指现在在哪 + 按当前速度 TAU ms 后会在哪。稳态匀速时前馈正好抵消平滑的固有
+       滞后（泡不拖在手指后面）；起步/加速/反向时 pt 与 pc 拉开一小段又被追上 = 有质量的弹性，
+       而不是光标式瞬移。帧长相关系数 aF 保证高刷屏手感一致。 */
+    var dtF=m.fT?Math.max(4,Math.min(50,now-m.fT)):16.7;m.fT=now;
+    var aF=1-Math.exp(-dtF/NAV_POS_TAU);
+    var pt=m.center+m.ff*(NAV_POS_TAU-dtF/2);   /* ★-dtF/2：指数平滑的固有滞后是 v*(TAU-dt/2)，按这个补才正好，不超前 */
+    m.pc+=(pt-m.pc)*aF;
+    var rawL=m.pc-nr.left-w/2;
+    var l=Math.max(minL,Math.min(maxL,rawL));
+    if(l!==rawL)m.pc=nr.left+l+w/2;   /* 边界反缠绕：钳住时把 pc 同步回可见位置，别攒着弹性出栏再放 */
     pill.style.transition='none';
     pill.style.width=w.toFixed(1)+'px';
     pill.style.transform='translateX('+l.toFixed(1)+'px)';
@@ -13156,7 +13183,12 @@ function _navMorphMove(clientX){
   if(_navLift.entering){
     _navLift.entering=false;
     var pl=_ensureNavPill();
-    if(pl)pl.style.transition='none';
+    if(pl){pl.style.transition='none';
+      /* ★R186 pc 从泡的**实时视觉位置**起滑（入场滑行可能进行到一半）：pc 若还停在旧 tab 中心，
+         下一帧会瞬移。从视觉位置出发 → 泡"滑"到手指下，与 R172① 的跟手语义衔接。 */
+      var pr0=pl.getBoundingClientRect();
+      m.pc=pr0.left+pr0.width/2;
+    }
   }
   if(m.lastT){
     var dt=now-m.lastT;
@@ -13192,6 +13224,7 @@ function _navEnterLift(startIdx){
      否则首帧 m.center=0，泡会被左边界钳住闪一下。 */
   var t0=tabs0[_navLift.idx];
   if(t0){var nr0=nav.getBoundingClientRect();_navMorph.center=nr0.left+t0.offsetLeft+t0.offsetWidth/2;}
+  _navMorph.pc=_navMorph.center;   /* ★R186 pc 与手指落点同起点：首帧平滑不产生位移 */
   nav.classList.add('nav-lift');
   var pill=_ensureNavPill();
   if(pill){
