@@ -409,8 +409,8 @@ body.kb-edit .hist-actions{display:inline-flex;}
 /* ★R92 紧凑视图组头从「整行 banner」压成「矮条」：原 34px+6px 吃掉近半行(一行卡片才 78px)，
    压到 ~17px+3px 省下约 20px。仍占整行、仍是一块明显的组头——不改成「占一格的卡片」，
    因为那样组头会退化成普通卡，与 R92 第①条「分组要能一眼看出」的目标互相打架。 */
-.memo-list.compact .mgh-head{padding:1px 8px 1px 4px;margin-left:-4px;margin-bottom:3px;gap:6px;}
-.memo-list.compact .mgh-caret{width:14px;height:14px;font-size:10px;}
+.memo-list.compact .mgh-head{padding:2px 8px;margin:0 0 3px;gap:6px;}
+.memo-list.compact .mgh-caret{width:16px;height:16px;}
 .memo-list.compact .mgh-title{font-size:11px;}
 .memo-list.compact .mgh-count{font-size:10px;}
 .memo-list.compact .mgh-color-btn{width:12px;height:12px;border-width:1.5px;}
@@ -1241,33 +1241,33 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
    ★务必与 R87 区分：R87 是给 .memo-list 加 padding-left，把**所有**卡片一起推右 → 整列与标题栏错位（已推翻）；
    这里只有分组内容内缩、组外卡片仍在 left:0，是**故意的层级缩进**，不是整列偏移。
    margin:7px 0 与 .memo-list 的 gap:8px 叠加 → 组↔普通卡 ≈15px、组↔组 ≈23px，与卡片间的 8px 拉开层级。 */
-.memo-group{display:block;margin:7px 0;padding:4px 6px 5px;border:none;border-radius:10px;background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 7%,var(--card-bg));user-select:none;}
+.memo-group{display:block;margin:7px 0;padding:4px 6px 5px;border:none;border-radius:10px;background:transparent;user-select:none;}
 /* ★玻璃主题的分组底衬不写在这里！玻璃主题块内另有一条 `[data-theme="glass"] .memo-group`
    声明在本行之后、特异性相同，会把这里的写法整条反杀。改玻璃底衬请去那一条改。 */
-/* ★★R179 组头回到「标题」身份：**去掉色底**（用户："分组的色条去了也看起来怪怪的，怎么优化更美观点？"）。
-   诊断：组头原来是一块 13% 分组色的**实心横条**，而整组本来就有 7% 分组色底衬（.memo-group）——
-   于是组头成了"底衬上的深色块"＝双层色块；再加上它沿用卡片的 12px 圆角，看起来像"一条被压扁的卡片"，
-   但它又不是卡片 → 身份模糊，这才是"怪"的真正来源（色条只是最显眼的那一层）。
-   现在：透明底 → 露出组底衬，组头与组内卡片**同处一块底衬**（整组的范围感更强）；
-        层级变成 组底衬(最淡) → 组头(无块面·仅标题) → 卡片(白块 + 色条)。
-   分组标识仍在：色圆点（.mgh-color-btn）＋ 名称 ＋ 条数。悬停/按下给一层淡底做点击反馈。
-   ★★R183 左内边距 10px → **0**（用户："这个分组的箭头和这个色条不对齐"）：
-     组头的展开箭头与组内卡片的色条是**同一件事的两个"组标识"**（一个在标题行、一个在内容行），
-     必须共用一条竖轴。色条按 R88/R177 的定稿是**紧贴卡片左缘**的（4px 宽、左缘出血 1px），
-     所以它的轴线只离容器左缘 ~1px —— 箭头只能往左靠，不能反过来把色条往右挪（那会破坏"贴左缘"）。
-     配合 .mgh-caret 的 justify-content:flex-start（字形左对齐），让箭头墨迹贴着容器左缘起笔。
-     ⚠️别省这一条：留着 10px 的话箭头轴线离色条轴线 19px（实测），就是用户看到的那道"错位的台阶"。
-   ★★R184 但箭头被推出**组头自己的盒子**之后，hover/按下那层淡底就盖不住它了
-     （用户："这箭头都在胶囊外了，也难看"）→ 把组头的**盒子**也往左扩 4px：
-     `margin-left:-4px` + `padding-left:4px`（内容盒仍在原位 → 箭头/标题位置一个像素都不动），
-     盒子左缘从 96 变 92，箭头盒 93~109、墨迹 94.75~101.75 全部落在淡底之内 ✓。
-     ⚠️只扩 4px 不扩 6px：组头圆角 12px，而分组底衬 .memo-group 的圆角是 10px 且左内距 6px；
-       扩到 6px 会让两者的圆角在四角错开 2px（置顶组的琥珀底近不透明，会露馅）。
-     ⚠️基础（本条）与紧凑（.memo-list.compact .mgh-head）**两处都要改**。 */
+/* ★★R185 组头改成「标题卡」—— **去掉整组底衬，组头自己成为一张浅分组色的卡**。
+   用户第三次说组头"不搭"（"我还是感觉分组这里样式需要优化，感觉不是很搭"）。把前两轮的结论
+   合起来看，根因是 **组头"虚"、内容卡"实"**：组头是一条没有边界的浅色带（R179 起透明，露出
+   7% 分组色底衬），内容卡是"白块 + 色条"的实体；一虚一实、一扁一厚，两者之间只有 3px 过渡
+   → 眼睛读不出"这是一个组"的结构。此前三轮都只改了局部（R178 删左侧色条、R179 去组头色底、
+   R181 删短色块），"底衬 / 组头 / 卡片"这三层的关系一直没理顺。
+   本轮从结构上改：**底衬整层去掉**，组头自己变成一张卡（分组色 9% 混 card-bg、圆角 = 卡片
+   --radius-card），层级变成「组头卡(浅分组色) → 内容卡(白)」两张**同宽同圆角**的卡 ——
+   单层、清晰、同一套语言。
+   ★顺带解决的三个历史补丁：
+     ① R184 的"组头盒往左扩 4px"不需要了 —— 组头现在与卡片**严格同宽**（左右外边距都是 0），
+        圆角也不会再和底衬的 10px 打架；
+     ② R183 的"箭头与卡片色条共轴"诉求源自"组头无边界、色条是唯一竖向参照"；有了卡片边界后，
+        箭头改为**贴着组头内容左缘起笔**（justify-content:flex-start）即可 —— 视觉上是"都从左边缘
+        开始"，比强行对齐一条看不见的轴线更自然，也不必再让盒子伸到容器外；
+     ③ 组头 padding-left 回到 10px（R183 把它归零就是为了对轴）。
+   ⚠️R179 的结论仍然成立 —— 它否定的是"**双层色块**"（底衬上再压一块深色）；本轮的解法是把两层
+     **合成一层**，而不是把色块加回来。
+   ⚠️玻璃主题的底衬在 `[data-theme="glass"] .memo-group` 另有一条，**必须一起改**。
+   ⚠️基础（本条）与紧凑（.memo-list.compact .mgh-head）**两处都要改**。 */
 
-.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 4px;margin-left:-4px;margin-bottom:3px;cursor:pointer;background:transparent;border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
+.mgh-head{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:0 0 3px;cursor:pointer;background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 9%,var(--card-bg));border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
 
-.mgh-head:hover{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 8%,transparent);}
+.mgh-head:hover{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 13%,var(--card-bg));}
 /* ★R89 分组置顶：组头加琥珀内描边 + 标题右侧图钉徽标，与卡片置顶(#f59e0b)同色系；
    底色仍保留分组色底，只是往琥珀方向偏一档，保证"这是置顶的分组"一眼可辨。 */
 .mgh-head.gp-pinned{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 9%, color-mix(in srgb,#f59e0b 16%,var(--card-bg)));box-shadow:inset 0 0 0 1px rgba(245,158,11,.45);}
@@ -1275,21 +1275,21 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 .mgh-pin{width:14px;height:14px;color:#f59e0b;display:flex;align-items:center;justify-content:center;flex-shrink:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
 .mgh-pin svg{width:13px;height:13px;flex:none;}
 [data-theme="dark"] .mgh-pin{color:#fbbf24;}
-/* ★R179 底衬透明化后按下反馈降一档（原来 20% 是压在 13% 色底上的叠加量，现在只有底衬 7%）。 */
-.mgh-head:active{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 16%,transparent);}
-/* ★★R183 展开箭头要与卡片色条**同轴**：原来 20px 的方盒 + 居中字形让箭头墨迹停在箱子中央
-   （= 容器左缘 + 10px），而色条轴线在 容器左缘 + 2.4px → 差 19px，就是用户看到的那道"错位台阶"。
-   两步对齐：① 盒子 16px + 字形**左对齐**（flex-start）→ 墨迹从容器左缘起笔；
-   ② `margin-left:-3px` 抵掉字形自带的前导边距（'▼' 在 11px 下的左侧 bearing ≈1.75px，
-      再加上墨迹宽 7px → 墨迹中心原本落在 +5.25px，减 3px 后 ≈ +2.25px = 色条中心）。
-   ★实测：墨迹中心 − 色条中心 = **−0.1px**（改前 +19.0px）。
-   ⚠️负 margin 是**光学对齐**（字形边距没法用别的方式吃掉）；盒子伸进组头自己的盒子里
-     （R184 组头也往左扩了 4px → 盒子 92~810），既不会被裁也不会露在淡底之外 —— 祖先都是 overflow:visible。
-   ⚠️盒子仍留 16×20 做点击热区（整个组头行本来也能点，但这一格是"立即折叠"的快捷区）。 */
-.mgh-caret{border:none;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:11px;line-height:1;width:16px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-start;padding:0;margin-left:-3px;}
+/* ★R185 组头有了自己的底（9% 分组色卡）→ hover/按下直接在**卡底**上加深，不再叠 transparent。 */
+.mgh-head:active{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 18%,var(--card-bg));}
+/* ★★R185 展开箭头：字符 → inline SVG（为什么见 CARET_ICON 常量的注释：字符 ▶/▼ 两态
+   字形盒宽高不同 = 用户说的"展开的箭头一下大一下小"），折叠态由 rotate(−90°) 切换。
+   对位：SVG 是几何绘制、没有字形 bearing → 用 `justify-content:flex-start` 让**墨迹从组头内容
+   左缘起笔**（不再像 R183 那样求"与卡片色条共轴"—— 组头现在有自己的卡片边界，两者不必共轴；
+   而且卡片色条本身也是贴着卡片左缘的，所以"都从左边缘开始"在视觉上仍然是一条竖线）。
+   ⚠️盒子保持 16×20 做点击热区（整行本来也能点，这一格是"立即折叠"的快捷区）。 */
+.mgh-caret{border:none;background:transparent;color:var(--gh-color,var(--color-primary,#6366f1));cursor:pointer;width:16px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-start;padding:0;}
+.mgh-caret svg{width:11px;height:11px;display:block;transition:transform .2s cubic-bezier(.34,1.3,.5,1);}
+.mgh-caret:hover{opacity:.72;}
+.memo-group.collapsed .mgh-caret svg{transform:rotate(-90deg);}
 .mgh-title{font-weight:600;font-size:13px;color:var(--gh-color,var(--color-primary,#6366f1));min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} /* ★R180 名称用分组色着色（用户方案①）：一眼看出哪个组，与短色块同色呼应 */ /* ★R68 长组名省略号，不挤压右侧条数 */
-.mgh-count{font-size:11px;color:var(--text-tertiary);margin-left:auto;white-space:nowrap;flex-shrink:0;} /* ★R68 nowrap:重命名输入框挤压时「N 条」不再折成两行 */
-.mgh-color-btn{width:16px;height:16px;border-radius:50%;border:2px solid var(--card-bg);box-shadow:0 0 0 1px rgba(0,0,0,.18);cursor:pointer;padding:0;flex-shrink:0;transition:transform .12s;}
+.mgh-count{font-size:11px;color:var(--text-secondary);margin-left:auto;white-space:nowrap;flex-shrink:0;} /* ★R68 nowrap:重命名输入框挤压时「N 条」不再折成两行 */
+.mgh-color-btn{width:14px;height:14px;border-radius:50%;border:2px solid var(--card-bg);box-shadow:0 0 0 1px rgba(0,0,0,.13);cursor:pointer;padding:0;flex-shrink:0;transition:transform .12s,opacity .14s;}
 .mgh-color-btn:active{transform:scale(.9);}
 .mgh-more-btn{width:22px;height:22px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;padding:0;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:background .12s,color .12s;margin-left:2px;}
 .mgh-more-btn:hover{background:var(--hover-bg);color:var(--text);}
@@ -1299,6 +1299,13 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 .mgh-add-btn:hover{background:var(--hover-bg);color:var(--gh-color,var(--color-primary,#6366f1));}
 .mgh-add-btn:active{transform:scale(.9);}
 .mgh-add-btn svg{width:15px;height:15px;}
+/* ★R185 分组色点（改色）是低频操作，桌面端改成**悬停组头才出现** ——
+   组头有卡底之后它是最抢眼的元素（实心饱和圆），静态常显会压过标题。
+   移动端（hover:none）保持常显，否则"改分组颜色"就没有入口了。 */
+@media (hover:hover){
+  .mgh-color-btn{opacity:0;pointer-events:none;}
+  .mgh-head:hover .mgh-color-btn{opacity:1;pointer-events:auto;}
+}
 .mgh-title-input{position:relative;z-index:140;font:inherit;font-weight:600;font-size:13px;color:var(--text);background:var(--card-bg);border:1px solid var(--color-primary);border-radius:var(--radius-xs);padding:0 4px;margin:0;width:auto;min-width:72px;outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--color-primary) 22%,transparent);}
 /* 组内成员:保持普通卡片外观,仅加一条细强调左边条表示归属,不整体发暗 */
 /* ★R87 组内成员沿用同一套胶囊色条，只是把颜色换成分组色（--qb-color 覆盖链）。
@@ -1618,8 +1625,8 @@ html.glass-text-dark [data-theme="glass"] .cal-cell .d-sub.jq{color:#34d399;font
 /* ★R92 玻璃主题分组底衬：本条声明在同特异性的 [data-theme="glass"] .memo-group(1042行) 之后，
    会把底衬整条反杀成 transparent —— 故 R92 的玻璃化底衬必须写在这里。
    用 inset 阴影做发丝描边（不用 border：border 会改变盒尺寸，破坏「组内卡片窄 12px」的口径）。 */
-[data-theme="glass"] .memo-group{background:linear-gradient(color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 17%,transparent),color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 17%,transparent));border:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);backdrop-filter:none;-webkit-backdrop-filter:none;}
-[data-theme="glass"] .mgh-head{background:transparent;border-left:none;}
+[data-theme="glass"] .memo-group{background:transparent;border:none;box-shadow:none;}
+[data-theme="glass"] .mgh-head{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 12%,var(--card-bg));border-left:none;}
 /* ★R179 组头在此主题也透明（原来是一层白玻璃 + 颗粒）——与其它主题统一，露出组底衬。 */
 /* ★R178 组头色条已整套删除（含玻璃主题这条覆盖）—— 理由见 .mgh-head 规则上方的注释。 */
 /* ★R89 玻璃主题置顶组头：琥珀渐变取代中性白玻璃，并补内描边 */
@@ -12384,6 +12391,17 @@ var ICON_EDIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
    合并 = 两条分支汇成一支右向箭头；取消合并 = 同形反向（一支拆成两条），语义对称。 */
 var ICON_X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>';
 var ICON_ADD='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>';
+/* ★★R185 组头展开箭头改成 inline SVG（原来在 '▼' / '▶' 两个**字符**之间切换）。
+   字符做箭头有三个治不好的毛病：
+   ① **两个码位的字形盒宽高完全不同** —— '▼'(U+25BC) 是宽扁的、'▶'(U+25B6) 是高窄的，
+      同一个 font-size 下墨迹面积差一截，就是用户说的「展开的箭头一下大一下小」；
+   ② 字形尺寸由**字体**决定（Windows 落到 Segoe UI Symbol、Android 落到 Noto），跨设备不一致；
+   ③ 字符自带左侧 bearing（'▼' 在 11px 下 ≈1.75px），只能用负 margin 硬凑（R183 的 -3px 就是这么来的），
+      字号一改就失效。
+   现在画一支"尖朝下"的三角，折叠态 `rotate(-90deg)` 转成朝右 —— **两态同一支图形**、大小绝对一致，
+   而且旋转带过渡（折叠/展开的手感比"换个字"顺）。viewBox 10×10 里墨迹占 x[1.15,8.85] y[2.75,7.85]
+   （path 外描 1.5 的圆角描边把尖角磨圆），显示 10px 时墨迹 ≈7.7×5.1 CSS px。 */
+var CARET_ICON='<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M1.9 3.5h6.2L5 7.1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 /* ★R93 「管理分组」图标：必须放在 IIFE 顶层 —— FAB_ICO_* 定义在 openFabMenu 所在的内层函数里，
    组头菜单(openGroupMenu) 取不到，会直接抛 ReferenceError 导致菜单压根不弹。 */
 var ICON_GROUPS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>';
@@ -12924,7 +12942,12 @@ function _navPlacePill(idx,lift){
    拖动过程中目标连续变化，弹簧又足够跟手。
    ⚠️Q 弹只作用在**宽度**上，位置严格跟手（中心对齐手指）—— 位置一旦引入延迟就成了"泡追不上手"。
    用 rAF 循环而非逐次 pointermove 写样式：频繁事件下要帧率一致的插值才顺滑。 */
-var NAV_MORPH_VMAX=1.15;      /* px/ms：达到这个速度即视为"快拖" */
+var NAV_MORPH_VMAX=1.6;       /* px/ms：达到这个速度即视为"快拖"。
+                                 ★R185 1.15→1.6：原来"到顶"太容易（人手正常拖动 0.5~1.5 px/ms 就撞上限），
+                                 形变只有"不变 / 到顶"两档，看起来就是"一动就快速缩到底"。
+                                 抬高后慢拖≈0.2、中速≈0.5、快拖≈0.9，形变幅度随速度**连续渐进**。 */
+var NAV_MORPH_VEL_MIX=0.5;    /* 速度估计的瞬时权重（原硬编码 0.65）：0.65 太"跟手" → 速度一抖形状就动；
+                                 0.5 让速度估计自己先平滑一层（叠上低通共两层滞后）。 */
 var NAV_STRETCH=22;           /* 右向快拖时比满宽再多出的宽度（"稍微宽一点的胶囊"）：14 时实测只多 9px，肉眼几乎看不出 → 提到 22 */
 /* ★★R175② 形变**幅度**上限（用户："是不是因为宽度太宽，然后移动时突变变短，导致跨度太大、过渡时间太长观感不佳"）。
    原口径：圆态宽度 = 泡高 h(≈60px)，满宽 wBase(≈144px) → **一次左右切换要跑 84px 的行程**，
@@ -12959,11 +12982,47 @@ var NAV_MORPH_IDLE=110;       /* ms：最后一次移动过去这么久即判定
    ★★R178 还有一处补漏：**右向"拉长"原来没走弹簧**（`wTgt += s*NAV_STRETCH`，s 直接来自低通速度）
      → 实测从满宽到最宽只用了 **1 帧**（159 → 181）。现在拉长量也由弹簧量 `m.st` 驱动（同组参数），
      宽窄**两侧**都变成"慢慢展开 / 慢慢收回"。 */
-var NAV_MORPH_RK_UP=0.12, NAV_MORPH_RUP_DAMP=0.793;
-var NAV_MORPH_RK_DOWN=0.07, NAV_MORPH_RDN_DAMP=0.838;
-var NAV_MORPH_VEPS=0.03;      /* |速度| 低于此值即视为静止（原代码里散落的 0.03 收到常量） */
-var NAV_MORPH_SMOOTH=0.32;    /* ★速度一阶低通系数：瞬时 dx/dt 抖动很大，滤波后再驱动形态。
-                                 0.45 实测"起步即满速" → 形变第一步就冲到底；0.32 让速度用 ~3 帧建立起来 */
+/* ★★R185 「粘黏感」三件套（用户："左右拖动时还是没什么惯性的粘黏感，就是快速宽窄缩放"）。
+   诊断：形变**幅度**早就做够了（R175 的连续 r + 单级弹簧 + 过冲），缺的是**时间上的滞后** ——
+     ① 速度估计太"利"：`vel` 瞬时权重 0.65 + 低通 0.32 → 速度 3 帧就建立，手一快形状立刻跟随，
+        读起来就是"宽度在跟着速度瞬时缩放"，没有"被拖住的橡皮"那种迟滞；
+     ② 死区太小（0.03）：手指的微小抖动都算"在拖"，形状一直在动；
+     ③ 速度上限太容易撞（1.15）：正常拖动就撞顶 → 形变只有"不动 / 到底"两档。
+   所以三处一起改（**只降刚度是错的**：那只会更弹，用户要的是"黏"）：
+     · vel 混合 0.65 → 0.5（NAV_MORPH_VEL_MIX）、低通 0.32 → 0.15 → 速度估计要 ~7 帧(≈115ms)才建立
+     · 死区 0.03 → 0.10（轻微移动不再触发形变）
+     · 速度上限 1.15 → 1.6（形变幅度随速度渐进，不再"一动就到底"）
+   刚度同步再降一档，并**按 ζ 不变调阻尼**（ζ = −ln(DAMP)/(2√K)）：
+     · 涨 K=0.09  / DAMP=0.813 → ζ≈0.345（过冲 ~30%）
+     · 收 K=0.055 / DAMP=0.860 → ζ≈0.322（过冲 ~32%，收窄侧更慢 = "慢慢黏回来"） */
+var NAV_MORPH_RK_UP=0.07, NAV_MORPH_RUP_DAMP=0.838;
+var NAV_MORPH_RK_DOWN=0.045, NAV_MORPH_RDN_DAMP=0.873;
+/* ★R185 右向"拉长"（m.st）另用一组**更快**的弹簧。理由：两种形变的物理性质不同 ——
+   拉长读起来是"被甩出去的被动拉伸"（要有即时感，滞后了就像"没拉住"），
+   收窄/回弹才是"弹性恢复"（要粘黏）。共用一组参数必然一边不对：
+   实测共用慢参数时"右快拉长"从 180px 掉到 170px（少掉一半 NAV_STRETCH）。
+   ζ 仍取同一档（≈0.33），只是时间尺度不同。 */
+var NAV_MORPH_SK_UP=0.13, NAV_MORPH_SUP_DAMP=0.785;
+var NAV_MORPH_SK_DOWN=0.09, NAV_MORPH_SDN_DAMP=0.825;
+/* ★★R185 **速度自适应刚度**：刚度乘以 `1 + (BOOST-1) * s`（s = |vf|/VMAX ∈ [0,1]）。
+   为什么需要它：把刚度一律调慢之后，"快拖"在 150ms 内**走不完行程**
+   —— 实测快左只到 109.9，而慢拖（900ms）已收敛到 106.3，方向语义被反过来（快拖反而不如慢拖收得窄）。
+   而这两种场景要的手感本来就相反：**慢拖要"黏住慢慢跟"，快拖要"利落到得了位"**。
+   用速度自适应把两者解耦：慢拖 s≈0.1 → 刚度 ×1.24（仍是"粘黏"档）；
+   快拖 s=1 → 刚度 ×3.5（≈0.245，比 R178 的 0.12 还利落）。
+   ⚠️阻尼必须同步按 **ζ 不变**换算：D' = D^√boost（ζ = −ln(D)/(2√K)）。只提 K 不提 D 会变成"又快又弹"。 */
+var NAV_MORPH_FAST_BOOST=3.5;
+var NAV_MORPH_VEPS=0.04;      /* |速度| 低于此值即视为静止。
+                                 ★R185 0.03→0.04（只提高一点点）：试过 0.10，结果把"左向慢拖"一起吃掉
+                                 —— 慢拖速度 <0.10 被当成静止 → 形状根本不收，方向×速度语义失效
+                                 （烟测 R170.3⑯ 实测 lSlowLast 从 ~125 变成满宽 194）。
+                                 "抑制抖动"这件事主要靠 0.15 的低通（速度要 ~7 帧才建立），死区不必太狠。 */
+var NAV_MORPH_SMOOTH=0.13;    /* ★速度一阶低通系数：瞬时 dx/dt 抖动很大，滤波后再驱动形态。
+                                 0.45 实测"起步即满速" → 形变第一步就冲到底；0.32 约 3 帧建立；
+                                 ★R185 降到 0.15（~7 帧），让形状明显滞后于速度 = "粘黏"。 */
+/* ★R185 运动学量（影子拖尾 / 镜面拉伸）用自己的速度尺度：它与"形变幅度"是两件事，
+   共用 NAV_MORPH_VMAX 会让改形变手感时连带把质感的强度一起改掉。 */
+var NAV_MOTION_VMAX=1.15;
 /* ★R175② 删掉 w/dvel（宽度不再单独跑弹簧）；★R178 加 st/vs（右向"拉长"量也走弹簧，原来它直接跟速度 = 1 帧拉满） */
 var _navMorph={vel:0,vf:0,r:0,vr:0,st:0,vs:0,lastX:0,lastT:0,raf:0,center:0};
 function _navMorphReset(){_navMorph.vel=0;_navMorph.vf=0;_navMorph.r=0;_navMorph.vr=0;_navMorph.st=0;_navMorph.vs=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;}
@@ -13034,13 +13093,15 @@ function _navMorphFrame(){
     var stTgt=(vf>NAV_MORPH_VEPS)?s:0;
     /* 不对称弹簧：涨快、收略慢（两侧都是同一档 ζ，惯性靠过冲而不是靠慢） */
     var rUp=(rTgt>m.r);
-    m.vr+=(rTgt-m.r)*(rUp?NAV_MORPH_RK_UP:NAV_MORPH_RK_DOWN);
-    m.vr*=(rUp?NAV_MORPH_RUP_DAMP:NAV_MORPH_RDN_DAMP);
+    /* ★R185 速度自适应刚度（慢拖黏、快拖利落）+ 阻尼按 ζ 不变换算 D^√boost */
+    var rBoost=1+(NAV_MORPH_FAST_BOOST-1)*s, rSqrt=Math.sqrt(rBoost);
+    m.vr+=(rTgt-m.r)*(rUp?NAV_MORPH_RK_UP:NAV_MORPH_RK_DOWN)*rBoost;
+    m.vr*=Math.pow(rUp?NAV_MORPH_RUP_DAMP:NAV_MORPH_RDN_DAMP, rSqrt);
     m.r+=m.vr;
     if(m.r<0){m.r=0;if(m.vr<0)m.vr=0;} else if(m.r>1.25){m.r=1.25;if(m.vr>0)m.vr=0;}
     var stUp=(stTgt>m.st);
-    m.vs+=(stTgt-m.st)*(stUp?NAV_MORPH_RK_UP:NAV_MORPH_RK_DOWN);
-    m.vs*=(stUp?NAV_MORPH_RUP_DAMP:NAV_MORPH_RDN_DAMP);
+    m.vs+=(stTgt-m.st)*(stUp?NAV_MORPH_SK_UP:NAV_MORPH_SK_DOWN);   /* ★R185 拉长用自己的弹簧对 */
+    m.vs*=(stUp?NAV_MORPH_SUP_DAMP:NAV_MORPH_SDN_DAMP);
     m.st+=m.vs;
     if(m.st<0){m.st=0;if(m.vs<0)m.vs=0;} else if(m.st>1.25){m.st=1.25;if(m.vs>0)m.vs=0;}
     var r=Math.max(0,Math.min(1,m.r));
@@ -13061,14 +13122,19 @@ function _navMorphFrame(){
     pill.style.width=w.toFixed(1)+'px';
     pill.style.transform='translateX('+l.toFixed(1)+'px)';
     _navSheen(pill,nr,nr.left+l+w/2);                         /* 镜面跟着泡流动 */
-    _navMotion(pill,m.vf/NAV_MORPH_VMAX);                     /* ★R184 运动量：影子拖尾 + 镜面拉伸/偏移 */
+    _navMotion(pill,m.vf/NAV_MOTION_VMAX);                    /* ★R184 运动量：影子拖尾 + 镜面拉伸/偏移（★R185 独立速度尺度） */
     /* ★R172② 光照：位置定稿后再按覆盖范围点亮图标。
        `+1` = 底栏自身的 1px 边框：泡的 translateX 坐标系是**padding box**（═ 外框 +1px），
        传给蒙版的必须是**视口坐标**，否则亮区整体偏左 1px（与 _navSettleFrame 的同名口径对齐）。 */
     _navLitUpdate(nr.left+1+l,nr.left+1+l+w);
   }
-  m.vel*=0.72;                                               /* ★R170.5 0.86→0.72：余速更快归零，去掉"惯性滑行"的拖泥感 */
-  m.vf*=0.72;                                                /* ★R175② 滤波速度同步衰减（否则停手后形态卡在旧值） */
+  /* ★★R185 速度估计改成**单一来源**（低通只在帧循环里做，不再额外衰减）。
+     原来这里是 `m.vel*=0.72; m.vf*=0.72;`（每帧把速度估计往下拽）叠加 `_navMorphMove` 里的低通 ——
+     拖动期每帧本来就有新位移进来，再乘 0.72 相当于"泄漏"：稳态 vf 只有真实速度的 ~1/3
+     （实测慢拖 0.197px/ms → vf 仅 0.036），降到死区以下 → 形状根本不收
+     （烟测 lSlowLast 从 ~125 变成 176，几乎满宽 = 用户要的"左慢拖=微椭圆圆"失效）。
+     手停后的归零由上面的 NAV_MORPH_IDLE 时间判定负责（110ms 即清零），不需要衰减兜底。 */
+  m.vf+=(m.vel-m.vf)*NAV_MORPH_SMOOTH;
   m.raf=requestAnimationFrame(_navMorphFrame);
 }
 function _navMorphMove(clientX){
@@ -13084,8 +13150,8 @@ function _navMorphMove(clientX){
     var dt=now-m.lastT;
     if(dt>0){
       var v=(clientX-m.lastX)/dt;
-      m.vel=m.vel*0.35+v*0.65;                        /* 新speed权重高 = 更跟手（0.5 偏"黏"） */
-      m.vf=m.vf+(m.vel-m.vf)*NAV_MORPH_SMOOTH;        /* ★R175② 一阶低通 → 形态不再跟着瞬时抖动跳 */
+      m.vel=m.vel*(1-NAV_MORPH_VEL_MIX)+v*NAV_MORPH_VEL_MIX;   /* ★R185 0.35/0.65 → 0.5/0.5：速度估计先自己平滑一层 */
+      /* ★R185 vf 的低通移到帧循环（move 是稀疏事件，放在这里会让低通次数依赖事件频率） */
     }
   }
   m.lastX=clientX;m.lastT=now;m.center=clientX;
@@ -14558,7 +14624,6 @@ function createGroupHeader(grp){
   wrap.className='memo-group'+((collapsedGroups[grp.id]&&!_searchExpand)?' collapsed':'')+(grp.pinned?' gp-pinned':'');
   wrap.setAttribute('data-group-id',grp.id);
   wrap.style.setProperty('--gh-color',ghc);
-  var caret=(collapsedGroups[grp.id]&&!_searchExpand)?'▶':'▼';
   var head=document.createElement('div');
   head.className='mgh-head'+(grp.pinned?' gp-pinned':'');
   /* ★R91 组头完成度：有已完成项时显示「已完成/总数 条」 */
@@ -14573,7 +14638,7 @@ function createGroupHeader(grp){
      （短块 → 空隙 → 卡片色条 → 空隙 → 卡片色条）—— 眼睛会自动去接续它，反而更刺眼。
      现在组头只用两个颜色标识：① 名称分组色  ② 右侧色圆点（改色按钮），都在组头内部、
      不与卡片色条产生任何对齐联想。 */
-  head.innerHTML='<button type="button" class="mgh-caret" aria-label="展开/收起">'+caret+'</button>'
+  head.innerHTML='<button type="button" class="mgh-caret" aria-label="展开/收起">'+CARET_ICON+'</button>'
     +'<span class="mgh-title">'+escapeHtml(grp.name)+'</span>'
     +(grp.pinned?'<span class="mgh-pin" title="已置顶">'+ICON_PIN+'</span>':'')
     +'<button type="button" class="mgh-ren-btn" aria-label="重命名分组" title="重命名">'+RENAME_ICON+'</button>'
@@ -15053,7 +15118,6 @@ function toggleGroupCollapse(gid){
   if(collapsedGroups[gid])delete collapsedGroups[gid];else collapsedGroups[gid]=true;
   saveData();
   if(!el)return;
-  var caret=el.querySelector('.mgh-caret'); if(caret)caret.textContent=collapsedGroups[gid]?'▶':'▼';
   var body=el.querySelector('.mgh-body'); if(!body)return;
   if(collapsedGroups[gid]){
     body.style.maxHeight=body.scrollHeight+'px';
