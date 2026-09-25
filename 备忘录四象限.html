@@ -15226,6 +15226,7 @@ function openGroupMenu(gid,anchorEl){
       +'<div class="more-item" data-action="pin">'+ICON_PIN+'置顶</div>'
       +'<div class="more-item" data-action="rename">'+RENAME_ICON+'重命名</div>'
       +'<div class="more-item" data-action="color">'+MORE_ICON+'改颜色</div>'
+      +'<div class="more-item" data-action="merge">'+MERGE_ICON+'合并到…</div>'
       +'<div class="more-item" data-action="manage">'+ICON_GROUPS+'管理分组…</div>'
       +'<div class="more-item danger" data-action="del">'+DELGRP_ICON+'删除分组</div>';
     document.body.appendChild(_groupMenu);
@@ -15237,6 +15238,7 @@ function openGroupMenu(gid,anchorEl){
         if(a==='pin')toggleGroupPin(g);
         else if(a==='rename')renameGroup(g);
         else if(a==='color')openGroupColorPicker(g);
+        else if(a==='merge')openMergePicker(g);   /* ★R188 整组合并到另一组 */
         else if(a==='manage')openGroupManage();
         else if(a==='del')deleteGroup(g);
       });
@@ -15477,6 +15479,11 @@ function mergeMemosIntoGroup(srcId,targetId){
    ④ 已有分组按钮带分组色点；
    ⑤ 加入后不再强制退出批量模式（原来立刻 cancelBatch()，没法连续把几组内容分别归组）。 */
 var _gpIds=[];
+/* ★R188 弹层模式：'memos'=加入分组（原行为）；'merge'=整组合并（组头 ⋮「合并到…」进来）。
+   merge 模式下：标题/提示换成合并语义、「新建并加入」行与「移出所在分组」「管理分组」隐藏、
+   分组列表排除源组自身、行点击 = mergeGroupInto。closeGroupPicker 统一复位，两条入口互不串。 */
+var _gpMode='memos';
+var _mergeSrcGid=null;
 function openGroupPicker(idsArg){
   var isList=Array.isArray(idsArg);
   var list=isList?idsArg.slice():_orderedSelected();
@@ -15484,6 +15491,7 @@ function openGroupPicker(idsArg){
   /* ★R95 放开「至少选 2 条」：批量勾 1 条点「入组」也要能用——加入分组，
      或经「移出所在分组」把它从当前组拿出来（原来直接 toast 拒绝，单条入组无路可走）。 */
   _gpIds=list;
+  _gpSetMode('memos',null);   /* ★R188 显式复位：上次 merge 半途取消不能污染这条路径 */
   var overlay=document.getElementById('groupPickOverlay');
   document.getElementById('gpHint').textContent=(list.length===1?'已选 1 条':'已选 '+list.length+' 条')+'，可加入已有分组或新建分组';
   var nm=document.getElementById('gpNewName');if(nm)nm.value='';
@@ -15499,25 +15507,106 @@ function openGroupPicker(idsArg){
    保证弹层里的分组列表/「移出所在分组」区块永远与管理面板的操作结果同步。 */
 function _gpRefresh(){
   var ex=document.getElementById('gpExisting');if(!ex)return;
+  var isM=(_gpMode==='merge');
   ex.innerHTML='';
-  if(!memo_groups.length){ex.innerHTML='<div class="gp-empty">暂无已有分组</div>';}
-  else{for(var i=0;i<memo_groups.length;i++){(function(g){
+  var visible=memo_groups;
+  if(isM){visible=[];for(var v=0;v<memo_groups.length;v++){if(memo_groups[v].id!==_mergeSrcGid)visible.push(memo_groups[v]);}   /* ★R188 合并模式排除源组自己 */
+    if(!visible.length)ex.innerHTML='<div class="gp-empty">没有其他分组可作为目标</div>';}
+  if(visible.length){for(var i=0;i<visible.length;i++){(function(g){
     var b=document.createElement('div');b.className='gp-existing-btn';b.setAttribute('role','button');b.tabIndex=0;
     b.innerHTML='<span class="gp-dot" style="background:'+escapeHtml(g.color||'#6366f1')+'"></span>'
       +'<span class="gp-name">'+escapeHtml(g.name)+'</span>'
       +'<span class="gp-cnt">'+g.members.length+' 条</span>'
-      +'<button type="button" class="gm-act danger gp-del" title="删除分组">'+DELGRP_ICON+'</button>';
-    b.addEventListener('click',function(){addMemosToGroup(_gpIds,g.id);closeGroupPicker();_gpAfterPick();});
-    b.querySelector('.gp-del').addEventListener('click',function(e){e.stopPropagation();deleteGroupFromPanel(g.id,b);});
+      +(isM?'':'<button type="button" class="gm-act danger gp-del" title="删除分组">'+DELGRP_ICON+'</button>');
+    b.addEventListener('click',function(){
+      if(_gpMode==='merge'){
+        var srcGid=_mergeSrcGid;   /* ★先取值再关弹层：closeGroupPicker 会把 _mergeSrcGid 复位成 null */
+        closeGroupPicker();
+        mergeGroupInto(srcGid,g.id);
+      }
+      else{addMemosToGroup(_gpIds,g.id);closeGroupPicker();_gpAfterPick();}
+    });
+    var del=b.querySelector('.gp-del');
+    if(del)del.addEventListener('click',function(e){e.stopPropagation();deleteGroupFromPanel(g.id,b);});
     ex.appendChild(b);
-  })(memo_groups[i]);}}
+  })(visible[i]);}}
   var _anyInGroup=false;
-  for(var g=0;g<memo_groups.length&&!_anyInGroup;g++){var gm=memo_groups[g].members;for(var q=0;q<gm.length;q++){if(_gpIds.indexOf(gm[q])>=0){_anyInGroup=true;break;}}}
+  if(_gpMode!=='merge'){for(var g=0;g<memo_groups.length&&!_anyInGroup;g++){var gm=memo_groups[g].members;for(var q=0;q<gm.length;q++){if(_gpIds.indexOf(gm[q])>=0){_anyInGroup=true;break;}}}}
   var ur=document.getElementById('gpUnmergeRow');if(ur)ur.classList.toggle('show',_anyInGroup);
 }
 /* ★R92 加入分组后只清空选中、保留批量态（可以接着勾下一条继续归组），不再直接退出批量模式 */
 function _gpAfterPick(){ if(batchEnabled){clearSelection();saveData();} }
-function closeGroupPicker(){var o=document.getElementById('groupPickOverlay');if(o)o.hidden=true;}
+/* ★R188 弹层两态切换：memos=加入分组（原有布局），merge=合并分组（隐藏新建行/移出/管理，换标题提示）。
+   集中在一处切换，open / close 都走它，防止两条入口互相残留对方的隐藏状态。 */
+function _gpSetMode(mode,srcGid){
+  _gpMode=mode;_mergeSrcGid=srcGid||null;
+  var ov=document.getElementById('groupPickOverlay');
+  var title=ov.querySelector('.gp-title span');
+  var newRow=ov.querySelector('.gp-new');
+  var mg=document.getElementById('gpManage');
+  var ur=document.getElementById('gpUnmergeRow');
+  var isM=(mode==='merge');
+  if(title)title.textContent=isM?'合并分组':'加入分组';
+  if(newRow)newRow.style.display=isM?'none':'';
+  if(mg)mg.style.display=isM?'none':'';
+  if(ur)ur.classList.toggle('show',!isM&&ur.classList.contains('show'));
+}
+function openMergePicker(srcGid){
+  var src=_gmFind(srcGid);if(!src)return;
+  /* 目标组至少要有"另一个组"可选；只有这一个组时合并无意义 */
+  var others=0;for(var i=0;i<memo_groups.length;i++){if(memo_groups[i].id!==srcGid)others++;}
+  if(!others){showToast('只有这一个分组，没有可合并的目标');return;}
+  _gpIds=[];
+  _gpSetMode('merge',srcGid);
+  document.getElementById('gpHint').textContent='把「'+src.name+'」并入哪个分组？组内 '+src.members.length+' 条备忘全部移入，源分组将删除。';
+  var nm=document.getElementById('gpNewName');if(nm)nm.value='';
+  _gpRefresh();
+  var overlay=document.getElementById('groupPickOverlay');
+  overlay.hidden=false;
+  overlay.onclick=function(e){if(e.target===overlay)closeGroupPicker();};
+  var cancelBtn=document.getElementById('gpCancel');if(cancelBtn)cancelBtn.onclick=closeGroupPicker;
+}
+/* ★R188 整组合并：src 全部成员追加到 tgt 末尾（各自在 memos 里的顺序不动，组渲染位由"首条成员"决定，
+   合并后组可能上浮到原 src 的位置——与批量合并"搬到首条锚位"同一语义），src 删除。
+   撤销 = 快照 restoreHistory（全局撤销栈本就覆盖 memo_groups，这里做的是"一键直达"）。 */
+function mergeGroupInto(srcGid,tgtGid){
+  var src=_gmFind(srcGid),tgt=_gmFind(tgtGid);
+  if(!src||!tgt||src===tgt)return;
+  var snap=snapshotState();
+  var moved=src.members.slice();
+  for(var j=0;j<moved.length;j++){removeMemoFromAllGroups(moved[j]);}
+  for(var k=0;k<moved.length;k++){tgt.members.push(moved[k]);}
+  var idx=memo_groups.indexOf(src);
+  if(idx>=0)memo_groups.splice(idx,1);
+  delete collapsedGroups[srcGid];
+  saveData();render();
+  showUndoableToast('已把「'+src.name+'」并入「'+tgt.name+'」（'+moved.length+' 条）',function(){restoreHistory(snap);});
+}
+/* ★R188 带撤销按钮的 toast（#undo-toast 的 CSS 早已存在、元素此前从未被创建 —— 动态建一次复用）。
+   5s 自动消失；点撤销执行回调；新 toast 覆盖旧的（回调被替换丢弃）。 */
+var _undoToastEl=null,_undoToastTimer=null,_undoToastFn=null;
+function showUndoableToast(msg,undoFn){
+  if(!_undoToastEl){
+    _undoToastEl=document.createElement('div');
+    _undoToastEl.id='undo-toast';
+    _undoToastEl.innerHTML='<span class="ut-msg"></span><button type="button" class="ut-undo">撤销</button>';
+    document.body.appendChild(_undoToastEl);
+    _undoToastEl.querySelector('.ut-undo').addEventListener('click',function(){
+      _undoToastEl.classList.remove('show');
+      var f=_undoToastFn;_undoToastFn=null;
+      if(f)f();
+    });
+  }
+  _undoToastFn=undoFn||null;
+  _undoToastEl.querySelector('.ut-msg').textContent=msg;
+  _undoToastEl.classList.add('show');
+  if(_undoToastTimer)clearTimeout(_undoToastTimer);
+  _undoToastTimer=setTimeout(function(){_undoToastEl.classList.remove('show');_undoToastFn=null;},5000);
+}
+function closeGroupPicker(){
+  var o=document.getElementById('groupPickOverlay');if(o)o.hidden=true;
+  _gpSetMode('memos',null);   /* ★R188 复位布局，下次"加入分组"打开时是原样 */
+}
 function openGroupColorPicker(gid){
   var grp=null;for(var i=0;i<memo_groups.length;i++){if(memo_groups[i].id===gid){grp=memo_groups[i];break;}}
   if(!grp)return;
@@ -16166,6 +16255,8 @@ var MORE_ICON_H='<svg class="mb-h" viewBox="0 0 24 24" fill="currentColor"><circ
 var MORE_ICON_V='<svg class="mb-v" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg>';
 var RENAME_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 var DELGRP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 7l-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7"/></svg>';
+/* ★R188 分组合并：箭头汇入托盘（组头 ⋮ 菜单「合并到…」用） */
+var MERGE_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M3 12h11"/><path d="m10 8 4 4-4 4"/></svg>';
 // Esc 退出象限全屏；Ctrl/⌘+Z 撤销、Ctrl/⌘+Shift+Z 或 Ctrl+Y 重做
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
