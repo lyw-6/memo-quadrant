@@ -409,7 +409,7 @@ body.kb-edit .hist-actions{display:inline-flex;}
 /* ★R92 紧凑视图组头从「整行 banner」压成「矮条」：原 34px+6px 吃掉近半行(一行卡片才 78px)，
    压到 ~17px+3px 省下约 20px。仍占整行、仍是一块明显的组头——不改成「占一格的卡片」，
    因为那样组头会退化成普通卡，与 R92 第①条「分组要能一眼看出」的目标互相打架。 */
-.memo-list.compact .mgh-head{padding:1px 8px;margin-bottom:3px;gap:6px;}
+.memo-list.compact .mgh-head{padding:1px 8px 1px 0;margin-bottom:3px;gap:6px;}
 .memo-list.compact .mgh-caret{width:14px;height:14px;font-size:10px;}
 .memo-list.compact .mgh-title{font-size:11px;}
 .memo-list.compact .mgh-count{font-size:10px;}
@@ -1250,9 +1250,15 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
    但它又不是卡片 → 身份模糊，这才是"怪"的真正来源（色条只是最显眼的那一层）。
    现在：透明底 → 露出组底衬，组头与组内卡片**同处一块底衬**（整组的范围感更强）；
         层级变成 组底衬(最淡) → 组头(无块面·仅标题) → 卡片(白块 + 色条)。
-   分组标识仍在：色圆点（.mgh-color-btn）＋ 名称 ＋ 条数。悬停/按下给一层淡底做点击反馈。 */
+   分组标识仍在：色圆点（.mgh-color-btn）＋ 名称 ＋ 条数。悬停/按下给一层淡底做点击反馈。
+   ★★R183 左内边距 10px → **0**（用户："这个分组的箭头和这个色条不对齐"）：
+     组头的展开箭头与组内卡片的色条是**同一件事的两个"组标识"**（一个在标题行、一个在内容行），
+     必须共用一条竖轴。色条按 R88/R177 的定稿是**紧贴卡片左缘**的（4px 宽、左缘出血 1px），
+     所以它的轴线只离容器左缘 ~1px —— 箭头只能往左靠，不能反过来把色条往右挪（那会破坏"贴左缘"）。
+     配合 .mgh-caret 的 justify-content:flex-start（字形左对齐），让箭头墨迹贴着容器左缘起笔。
+     ⚠️别省这一条：留着 10px 的话箭头轴线离色条轴线 19px（实测），就是用户看到的那道"错位的台阶"。 */
 
-.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px;margin-bottom:3px;cursor:pointer;background:transparent;border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
+.mgh-head{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 0;margin-bottom:3px;cursor:pointer;background:transparent;border-left:none;border-radius:var(--radius-card);transition:background .15s;position:relative;}
 
 .mgh-head:hover{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 8%,transparent);}
 /* ★R89 分组置顶：组头加琥珀内描边 + 标题右侧图钉徽标，与卡片置顶(#f59e0b)同色系；
@@ -1264,7 +1270,16 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 [data-theme="dark"] .mgh-pin{color:#fbbf24;}
 /* ★R179 底衬透明化后按下反馈降一档（原来 20% 是压在 13% 色底上的叠加量，现在只有底衬 7%）。 */
 .mgh-head:active{background:color-mix(in srgb,var(--gh-color,var(--color-primary,#6366f1)) 16%,transparent);}
-.mgh-caret{border:none;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:11px;line-height:1;width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;}
+/* ★★R183 展开箭头要与卡片色条**同轴**：原来 20px 的方盒 + 居中字形让箭头墨迹停在箱子中央
+   （= 容器左缘 + 10px），而色条轴线在 容器左缘 + 2.4px → 差 19px，就是用户看到的那道"错位台阶"。
+   两步对齐：① 盒子 16px + 字形**左对齐**（flex-start）→ 墨迹从容器左缘起笔；
+   ② `margin-left:-3px` 抵掉字形自带的前导边距（'▼' 在 11px 下的左侧 bearing ≈1.75px，
+      再加上墨迹宽 7px → 墨迹中心原本落在 +5.25px，减 3px 后 ≈ +2.25px = 色条中心）。
+   ★实测：墨迹中心 − 色条中心 = **−0.1px**（改前 +19.0px）。
+   ⚠️负 margin 是**光学对齐**（字形边距没法用别的方式吃掉）；盒子会伸进分组底衬的 6px 左内边距里
+     （.memo-group padding-left:6px），既不会被裁也不会有视觉副作用 —— 祖先都是 overflow:visible。
+   ⚠️盒子仍留 16×20 做点击热区（整个组头行本来也能点，但这一格是"立即折叠"的快捷区）。 */
+.mgh-caret{border:none;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:11px;line-height:1;width:16px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-start;padding:0;margin-left:-3px;}
 .mgh-title{font-weight:600;font-size:13px;color:var(--gh-color,var(--color-primary,#6366f1));min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} /* ★R180 名称用分组色着色（用户方案①）：一眼看出哪个组，与短色块同色呼应 */ /* ★R68 长组名省略号，不挤压右侧条数 */
 .mgh-count{font-size:11px;color:var(--text-tertiary);margin-left:auto;white-space:nowrap;flex-shrink:0;} /* ★R68 nowrap:重命名输入框挤压时「N 条」不再折成两行 */
 .mgh-color-btn{width:16px;height:16px;border-radius:50%;border:2px solid var(--card-bg);box-shadow:0 0 0 1px rgba(0,0,0,.18);cursor:pointer;padding:0;flex-shrink:0;transition:transform .12s;}
