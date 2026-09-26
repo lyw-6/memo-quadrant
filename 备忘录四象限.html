@@ -2523,7 +2523,9 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .cal-cell .d-num{font-size:14px;font-weight:600;color:var(--text);line-height:1.15;}
 /* ★R136: 农历原为 9px + --text-tertiary(第三级灰) → 浅色/护眼主题下对比不足、选中态(蓝底)几乎不可见。
    提到 10px / --text-secondary / 500，并用固定 height 保证"有农历与无农历"的格子内容总高一致 */
-.cal-cell .d-sub{font-size:10px;line-height:1;height:10px;color:var(--text-secondary);margin-top:2px;max-width:100%;overflow:hidden;white-space:nowrap;font-weight:500;}
+/* ★R190 加 flex:none：格内是 flex 列，格子被压扁时（★桌面档底栏变高 → 日历可用高度变小
+   → 实测 .d-sub 被压到 9.89px）它会被压缩；农历/摘要是固定 10px 的元数据行，不该参与伸缩。 */
+.cal-cell .d-sub{font-size:10px;line-height:1;height:10px;flex:none;color:var(--text-secondary);margin-top:2px;max-width:100%;overflow:hidden;white-space:nowrap;font-weight:500;}
 /* ★R169 窄屏格子小，标题只留 1 行（第二条用 max-height:0 收掉，不是删掉 —— 留着结构稳定，
    宽屏再放开）：显示 2 行会把日期数字挤到格子外。 */
 .cal-cell .d-memos{margin-top:2px;}
@@ -2731,6 +2733,19 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    ⚠️窄屏（≤560px）有自己的覆盖（22px + 10px×0.88），**不受本条影响**。 */
 .nav-tab svg{width:24px;height:24px;flex-shrink:0;}
 .nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:11px;}
+/* ★R190 hover 胶囊（贴内容）：宽度 = --ink-w（JS 每帧量墨迹）+ 2×--nav-pill-pad，与选中胶囊同公式 */
+.nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(var(--ink-w,44px) + var(--nav-pill-pad,14px) * 2);border-radius:22px;background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
+/* ★R190 桌面档（≥1024）：手机那一套尺寸在大屏上偏小（实测桌面栏高 62 / 图标 24 / 字 11，
+   手机 59 / 22 / 10，几乎没涨）→ 宽屏再放大一档：栏内距 8/10、图标 28、字号 13。
+   ⚠️①必须写在 .nav-tab / .nav-tab svg / label 基础规则**之后**：同特异性"后者胜"，
+      写在前面会被基础规则的 24px/11px 反杀（首跑实测：栏宽生效了、图标字号没生效）。
+   ⚠️②断点取 1024 而不是 900：烟测多个手势块用 900×820，撞上会让浮起/归位几何断言整片飘。 */
+@media (min-width:1024px){
+  .bottom-nav{padding:6px 10px;max-width:760px;--nav-pill-pad:16px;}
+  .nav-tab{padding:7px 2px 6px;gap:3px;font-size:12px;}
+  .nav-tab svg{width:28px;height:28px;}
+  .nav-tab span,.nav-tab .nav-label{font-size:13px;}
+}
 .nav-tab.active{color:var(--color-primary,#6366f1);}
 .nav-tab.active svg{filter:drop-shadow(0 1px 2px rgba(99,102,241,.4));}
 /* 底部导航选中指示：独立滑块胶囊，切换视图时滑动 + 形变过渡（不随 innerHTML 重建而闪跳）
@@ -2956,7 +2971,11 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      ★★R182① 形状也统一到胶囊：tab 的 border-radius 10px→**22px**（= .nav-pill 的圆角），
        所以 hover 底与选中胶囊**同形同footprint**（同一个 tab 宽、同样的半圆端），读起来就是
        "选中态在这里，只是还没选中"。改前实测：hover 底 139×48 圆角 10px（方块）vs 胶囊圆角 22px。 */
-  .nav-tab:not(.active):hover{color:var(--nav-hover-fg);background:var(--hover-bg);}
+  /* ★R190 hover 底改由 ::before 画（贴内容，与 R190 的窄胶囊同 footprint）：
+     胶囊从"整格宽"改成"内容+内边距"后，若 hover 仍是整格宽 → 又变回 R182① 修过的两套形状语言。
+     z-index:-1 让它压在 tab 自己的 stacking context 里、位于图标/文字之下（tab 有 z-index:1）。 */
+  .nav-tab:not(.active):hover{color:var(--nav-hover-fg);}
+  .nav-tab:not(.active):hover::before{background:var(--hover-bg);}
   .nav-batch:hover{background:var(--nb-surface-hi);}
   .nav-batch.ghost:hover{background:var(--nb-surface);}
   .select-box:hover{border-color:var(--color-primary,#6366f1);}
@@ -12817,7 +12836,10 @@ function renderBottomNav(){
    · 与 positionNavPill 的关系：lift 期间胶囊由本模块接管，positionNavPill 必须让位（见其首行守卫），
      否则 ResizeObserver / resize / render 里的任何一次重排都会把浮起态覆盖回常态位置。
    · 长按后浏览器还会补一次 click：用 suppressClick 吃掉，避免连切两次。 */
-var NAV_PILL_EXTRA=20;   /* ★R170.4 浮起泡比常态选中胶囊宽出的像素（原 10 → 20；用户："能否和被选中态的胶囊还宽点"） */
+var NAV_PILL_EXTRA=44;   /* ★R170.4 浮起泡比常态选中胶囊宽出的像素（原 10 → 20；用户："能否和被选中态的胶囊还宽点"）。
+                            ★R190 20→44：胶囊改成"贴内容"后常态只有 ~71px，与泡高(~70)几乎相等 →
+                            「压圆/拉长」的形态行程只剩 11px（实测），方向×速度的手感基本没了。
+                            浮起态多留宽（71+44=115）→ 行程回到 ~45px，形态语义保住。 */
 var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素（用户：微微超过一点点、能看到后面的边框） */
 /* ★★R170.5 弹簧调参 —— **DAMP 越小阻尼越大**（这个方向我第一版搞反了，实测轨迹一路振荡：
    197→157→185→166→179，42 帧都没收敛）。阻尼比近似 ζ = −ln(DAMP) / (2·√K)：
@@ -12858,6 +12880,67 @@ var _navLift={lifting:false,settling:false,entering:false,enterT0:0,idx:-1,start
 var _navSettle={x:0,tx:0,w:0,tw:0,vx:0,vw:0,t0:0,lp:1,tlp:0,vlp:0};   /* ★R175① lp/tlp/vlp = 浮起度弹簧 */
 function _navNow(){return (window.performance&&performance.now)?performance.now():Date.now();}
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
+/* ★★R190 胶囊几何的**唯一来源**：宽度 = 内容墨迹 + 左右各 NAV_PILL_PAD，居中落在 tab 内 ——
+   不再跟"tab 等分整条栏"走。改前实测：桌面 tab 138.8px 而内容(图标+文字)仅 ~41px
+   → 胶囊左右各吊着 ~49px 空白（用户："胶囊宽度是不是太宽了"）。
+   ★hover 底必须共用同一个公式（CSS 侧读 --ink-w + --nav-pill-pad），否则又变回 R182① 修过的
+   "hover 底与选中胶囊 footprint 不一致"。
+   ★墨迹宽度用 Range.selectNodeContents 量（R183 量箭头墨迹同款手法，比 offsetWidth 可靠：
+   窄屏 label 是 width:100% 被拉满的块级盒，offsetWidth 拿到的是 tab 宽而不是字的宽度）。 */
+var NAV_PILL_PAD=14;
+function _navTabInk(t){
+  if(!t)return 0;
+  var w=0;
+  for(var i=0;i<t.children.length;i++){
+    var c=t.children[i];
+    if(getComputedStyle(c).display==='none')continue;
+    try{
+      var rg=document.createRange();rg.selectNodeContents(c);
+      var b=rg.getBoundingClientRect();
+      if(b.width>w)w=b.width;
+    }catch(e){}
+  }
+  return w;
+}
+/* ★取"常态墨迹"：优先 tab 上的缓存；缓存缺失**且**当前正处于浮起态（nav-lift 下 label 排版不同，
+   现量只会拿到图标 24px → 归位终态比常态窄 ~19px，实测 52 vs 71）→ 回落到上一次的常态值。 */
+var _navLastRestInk=0;
+function _navInkOf(t){
+  var v=parseFloat(t&&t._inkW);
+  if(v>0)return v;
+  var nav=document.getElementById('bottomNav');
+  if(nav&&nav.classList.contains('nav-lift')&&_navLastRestInk>0)return _navLastRestInk;
+  return _navTabInk(t);
+}
+/* 内边距读 CSS 的 --nav-pill-pad（桌面断点 14→16），JS 与 CSS 两侧共用一个值 */
+function _navPillPad(){
+  var nav=document.getElementById('bottomNav');
+  var v=nav?parseFloat(getComputedStyle(nav).getPropertyValue('--nav-pill-pad')):NaN;
+  return (isFinite(v)&&v>0)?v:NAV_PILL_PAD;
+}
+function _navPillBox(idx){
+  var tabs=_navTabs(),t=tabs[idx]||tabs[0];
+  if(!t)return {w:0,l:0};
+  var tw=t.offsetWidth||0;
+  /* ★必须读**常态**墨迹缓存：浮起/归位期栏 padding 与 tab 布局都在变（nav-lift 下 label 排版不同），
+     此刻现量会拿到浮起态的墨迹 → 归位终态比常态窄 ~19px（实测 52 vs 71）= "先回正再收起"的老毛病
+     （R170.5 的终态一致性）。缓存只在非浮起期刷新（见 _navInkSync）。 */
+  var ink=_navInkOf(t);
+  var w=tw?(Math.min(tw,ink+_navPillPad()*2)):0;
+  return {w:w,l:t.offsetLeft+(tw-w)/2};
+}
+/* 把每个 tab 的墨迹宽度写进 --ink-w，供 CSS 的 hover 胶囊读（同公式 → 同 footprint） */
+function _navInkSync(force){
+  if(!force&&(_navLift.lifting||_navLift.settling))return;   /* ★浮起期量到的是浮起态墨迹，会污染缓存 */
+  var tabs=_navTabs(),mx=0;
+  for(var i=0;i<tabs.length;i++){
+    var ink=_navTabInk(tabs[i]);
+    if(ink>mx)mx=ink;
+    var v=ink.toFixed(1)+'px';
+    if(tabs[i]._inkW!==v){tabs[i]._inkW=v;tabs[i].style.setProperty('--ink-w',v);}
+  }
+  if(mx>0)_navLastRestInk=mx;
+}
 /* ★★R172① 底栏「常态高度」取值器 —— 浮起/归位期底栏会靠 padding 长高 6px（用户要的"导航栏也变大"），
    但**布局消费者**（body 底部留白 / 日历按视口反算格子高）必须看到**常态**高度：
    否则浮起期间发生的任何一次 render 都会把这 6px 烘进布局 —— 日历格子被算小一档（7 行各扁 0.7px
@@ -12904,7 +12987,10 @@ function _navLitUpdate(pl,pr){
     var r=rec[i],lit=false,a=1,b=1;
     if(r.width){
       var ov=Math.min(pr,r.right)-Math.max(pl,r.left);
-      lit=ov>0&&ov/r.width>=NAV_LIT_RATIO;
+      /* ★R190 覆盖率按"胶囊与格子的较小者"算：胶囊贴内容变窄后（71 vs 格 146），
+         用格子宽当分母时任何一格都到不了 28%（泡压在两格分界也两格全灭 —— 实测 filling 为空）。
+         按覆盖率（重叠 / min(格宽, 泡宽)）判才对得上"照到多少算亮"的语义。 */
+      lit=ov>0&&ov/Math.max(1,Math.min(r.width,pr-pl))>=NAV_LIT_RATIO;
       a=Math.max(0,Math.min(1,(pl-r.left)/r.width));
       b=Math.max(0,Math.min(1,(pr-r.left)/r.width));
       if(!(b>a)){a=1;b=1;}
@@ -12926,7 +13012,7 @@ function _navLitClear(){
 function _navPlacePill(idx,lift){
   var tabs=_navTabs(),pill=_ensureNavPill();
   if(idx<0||!tabs[idx])return;
-  var t=tabs[idx],w=t.offsetWidth,l=t.offsetLeft;
+  var bx=_navPillBox(idx),w=bx.w,l=bx.l;   /* ★R190 贴内容盒（不再整格宽） */
   if(!w)return;
   if(lift){
     /* 浮起：宽 +10px（左右各外溢 5px）；高度由 CSS 的 .nav-pill.lift 上下外扩负责。
@@ -13103,7 +13189,7 @@ function _navMorphFrame(){
       return;
     }
     var h=pill.getBoundingClientRect().height||60;   /* 圆态：宽 = 高（CSS 的 26px 圆角把方形拉成圆） */
-    var wBase=Math.max((tabs[_navLift.idx]?tabs[_navLift.idx].offsetWidth:tabs[0].offsetWidth)+NAV_PILL_EXTRA,h+10);
+    var wBase=Math.max(_navPillBox(_navLift.idx>=0?_navLift.idx:0).w+NAV_PILL_EXTRA,h+10);   /* ★R190 贴内容盒 + 浮起外扩 */
     if(h>wBase)h=wBase;
     /* ★R175② 最窄不再等于泡高（那会让行程长达 84px），改为按 NAV_NARROW_MAX 压缩后的"收短态" */
     var wRound=wBase-(wBase-h)*NAV_NARROW_MAX;
@@ -13147,8 +13233,10 @@ function _navMorphFrame(){
     var nr=nav.getBoundingClientRect(),last=tabs[tabs.length-1];
     /* ★R170.3 边界放宽 NAV_OVER：泡可以微微探出底栏左右边缘（用户要"能看到后面的边框"）。
        CSS 侧配套：`.bottom-nav.nav-lift{overflow:visible}`（常态是 overflow-x:clip，不改就看不到）。 */
-    var minL=tabs[0].offsetLeft-5-NAV_OVER;
-    var maxL=last.offsetLeft+last.offsetWidth-w+5+NAV_OVER;
+    /* ★边界按**整格**算（不是胶囊盒）—— 用户要的是"拖到最左/最右时泡能微微探出栏外看到边框"：
+       若按胶囊盒（首格内容居中，天然内缩 ~37px）算，泡根本到不了栏边（实测 overL −53.5）。 */
+    var minL=tabs[0].offsetLeft-NAV_OVER;
+    var maxL=last.offsetLeft+last.offsetWidth-w+NAV_OVER;
     if(maxL<minL)maxL=minL;
     /* ★R186 位置 = 「速度前馈 + 指数平滑」逼近手指（替代 1:1 硬贴）：
        目标 pt = 手指现在在哪 + 按当前速度 TAU ms 后会在哪。稳态匀速时前馈正好抵消平滑的固有
@@ -13229,6 +13317,9 @@ function _navEnterLift(startIdx){
   var t0=tabs0[_navLift.idx];
   if(t0){var nr0=nav.getBoundingClientRect();_navMorph.center=nr0.left+t0.offsetLeft+t0.offsetWidth/2;}
   _navMorph.pc=_navMorph.center;   /* ★R186 pc 与手指落点同起点：首帧平滑不产生位移 */
+  /* ★R190 进浮起前先刷新一次墨迹缓存：此时还没加 nav-lift，量到的是**常态**排版，
+     归位/浮起期的胶囊几何才能落在常态盒上（终态一致性，R170.5）。 */
+  _navInkSync(true);
   nav.classList.add('nav-lift');
   var pill=_ensureNavPill();
   if(pill){
@@ -13302,15 +13393,20 @@ function _navBeginSettle(tab){
      而不是"浮起态的 +20 宽"。原来目标停在浮起尺寸上，收尾时 positionNavPill 又把它设成常态值
      → 用户看到的是「先回正 → 再收起 → 栏才变正常大小」三段式。现在归位过程本身就在做"缩回常态"，
      收尾时终态已经一致 → 零跳变，整个归位是一个连续动作。 */
-  _navSettle.tx=t.offsetLeft;
+  var bxT=_navPillBox(_navLift.idx);   /* ★R190 归位目标 = 贴内容盒（终态必须等于常态，R170.5） */
+  /* ★归位锚的是**中心**而不是左缘：贴内容后常态宽(53)比浮起宽(105)窄一半，若弹簧只锚左缘，
+     宽度一收窄泡中心就被"甩"出去 ~26px（实测归位过冲 36.8px）→ 视觉上泡歪着滑回去。 */
+  _navSettle.tcx=bxT.l+bxT.w/2;
+  _navSettle.tx=bxT.l;
   _navSettle.w=pr.width;
-  _navSettle.tw=t.offsetWidth;
+  _navSettle.tw=bxT.w;
   /* ★R175① 浮起度从「当前实时值」起算（不是硬编码 1）：入场滑行中途松手时泡还没完全浮起，
      从 1 起算会让它先"补涨"一下。tlp=0 = 目标常态。 */
   var lpNow=parseFloat(pill.style.getPropertyValue('--lp'));
   _navSettle.lp=(isFinite(lpNow)?lpNow:1);
   _navSettle.tlp=0;_navSettle.vlp=0;
-  _navSettle.vx=0;_navSettle.vw=0;_navSettle.t0=Date.now();
+  _navSettle.vx=0;_navSettle.vw=0;_navSettle.vcx=0;_navSettle.t0=Date.now();
+  _navSettle.cx=_navSettle.x+_navSettle.w/2;   /* ★R190 中心起算（与宽度无关） */
   _navLift.settling=true;
   /* 栏的 padding 与泡的弹簧**同时**收回（★R174① 0.3s → 0.2s，与加快后的宽度弹簧同步收完），
      而不是等 settle 结束再跳变 */
@@ -13321,11 +13417,19 @@ function _navSettleFrame(nav,pill){
   var s=_navSettle,tabs=_navTabs(),t=(_navLift.idx>=0&&tabs[_navLift.idx])?tabs[_navLift.idx]:null;
   /* ★每帧重算目标：归位期栏的 padding 正在收回 → tab.offsetLeft 一直在动，目标必须跟着走，
      否则泡会先冲向"旧布局的位置"、再被 positionNavPill 纠正一次（又是一次跳变）。 */
-  if(t){s.tx=t.offsetLeft;s.tw=t.offsetWidth;}
+  /* ★R190 每帧重算：①栏 padding 在收回 → 盒子跟着动；②目标按**中心**锚定（s.tcx），
+     左缘 = 中心 − 当前宽/2，这样宽度弹簧收缩时泡中心不漂移。 */
+  if(t){var bxF=_navPillBox(_navLift.idx);s.tcx=bxF.l+bxF.w/2;s.tw=bxF.w;}
+  /* ★★R190 弹簧走**中心**、左缘由中心反推（s.x = s.cx − w/2）——
+     贴内容后常态宽(53)比浮起宽(105)窄一半：若弹簧锚在左缘，宽度收缩会把"左缘目标"一路右推 26px，
+     位置弹簧追一个移动靶 → 过冲被放大到 18.6px（实测归位中心轨迹冲过目标再回摆 ±10px）。
+     锚中心后：宽度怎么弹都不影响对中，过冲只来自位置弹簧本身的 ζ（≈2px）。 */
+  s.vcx+=(s.tcx-s.cx)*NAV_SETTLE_K; s.vcx*=NAV_SETTLE_DAMP; s.cx+=s.vcx;
   /* ★R174① 位置与宽度各走一组参数：宽度更硬更快（NAV_SETTLE_WK/WDAMP）→ 收小与对正**同时开始、
      更早收完**，不再是"先对正、后收小"的两段生硬观感。 */
-  s.vx+=(s.tx-s.x)*NAV_SETTLE_K; s.vx*=NAV_SETTLE_DAMP; s.x+=s.vx;
   s.vw+=(s.tw-s.w)*NAV_SETTLE_WK; s.vw*=NAV_SETTLE_WDAMP; s.w+=s.vw;
+  s.x=s.cx-s.w/2;
+  s.tx=s.tcx-s.w/2;   /* 供收尾判据与拖尾量使用 */
   /* ★R175① 浮起度弹簧（与位置/宽度**同时**起跑）。允许轻微过冲到 [-0.25,1.25]：
      收到比常态更小(>5px)一点点再弹回来 = 果冻感；若把下界钳死在 0 会出现"停在常态等一下再回弹"的停滞。 */
   s.vlp+=(s.tlp-s.lp)*NAV_SETTLE_LK; s.vlp*=NAV_SETTLE_LDAMP; s.lp+=s.vlp;
@@ -13435,7 +13539,10 @@ function positionNavPill(retry){
   if(pill.parentNode!==nav)return;
   var active=nav.querySelector('.nav-tab.active');
   if(!active||nav.classList.contains('batch-mode')){pill.style.opacity='0';return;}
-  var w=active.offsetWidth, l=active.offsetLeft;
+  _navInkSync();   /* ★R190 hover 胶囊与选中胶囊共用墨迹宽度 */
+  var tabsA=_navTabs(),ai=-1;
+  for(var ai2=0;ai2<tabsA.length;ai2++){if(tabsA[ai2]===active)ai=ai2;}
+  var bxA=_navPillBox(ai<0?_navCurrentIndex():ai),w=bxA.w,l=bxA.l;
   if(!w){
     // 编辑态关闭/切换视图瞬间 DOM 可能尚未稳定(offsetWidth=0)，下一帧重试一次再隐身
     pill.style.opacity='0';
