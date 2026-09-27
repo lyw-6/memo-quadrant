@@ -2627,7 +2627,11 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    为什么非要两层：`box-shadow` 只在**层数与 inset 标记逐层对齐**时才插值（R182①）——
    玻璃主题的常态是 inset、浮起是普通投影，标记不同 → 归位时浏览器**直接跳变**（用户："整个导航栏的阴影也闪一下"）。
    把常态的第 1 层 alpha 归零即为浮起态（视觉上"皮肤淡出"），层结构不变 → 全程可插值。 */
-.bottom-nav{--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-sh-lift:0 -2px 14px rgba(0,0,0,0);--nav-px:4px;--nav-py:6px;--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+/* ★★R195 浮起时**栏本身要变宽变高**（用户：在原基础变宽变高、幅度不要太大）。
+   原来只有 padding 竖直 +2px（栏高 +4px），水平 +5px 只是让**内容内缩**、栏外框宽度写死不变 → 看着「单纯变高」。
+   加一个外扩量 `--nav-grow`：常态 0、浮起 8px（左右各 4px），所有 width/max-width 都 `+ var(--nav-grow)`。
+   ★关键配平：水平内距增量同时 5px→**4px** → 内容盒净变化（−8px padding ＋ 8px 宽度）= **0** → 栏外框膨胀、tab 与图标位置纹丝不动。 */
+.bottom-nav{--nav-grow:0px;--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-sh-lift:0 -2px 14px rgba(0,0,0,0);--nav-px:4px;--nav-py:6px;--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right) + var(--nav-grow));max-width:calc(640px + var(--nav-grow));/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2649,10 +2653,10 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    561–768 容器 640（基础 max 已覆盖）；≥769 容器 720。宽度公式 calc(100% - 40px) 与容器
    （视口 - body 左右 padding 20×2）一致，任何中间视口都严格等宽。★须写在基础规则之后，同特异性后者胜。 */
 @media (min-width:561px){
-  .bottom-nav{width:calc(100% - 40px);}
+  .bottom-nav{width:calc(100% - 40px + var(--nav-grow));}
 }
 @media (min-width:769px){
-  .bottom-nav{max-width:720px;}
+  .bottom-nav{max-width:calc(720px + var(--nav-grow));}
 }
 /* 编辑备忘录时隐藏切换视图导航(用户需求:输入时切换导航消失,避免遮挡);键盘弹起时聚焦备忘已被滚到键盘上方 */
 .kb-edit #bottomNav{display:none!important;}
@@ -2750,8 +2754,8 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      · 24px 是 Material 3 的导航图标标准尺寸；墨迹 18~20px，与 11px 文字的比 ≈ 2.2×（iOS 2.5× / M3 2×，同区间）
      · 内容块 34 → 38px，底栏 59 → 62px（+3px）；栏更高是**动态算**的（syncFloatingBars / fitCalGrid 都读实时高度）→ 无副作用
    ⚠️窄屏（≤560px）有自己的覆盖（22px + 10px×0.88），**不受本条影响**。 */
-.nav-tab svg{width:24px;height:24px;flex-shrink:0;}
-.nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:11px;}
+.nav-tab svg{width:26px;height:26px;flex-shrink:0;}   /* ★R195 图标偏小：24→26 */
+.nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:12px;}   /* ★R195 字号 11→12 */
 /* ★R192 hover 胶囊：宽度 = calc(100% − 8px) —— 与 JS `_navPillBox()`（整格宽 − 2×NAV_PILL_SIDE）
    同一个公式，hover 底与选中胶囊继续同 footprint（R182① 不变量）。 */
 .nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(100% - 8px);border-radius:var(--nav-r);background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
@@ -2761,10 +2765,10 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       写在前面会被基础规则的 24px/11px 反杀（首跑实测：栏宽生效了、图标字号没生效）。
    ⚠️②断点取 1024 而不是 900：烟测多个手势块用 900×820，撞上会让浮起/归位几何断言整片飘。 */
 @media (min-width:1024px){
-  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);max-width:760px;--nav-r:26px;}
+  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);max-width:calc(760px + var(--nav-grow));--nav-r:26px;}
   .nav-tab{padding:7px 2px 6px;gap:0;font-size:12px;}
-  .nav-tab svg{width:28px;height:28px;}
-  .nav-tab span,.nav-tab .nav-label{font-size:13px;}
+  .nav-tab svg{width:30px;height:30px;}   /* ★R195 桌面档 28→30 */
+  .nav-tab span,.nav-tab .nav-label{font-size:14px;}   /* ★R195 桌面档 13→14 */
 }
 .nav-tab.active{color:var(--color-primary,#6366f1);}
 .nav-tab.active svg{filter:drop-shadow(0 1px 2px rgba(99,102,241,.4));}
@@ -2893,7 +2897,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    泡压到栏的 1px 描边上时，那条线要能透过玻璃被看见（用户："怎么看不到导航栏的边框…是变暗还是怎么样"）。
    日间主题 --border:#e5e7eb 压在半透紫 tint 下对比度只剩 ~7% → 不明混 text 色一档；
    各主题自动算出协调值，玻璃主题（白描边）同理变实一点。 */
-.bottom-nav.nav-lift{padding:calc(var(--nav-py) + 2px) calc(var(--nav-px) + 5px);box-shadow:var(--nav-sh-lift),0 -5px 22px rgba(0,0,0,.16);overflow:visible;
+.bottom-nav.nav-lift{--nav-grow:8px;padding:calc(var(--nav-py) + 2px) calc(var(--nav-px) + 4px);box-shadow:var(--nav-sh-lift),0 -5px 22px rgba(0,0,0,.16);overflow:visible;
   border-color:color-mix(in srgb,var(--text) 17%,var(--border));
   /* ★R172② lift 期 tab 一律无底色：hover 底在这里会盖在浮起泡上，显得脏 */
   }
@@ -2912,7 +2916,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      归位动画结束后**摘掉 nav-lift-out 时 padding 再从 8px 过渡到 4px**，
      于是"胶囊/导航内容在归位完成后又自己展开一次"（用户报的现象；实测 t≈1044ms 起 tab 宽 146.81→148.41）。
    现在两边同源，归位期就一步到位 → 摘类时零变化。 */
-.bottom-nav.nav-lift-out{padding:var(--nav-py) var(--nav-px);
+.bottom-nav.nav-lift-out{--nav-grow:0px;padding:var(--nav-py) var(--nav-px);
   /* ★★R194 归位期**皮肤也一并回到常态**（原来只回 padding）：否则阴影/描边要等 settle 结束、
      摘掉状态类之后才用 CSS 过渡慢慢收（实测摘类后还有 ~300ms：阴影 0 -5px 22px/.16 → 0 -2px 14px/.10）
      —— 那一段"归位完成后阴影还在变"就是用户说的"阴影闪一下"。 */
@@ -3260,7 +3264,7 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
   /* ★R192f 窄屏与宽屏口径统一（用户："宽屏贴合了，窄屏不贴合"）：这条块**在文件末尾**，
      压过前面所有 .bottom-nav/.nav-tab 断点 → 窄屏曾固定 内距 8px + gap 2px（左边距 10、图标文字又拉开 2px）。
      现改成与基础规则一致：水平内距 4px、gap 0。 */
-  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);gap:0;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 12px);}
+  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);gap:0;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 12px + var(--nav-grow));}   /* ★R195 浮起外扩量 */
   .nav-tab{flex:1 1 0%;min-width:0;padding:6px 2px 4px;gap:0;}
   .nav-tab svg{width:22px;height:22px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:10px;transform:scale(0.88);transform-origin:center top;line-height:1.1;}
