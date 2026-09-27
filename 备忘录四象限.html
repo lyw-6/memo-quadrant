@@ -570,6 +570,11 @@ body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50
   background:var(--qb-color,var(--color-primary,#6366f1));
   -webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(var(--rail-w) + var(--card-bw)),transparent calc(var(--rail-w) + var(--card-bw)));
   mask-image:linear-gradient(90deg,#000 0,#000 calc(var(--rail-w) + var(--card-bw)),transparent calc(var(--rail-w) + var(--card-bw)));
+  /* ★★R196 色条画在**左滑菜单之上**（菜单 .swipe-actions z-index:3 / .swipe-clip z-index:2）：
+     这样打开左滑菜单时色条照样可见、也不再需要"打开态淡出"——
+     淡出是 R166 为**玻璃主题**加的（半透磨砂面板会把身后的色条透成一道橙带），
+     提到上层后色条不再位于面板之下，透出问题自然消失（用户："这个色条在左滑菜单时能否不隐藏它"）。 */
+  z-index:4;
   pointer-events:none;}
 .memo-item.qb.q0{--qb-color:var(--q0);}
 .memo-item.qb.q1{--qb-color:var(--q1);}
@@ -705,8 +710,9 @@ body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50
    （backdrop-filter），身后饱和度高的色条会透过面板显出一道橙带（实测打开态左缘仍是柔橙渐变、肉眼可见）
    → 干脆在打开态把色条淡出。.22s 与面板滑入/滑出同拍（swipe-open 由 openSwipe 立即加、
    closeSwipe 在滑出结束的 240ms 后才摘，所以淡出淡回都与面板同步）。 */
-.memo-item.qb::before{transition:opacity .22s ease;}
-.memo-item.qb.swipe-open::before{opacity:0;}   /* ★注意：qb/swipe-open 同挂在一个元素上，必须是复合选择器，不能写成 `.swipe-open .qb` */
+/* ★R196 已删除 R166 的「打开态淡出」：`.memo-item.qb.swipe-open::before{opacity:0}` 与它的 opacity 过渡。
+   色条改为 z-index:4 常显（见 .memo-item.qb::before）。⚠️ 历史包袱：跟手左滑时会**无条件**加 `swipe-open`
+   （见 onMove），若收尾路径不移除它，色条会永久消失（R196 修的 bug）。 */
 /* ★R167「删除」危险色（R167.1 重做）：第一版只把 color 挂在按钮元素上 —— 但这套按钮的
    圆框底 / 图标 / 文字是三变量分工（--sw-icon-bg / --sw-icon-fg / --sw-label-fg，4 主题各一套，
    见 .sw-icon/.sw-label 的显式 color），按钮级 color 传不进圆框和文字
@@ -2622,16 +2628,17 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    映射：外层 `border-radius:999px`（浏览器自动钳到半高，栏高怎么变都是全圆端）；
    内层 `--nav-r`：桌面 26 / 基准 22 / 窄屏 20 —— 本应用胶囊更宽扁（2.3:1），同比例会更显方，故取"看得出是圆角矩形"的上限，
    并始终 < 外层（内 < 外）。 */
-/* ★★R194 底栏皮肤（阴影/描边）也走「三态同源」（同 R193 的 --nav-px/--nav-py 思路）：
+/* ★★R194 底栏皮肤（阴影/描边）也走「三态同源」（同 R193 的 --nav-px/--nav-py 思路）；
+   ★R196：用户要求"长按时的阴影去掉" → 三态**统一用 `--nav-sh-rest`**（浮起不再加重投影）：
    阴影统一定为**两层**：第 1 层 = 主题皮肤（浅色系是常态投影，玻璃主题是 inset 内高光），第 2 层 = 投影层。
    为什么非要两层：`box-shadow` 只在**层数与 inset 标记逐层对齐**时才插值（R182①）——
    玻璃主题的常态是 inset、浮起是普通投影，标记不同 → 归位时浏览器**直接跳变**（用户："整个导航栏的阴影也闪一下"）。
-   把常态的第 1 层 alpha 归零即为浮起态（视觉上"皮肤淡出"），层结构不变 → 全程可插值。 */
+   层结构天然一致 → 既没有"归位后的跳变"，也没有多余的阴影变化（R194 的淡出方案已不需要）。 */
 /* ★★R195 浮起时**栏本身要变宽变高**（用户：在原基础变宽变高、幅度不要太大）。
    原来只有 padding 竖直 +2px（栏高 +4px），水平 +5px 只是让**内容内缩**、栏外框宽度写死不变 → 看着「单纯变高」。
    加一个外扩量 `--nav-grow`：常态 0、浮起 8px（左右各 4px），所有 width/max-width 都 `+ var(--nav-grow)`。
    ★关键配平：水平内距增量同时 5px→**4px** → 内容盒净变化（−8px padding ＋ 8px 宽度）= **0** → 栏外框膨胀、tab 与图标位置纹丝不动。 */
-.bottom-nav{--nav-grow:0px;--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-sh-lift:0 -2px 14px rgba(0,0,0,0);--nav-px:4px;--nav-py:6px;--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right) + var(--nav-grow));max-width:calc(640px + var(--nav-grow));/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+.bottom-nav{--nav-grow:0px;--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-px:4px;--nav-py:6px;--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right) + var(--nav-grow));max-width:calc(640px + var(--nav-grow));/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2673,7 +2680,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    （手机实测仍是 15px）；★另外：媒体块绝不能插进规则声明中间（第一次修时插错，导致 `.nav-tab` 整条失效）。 */
 /* ★R194 玻璃主题的底栏常态皮肤（inset 内高光）——**必须在基础 `.bottom-nav` 之后**：
    变量覆盖同样遵循"同特异性后者胜"，写早了会被基础值反杀（R192b 已踩过一次）。 */
-[data-theme="glass"] .bottom-nav{--nav-sh-rest:inset 0 1px 0 rgba(255,255,255,0.32);--nav-sh-lift:inset 0 1px 0 rgba(255,255,255,0);}
+[data-theme="glass"] .bottom-nav{--nav-sh-rest:inset 0 1px 0 rgba(255,255,255,0.32);}
 @media (max-width:560px){ .bottom-nav{--nav-r:20px;} }
 @media (max-width:480px){ .bottom-nav{--nav-r:20px;} }
 /* ===== 批量操作按钮（★R59 重新设计）=====
@@ -2754,8 +2761,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      · 24px 是 Material 3 的导航图标标准尺寸；墨迹 18~20px，与 11px 文字的比 ≈ 2.2×（iOS 2.5× / M3 2×，同区间）
      · 内容块 34 → 38px，底栏 59 → 62px（+3px）；栏更高是**动态算**的（syncFloatingBars / fitCalGrid 都读实时高度）→ 无副作用
    ⚠️窄屏（≤560px）有自己的覆盖（22px + 10px×0.88），**不受本条影响**。 */
-.nav-tab svg{width:26px;height:26px;flex-shrink:0;}   /* ★R195 图标偏小：24→26 */
-.nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:12px;}   /* ★R195 字号 11→12 */
+.nav-tab svg{width:30px;height:30px;flex-shrink:0;}   /* ★R195 24→26；★R196 26→28 → 30（周围还很空） */
+/* ★★R196 定稿口径（用户澄清）：**长按时图标文字不放大**，只是跟随栏的新尺寸重新分布 ——
+   所以 `--nav-grow`（栏宽 +6）**不做内距配平**：水平内距保持常态值 → 内容盒随栏一起 +6px
+   → 每个 tab 变宽约 +1.2px、图标/文字仍各自居中（位置自然地随栏「张开」，不做强制零位移）。
+   竖直方向同理不补偿：栏从底部向上长高 3px，内容在栏内重新居中（上移 1.5px）—— 这是「栏变大」的自然结果。
+   ★图标/文字的**尺寸**只在常态档位里放大（基础 30/14、桌面档 34/16），与长按状态无关。 */
+.nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:14px;}   /* ★R195 11→12；★R196 12→13 → 14 */
 /* ★R192 hover 胶囊：宽度 = calc(100% − 8px) —— 与 JS `_navPillBox()`（整格宽 − 2×NAV_PILL_SIDE）
    同一个公式，hover 底与选中胶囊继续同 footprint（R182① 不变量）。 */
 .nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(100% - 8px);border-radius:var(--nav-r);background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
@@ -2767,8 +2779,8 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 @media (min-width:1024px){
   .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);max-width:calc(760px + var(--nav-grow));--nav-r:26px;}
   .nav-tab{padding:7px 2px 6px;gap:0;font-size:12px;}
-  .nav-tab svg{width:30px;height:30px;}   /* ★R195 桌面档 28→30 */
-  .nav-tab span,.nav-tab .nav-label{font-size:14px;}   /* ★R195 桌面档 13→14 */
+  .nav-tab svg{width:34px;height:34px;}   /* ★R195 28→30；★R196 30→32 → 34 */
+  .nav-tab span,.nav-tab .nav-label{font-size:16px;}   /* ★R195 13→14；★R196 14→15 → 16 */
 }
 .nav-tab.active{color:var(--color-primary,#6366f1);}
 .nav-tab.active svg{filter:drop-shadow(0 1px 2px rgba(99,102,241,.4));}
@@ -2897,7 +2909,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    泡压到栏的 1px 描边上时，那条线要能透过玻璃被看见（用户："怎么看不到导航栏的边框…是变暗还是怎么样"）。
    日间主题 --border:#e5e7eb 压在半透紫 tint 下对比度只剩 ~7% → 不明混 text 色一档；
    各主题自动算出协调值，玻璃主题（白描边）同理变实一点。 */
-.bottom-nav.nav-lift{--nav-grow:8px;padding:calc(var(--nav-py) + 2px) calc(var(--nav-px) + 4px);box-shadow:var(--nav-sh-lift),0 -5px 22px rgba(0,0,0,.16);overflow:visible;
+.bottom-nav.nav-lift{--nav-grow:6px;padding:calc(var(--nav-py) + 1.5px) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);overflow:visible;
   border-color:color-mix(in srgb,var(--text) 17%,var(--border));
   /* ★R172② lift 期 tab 一律无底色：hover 底在这里会盖在浮起泡上，显得脏 */
   }
@@ -18323,6 +18335,16 @@ function attachSwipe(div,memo){
       if(dx>_need&&memo&&typeof toggleDone==='function'){toggleDone(memo.id,_curF);}
       else if(chkBox){             // 未过阈值：圆圈动画回弹到原态(完成=1,未完成=0)
         animateCheckCircle(chkBox,_curF,_dn?1:0,160,function(){clearCheckAnim(chkBox);});
+      }
+      /* ★★R196 修 bug：跟手左滑时会**无条件**给卡片加 `swipe-open`（onMove 里那一行，用来让菜单视觉状态正确）。
+         若这次手势随后**右滑回去**，onUp 会进本分支（moved && rdone）并 return —— 以前就此把那个临时类留下：
+         色条（.qb.swipe-open::before 当时 opacity:0）永久消失，且 .swipe-actions 保持 visible/pointer-events:auto
+         （菜单虽被 translateX(100%) 滑出、仍可被点中）。这里在收尾前把"跟手期的临时打开态"复位。
+         判定 = 有 swipe-open 类但 _swipeOpen 为 false（真打开态不该被动）。 */
+      if(div.classList.contains('swipe-open')&&!div._swipeOpen){
+        div.classList.remove('swipe-open','swipe-closing');
+        var _a=div.querySelector('.swipe-actions');
+        if(_a){_a.style.transition='transform .22s ease';_a.style.transform='translateX(100%)';_a.classList.add('swipe-no-blur');}
       }
       dragSuppress=true;setTimeout(function(){dragSuppress=false;},300);
       return;
