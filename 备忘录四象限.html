@@ -2761,13 +2761,25 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      · 24px 是 Material 3 的导航图标标准尺寸；墨迹 18~20px，与 11px 文字的比 ≈ 2.2×（iOS 2.5× / M3 2×，同区间）
      · 内容块 34 → 38px，底栏 59 → 62px（+3px）；栏更高是**动态算**的（syncFloatingBars / fitCalGrid 都读实时高度）→ 无副作用
    ⚠️窄屏（≤560px）有自己的覆盖（22px + 10px×0.88），**不受本条影响**。 */
-.nav-tab svg{width:30px;height:30px;flex-shrink:0;}   /* ★R195 24→26；★R196 26→28 → 30（周围还很空） */
+.nav-tab svg{width:38px;height:38px;flex-shrink:0;}   /* ★R195 24→26；★R196 26→28 → 30；★R197 30→38（C 档） */
+/* ★★R197 图标"视觉重量"补足（用户："图标文字和酷安比就是小点"）——
+   像素实测两图（都按**占栏高**归一化，因为两张截图缩放不同）：
+     酷安 图标墨迹 42.5~45% 栏高 / 文字 21~22% / 内容总高 76%；
+     我们(R196) 图标 27~32% / 文字 13~14% / 内容总高仅 55% → 上下留白多，"显空显小"。
+   两个叠加原因：① 内容/栏 占比小一档（本轮尺寸放大解决，栏高 78.6→90.4，占比 →68%）；
+   ② **图标语言不同**：酷安是实心填充（粗壮），我们是 `fill:none;stroke-width:2` 细描边 ——
+      同样外接高度下墨迹面积只有它 1/3，视觉重量天然轻 ⇒ 尺寸放大之外还要把描边 +17%。
+   ⚠️①必须写 `.bottom-nav .nav-tab svg`(0,2,1)：**压过 `[data-theme="glass"] svg{stroke-width:1.6}`(0,1,1)**
+      —— 否则玻璃主题下底栏图标比其他主题更细（同组件两套形状语言，R182④ 铁律）。
+   ⚠️②包在 min-width:561 里 **不落到窄屏**：≤560 的图标只有 19/20px，2.35 在同一 viewBox 下
+      视觉描边已 1.9px，小盒子里会糊（手机档本轮明确不动）。 */
+@media (min-width:561px){ .bottom-nav .nav-tab svg{stroke-width:2.35;} }
 /* ★★R196 定稿口径（用户澄清）：**长按时图标文字不放大**，只是跟随栏的新尺寸重新分布 ——
    所以 `--nav-grow`（栏宽 +6）**不做内距配平**：水平内距保持常态值 → 内容盒随栏一起 +6px
    → 每个 tab 变宽约 +1.2px、图标/文字仍各自居中（位置自然地随栏「张开」，不做强制零位移）。
    竖直方向同理不补偿：栏从底部向上长高 3px，内容在栏内重新居中（上移 1.5px）—— 这是「栏变大」的自然结果。
    ★图标/文字的**尺寸**只在常态档位里放大（基础 30/14、桌面档 34/16），与长按状态无关。 */
-.nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:14px;}   /* ★R195 11→12；★R196 12→13 → 14 */
+.nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:17.5px;}   /* ★R195 11→12；★R196 12→13 → 14；★R197 14→17.5（C 档，×1.22） */
 /* ★R192 hover 胶囊：宽度 = calc(100% − 8px) —— 与 JS `_navPillBox()`（整格宽 − 2×NAV_PILL_SIDE）
    同一个公式，hover 底与选中胶囊继续同 footprint（R182① 不变量）。 */
 .nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(100% - 8px);border-radius:var(--nav-r);background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
@@ -2779,8 +2791,8 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 @media (min-width:1024px){
   .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);max-width:calc(760px + var(--nav-grow));--nav-r:26px;}
   .nav-tab{padding:7px 2px 6px;gap:0;font-size:12px;}
-  .nav-tab svg{width:34px;height:34px;}   /* ★R195 28→30；★R196 30→32 → 34 */
-  .nav-tab span,.nav-tab .nav-label{font-size:16px;}   /* ★R195 13→14；★R196 14→15 → 16 */
+  .nav-tab svg{width:42px;height:42px;}   /* ★R195 28→30；★R196 30→32 → 34；★R197 34→42（C 档，×1.235） */
+  .nav-tab span,.nav-tab .nav-label{font-size:19.5px;}   /* ★R195 13→14；★R196 14→15 → 16；★R197 16→19.5（C 档，×1.22） */
 }
 .nav-tab.active{color:var(--color-primary,#6366f1);}
 .nav-tab.active svg{filter:drop-shadow(0 1px 2px rgba(99,102,241,.4));}
