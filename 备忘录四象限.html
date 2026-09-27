@@ -2354,8 +2354,8 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
   /* ★ 2026-09-01 修复：窄屏底部导航"成一坨"——6 个 tab(备忘录/四象限/今日/月/日历/统计)默认 min-width:48px+各自撑宽,
      在窄容器里总宽超限被 overflow-x 挤压成团。改为 flex:1 1 0 均分容器+min-width:0,永不溢出;
      图标/文字等比缩小,整体更紧凑不挤 */
-  .bottom-nav{padding:4px 5px;gap:1px;width:calc(100% - 12px);}
-  .nav-tab{min-width:0;flex:1 1 0;padding:5px 1px 3px;font-size:12px;gap:1px;border-radius:var(--nav-r);
+  .bottom-nav{padding:4px 4px;gap:0;width:calc(100% - 12px);}
+  .nav-tab{min-width:0;flex:1 1 0;padding:5px 1px 3px;font-size:12px;gap:0;border-radius:var(--nav-r);
            overflow:hidden;align-items:center;justify-content:center;text-align:center;}
   .nav-tab svg{width:19px;height:19px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.1;font-size:12px;transform:scale(0.78);transform-origin:center top;}
@@ -2387,8 +2387,8 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
      480 已经设了"padding 4px 6px / gap 1px / width calc(100% - 12px) / font 9px"，
      但 5 个 9 字 nav-tab(备忘录四象限/今日月日历)仍溢出。
      缩 svg 18 + font 8 + height auto，让 5 tab 真正均分 */
-  .bottom-nav{padding:3px 3px;gap:1px;width:calc(100% - 8px);}
-  .nav-tab{padding:4px 1px 3px;font-size:12px;gap:1px;border-radius:var(--nav-r);}
+  .bottom-nav{padding:3px 2px;gap:0;width:calc(100% - 8px);}
+  .nav-tab{padding:4px 1px 3px;font-size:12px;gap:0;border-radius:var(--nav-r);}
   .nav-tab svg{width:20px;height:20px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:none!important;} /* ★ 手机端 nav 只显示图标，彻底解决中文最小字号粘连 */
   .header-actions .btn-icon{width:26px;height:26px;}
@@ -2621,7 +2621,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    映射：外层 `border-radius:999px`（浏览器自动钳到半高，栏高怎么变都是全圆端）；
    内层 `--nav-r`：桌面 26 / 基准 22 / 窄屏 20 —— 本应用胶囊更宽扁（2.3:1），同比例会更显方，故取"看得出是圆角矩形"的上限，
    并始终 < 外层（内 < 外）。 */
-.bottom-nav{--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:6px 6px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+.bottom-nav{--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:6px 4px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2657,7 +2657,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    两处共用一个数字才好维护；且 tab 高 48px 时 22px 与胶囊端头的视觉弧线一致）。
    ⚠️三个断点各有一条 .nav-tab 规则（本行 + ≤560 的 8px + ≤480 的 7px），**三处必须同改**，
      否则窄窗口 hover 又变回方角。 */
-.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:var(--nav-r);font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;}
+.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:var(--nav-r);font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;}
 /* ★R192b 圆角令牌的断点覆盖**必须写在基础规则之后**：同特异性"后者胜"——
    首版把这两条加在文件上半区（2279 行区的 ≤560/≤480 块内），被基础 `.bottom-nav{--nav-r:15px}` 反杀
    （手机实测仍是 15px）；★另外：媒体块绝不能插进规则声明中间（第一次修时插错，导致 `.nav-tab` 整条失效）。 */
@@ -2752,8 +2752,8 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       写在前面会被基础规则的 24px/11px 反杀（首跑实测：栏宽生效了、图标字号没生效）。
    ⚠️②断点取 1024 而不是 900：烟测多个手势块用 900×820，撞上会让浮起/归位几何断言整片飘。 */
 @media (min-width:1024px){
-  .bottom-nav{padding:6px 8px;max-width:760px;--nav-r:26px;}
-  .nav-tab{padding:7px 2px 6px;gap:3px;font-size:12px;}
+  .bottom-nav{padding:6px 4px;max-width:760px;--nav-r:26px;}
+  .nav-tab{padding:7px 2px 6px;gap:0;font-size:12px;}
   .nav-tab svg{width:28px;height:28px;}
   .nav-tab span,.nav-tab .nav-label{font-size:13px;}
 }
@@ -2852,7 +2852,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    ⚠️grid 行高与 flex 列向完全一致（同样两项：图标行 + 标签行），所以浮起时栏只按设计长高 6px（padding 6→9）。
    ⚠️`justify-items:stretch` + 子项 width:100% 是**蒙版坐标系**的前提（见下方三段蒙版说明）。 */
 .bottom-nav.nav-lift .nav-tab{display:grid;grid-template-columns:1fr;align-content:center;
-  justify-items:stretch;row-gap:2px;column-gap:0;padding-left:0;padding-right:0;
+  justify-items:stretch;row-gap:0;column-gap:0;padding-left:0;padding-right:0;   /* ★R192e 与常态 tab 的 gap:0 对齐（否则浮起态 tab 比常态高 2px → R172⑨/R175① 两处几何断言红） */
   background:transparent;color:var(--text-secondary);}
 .bottom-nav.nav-lift .nav-tab > .ni{grid-row:1;grid-column:1;display:flex!important;justify-content:center;}
 .bottom-nav.nav-lift .nav-tab > .nav-label{grid-row:2;grid-column:1;width:100%;text-align:center;}
