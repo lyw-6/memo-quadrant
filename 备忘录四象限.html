@@ -1660,7 +1660,8 @@ html.glass-text-dark [data-theme="glass"] .cal-cell .d-sub.jq{color:#34d399;font
   backdrop-filter:blur(calc(var(--glass-blur) * 1.08)) saturate(var(--glass-sat));
   -webkit-backdrop-filter:blur(calc(var(--glass-blur) * 1.08)) saturate(var(--glass-sat));
   border:none;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,0.32);
+  /* ★R194 阴影不再在这里写死：本块在**基础规则之前**，写属性会赢过基础（特异性 0,2,0 > 0,1,0），
+     但归位态用的是基础里的 `var(--nav-sh-rest)` → 两边口径分裂。改为在基础规则之后覆盖变量（见下方 R194 块）。 */
 }
 /* Tier 3 — Popover 弹层 / 下拉 / 设置 / 抽屉（最不透明 + 最多模糊 + 大阴影） */
 [data-theme="glass"] .select-dropdown,
@@ -2621,7 +2622,12 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    映射：外层 `border-radius:999px`（浏览器自动钳到半高，栏高怎么变都是全圆端）；
    内层 `--nav-r`：桌面 26 / 基准 22 / 窄屏 20 —— 本应用胶囊更宽扁（2.3:1），同比例会更显方，故取"看得出是圆角矩形"的上限，
    并始终 < 外层（内 < 外）。 */
-.bottom-nav{--nav-px:4px;--nav-py:6px;--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+/* ★★R194 底栏皮肤（阴影/描边）也走「三态同源」（同 R193 的 --nav-px/--nav-py 思路）：
+   阴影统一定为**两层**：第 1 层 = 主题皮肤（浅色系是常态投影，玻璃主题是 inset 内高光），第 2 层 = 投影层。
+   为什么非要两层：`box-shadow` 只在**层数与 inset 标记逐层对齐**时才插值（R182①）——
+   玻璃主题的常态是 inset、浮起是普通投影，标记不同 → 归位时浏览器**直接跳变**（用户："整个导航栏的阴影也闪一下"）。
+   把常态的第 1 层 alpha 归零即为浮起态（视觉上"皮肤淡出"），层结构不变 → 全程可插值。 */
+.bottom-nav{--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-sh-lift:0 -2px 14px rgba(0,0,0,0);--nav-px:4px;--nav-py:6px;--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2661,6 +2667,9 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
 /* ★R192b 圆角令牌的断点覆盖**必须写在基础规则之后**：同特异性"后者胜"——
    首版把这两条加在文件上半区（2279 行区的 ≤560/≤480 块内），被基础 `.bottom-nav{--nav-r:15px}` 反杀
    （手机实测仍是 15px）；★另外：媒体块绝不能插进规则声明中间（第一次修时插错，导致 `.nav-tab` 整条失效）。 */
+/* ★R194 玻璃主题的底栏常态皮肤（inset 内高光）——**必须在基础 `.bottom-nav` 之后**：
+   变量覆盖同样遵循"同特异性后者胜"，写早了会被基础值反杀（R192b 已踩过一次）。 */
+[data-theme="glass"] .bottom-nav{--nav-sh-rest:inset 0 1px 0 rgba(255,255,255,0.32);--nav-sh-lift:inset 0 1px 0 rgba(255,255,255,0);}
 @media (max-width:560px){ .bottom-nav{--nav-r:20px;} }
 @media (max-width:480px){ .bottom-nav{--nav-r:20px;} }
 /* ===== 批量操作按钮（★R59 重新设计）=====
@@ -2884,7 +2893,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    泡压到栏的 1px 描边上时，那条线要能透过玻璃被看见（用户："怎么看不到导航栏的边框…是变暗还是怎么样"）。
    日间主题 --border:#e5e7eb 压在半透紫 tint 下对比度只剩 ~7% → 不明混 text 色一档；
    各主题自动算出协调值，玻璃主题（白描边）同理变实一点。 */
-.bottom-nav.nav-lift{padding:calc(var(--nav-py) + 2px) calc(var(--nav-px) + 5px);box-shadow:0 -5px 22px rgba(0,0,0,.16);overflow:visible;
+.bottom-nav.nav-lift{padding:calc(var(--nav-py) + 2px) calc(var(--nav-px) + 5px);box-shadow:var(--nav-sh-lift),0 -5px 22px rgba(0,0,0,.16);overflow:visible;
   border-color:color-mix(in srgb,var(--text) 17%,var(--border));
   /* ★R172② lift 期 tab 一律无底色：hover 底在这里会盖在浮起泡上，显得脏 */
   }
@@ -2903,7 +2912,11 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      归位动画结束后**摘掉 nav-lift-out 时 padding 再从 8px 过渡到 4px**，
      于是"胶囊/导航内容在归位完成后又自己展开一次"（用户报的现象；实测 t≈1044ms 起 tab 宽 146.81→148.41）。
    现在两边同源，归位期就一步到位 → 摘类时零变化。 */
-.bottom-nav.nav-lift-out{padding:var(--nav-py) var(--nav-px);}
+.bottom-nav.nav-lift-out{padding:var(--nav-py) var(--nav-px);
+  /* ★★R194 归位期**皮肤也一并回到常态**（原来只回 padding）：否则阴影/描边要等 settle 结束、
+     摘掉状态类之后才用 CSS 过渡慢慢收（实测摘类后还有 ~300ms：阴影 0 -5px 22px/.16 → 0 -2px 14px/.10）
+     —— 那一段"归位完成后阴影还在变"就是用户说的"阴影闪一下"。 */
+  box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);border-color:var(--border);}
 /* ★R170.5 浮起胶囊 = 「液态玻璃」（**自绘质感**版）。
    ★为什么不用 backdrop-filter 做折射：底栏背景是不透明实体色 → 玻璃身后是一片纯色，
      blur/折射/saturate 会**全部生效但肉眼零效果**（技能 html-liquid-glass-metaball 第一前提）。
@@ -2974,7 +2987,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .bottom-nav{touch-action:none;transition:padding .28s cubic-bezier(.22,.61,.36,1),opacity .25s ease,transform .25s ease,
   /* ★R182② 栏自己的皮肤也要过渡：摘掉 .nav-lift 时 border-color（浮起期压深一档）与 box-shadow
      （浮起期加重）以前是**一帧跳回**的 —— 与泡的皮肤在同一帧跳，叠加起来就是"收尾时闪一下"。 */
-  box-shadow .28s ease,border-color .28s ease;} /* ★R181 与泡同步（0.2s 会比泡先收完） */
+  box-shadow .28s cubic-bezier(.22,.61,.36,1),border-color .28s cubic-bezier(.22,.61,.36,1);} /* ★R181 与泡同步（0.2s 会比泡先收完）；★R194 缓动与 padding 统一（同步感＝同时长＋同缓动） */
 /* 桌面端(精确指针 + 支持 hover):为列表项与导航提供鼠标 hover 反馈,移动端不触发 */
 @media (hover:hover) and (pointer:fine){
   .memo-item:hover,
