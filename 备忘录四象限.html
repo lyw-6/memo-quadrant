@@ -1839,7 +1839,7 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
    ★R143 曾把（已下线的）拖动泡并进过这条规则同源防「拖动时变蓝」；★R165 该泡连同整套长按
    液态玻璃已删除，本条退回「常态选中胶囊」单一职责。 */
 [data-theme="glass"] .nav-pill{
-  border-radius:22px;
+  border-radius:var(--nav-r);
   background:
     /* ★R184 与主主题同一条运动学：镜面沿运动方向偏移 + 被拉长（静止时 --mv/--mva 均为 0 → 逐像素不变） */
     radial-gradient(calc(130% + 60% * var(--mva,0)) calc(150% + 40% * var(--mva,0)) at calc(50% + var(--mv,0) * 11%) -32%, rgba(255,255,255,.80) 0%, rgba(255,255,255,.30) 46%, rgba(255,255,255,.08) 100%),
@@ -2355,7 +2355,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
      在窄容器里总宽超限被 overflow-x 挤压成团。改为 flex:1 1 0 均分容器+min-width:0,永不溢出;
      图标/文字等比缩小,整体更紧凑不挤 */
   .bottom-nav{padding:4px 6px;gap:1px;width:calc(100% - 12px);}
-  .nav-tab{min-width:0;flex:1 1 0;padding:5px 1px 3px;font-size:12px;gap:1px;border-radius:22px;
+  .nav-tab{min-width:0;flex:1 1 0;padding:5px 1px 3px;font-size:12px;gap:1px;border-radius:var(--nav-r);
            overflow:hidden;align-items:center;justify-content:center;text-align:center;}
   .nav-tab svg{width:19px;height:19px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.1;font-size:12px;transform:scale(0.78);transform-origin:center top;}
@@ -2388,7 +2388,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
      但 5 个 9 字 nav-tab(备忘录四象限/今日月日历)仍溢出。
      缩 svg 18 + font 8 + height auto，让 5 tab 真正均分 */
   .bottom-nav{padding:3px 4px;gap:1px;width:calc(100% - 8px);}
-  .nav-tab{padding:4px 1px 3px;font-size:12px;gap:1px;border-radius:22px;}
+  .nav-tab{padding:4px 1px 3px;font-size:12px;gap:1px;border-radius:var(--nav-r);}
   .nav-tab svg{width:20px;height:20px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:none!important;} /* ★ 手机端 nav 只显示图标，彻底解决中文最小字号粘连 */
   .header-actions .btn-icon{width:26px;height:26px;}
@@ -2616,7 +2616,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
 .app-sub{font-size:12px;font-weight:400;color:var(--text-tertiary);letter-spacing:0;}
 
 /* ===== 底部导航栏（图标 + 文字）===== */
-.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+.bottom-nav{--nav-r:15px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2652,7 +2652,12 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    两处共用一个数字才好维护；且 tab 高 48px 时 22px 与胶囊端头的视觉弧线一致）。
    ⚠️三个断点各有一条 .nav-tab 规则（本行 + ≤560 的 8px + ≤480 的 7px），**三处必须同改**，
      否则窄窗口 hover 又变回方角。 */
-.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:22px;font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;}
+.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:var(--nav-r);font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;}
+/* ★R192b 圆角令牌的断点覆盖**必须写在基础规则之后**：同特异性"后者胜"——
+   首版把这两条加在文件上半区（2279 行区的 ≤560/≤480 块内），被基础 `.bottom-nav{--nav-r:15px}` 反杀
+   （手机实测仍是 15px）；★另外：媒体块绝不能插进规则声明中间（第一次修时插错，导致 `.nav-tab` 整条失效）。 */
+@media (max-width:560px){ .bottom-nav{--nav-r:14px;} }
+@media (max-width:480px){ .bottom-nav{--nav-r:13px;} }
 /* ===== 批量操作按钮（★R59 重新设计）=====
    批量操作并入底部导航槽位：复用同一固定条，零额外占用。
    设计要点（四主题统一自适应）：
@@ -2735,14 +2740,14 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:11px;}
 /* ★R192 hover 胶囊：宽度 = calc(100% − 8px) —— 与 JS `_navPillBox()`（整格宽 − 2×NAV_PILL_SIDE）
    同一个公式，hover 底与选中胶囊继续同 footprint（R182① 不变量）。 */
-.nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(100% - 8px);border-radius:22px;background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
+.nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(100% - 8px);border-radius:var(--nav-r);background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
 /* ★R190 桌面档（≥1024）：手机那一套尺寸在大屏上偏小（实测桌面栏高 62 / 图标 24 / 字 11，
    手机 59 / 22 / 10，几乎没涨）→ 宽屏再放大一档：栏内距 8/10、图标 28、字号 13。
    ⚠️①必须写在 .nav-tab / .nav-tab svg / label 基础规则**之后**：同特异性"后者胜"，
       写在前面会被基础规则的 24px/11px 反杀（首跑实测：栏宽生效了、图标字号没生效）。
    ⚠️②断点取 1024 而不是 900：烟测多个手势块用 900×820，撞上会让浮起/归位几何断言整片飘。 */
 @media (min-width:1024px){
-  .bottom-nav{padding:6px 10px;max-width:760px;}
+  .bottom-nav{padding:6px 10px;max-width:760px;--nav-r:18px;}
   .nav-tab{padding:7px 2px 6px;gap:3px;font-size:12px;}
   .nav-tab svg{width:28px;height:28px;}
   .nav-tab span,.nav-tab .nav-label{font-size:13px;}
@@ -2752,7 +2757,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 /* 底部导航选中指示：独立滑块胶囊，切换视图时滑动 + 形变过渡（不随 innerHTML 重建而闪跳）
    ★R142 胶囊保持 primary 渐变观感（用户定稿：不一定要透明玻璃）。
    ★R165 原先「拖动期由玻璃泡接管、真 pill 藏起防双泡」的 liq-drag 交接规则已随泡一并删除。 */
-.nav-pill{position:absolute;top:5px;bottom:5px;left:0;width:0;border-radius:22px;pointer-events:none;z-index:0;opacity:0;
+.nav-pill{position:absolute;top:5px;bottom:5px;left:0;width:0;border-radius:var(--nav-r);pointer-events:none;z-index:0;opacity:0;
   --lp:0;   /* ★R182② 浮起度：0=常态皮 / 1=玻璃皮。由归位弹簧每帧 inline 写（同 .nav-pill.lift 的 --lp:1） */
   /* ★★R182② 皮肤改成**全部由 --lp 连续驱动**（原来只在 .nav-pill.lift 里另写一套，摘类那一帧整块换装）。
      两个理由：
@@ -2901,12 +2906,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      原来 top/bottom/border-radius/外晕写在类里，**只有到 _navFinishSettle 移除 .lift 才开始变**
      —— 而位置/宽度弹簧早就收完了，于是用户看到「泡先回正 → 停一下 → 才收起来」。
      现在归位弹簧每帧写 --lp，几何与位置/宽度**同一条时间轴**收敛；收尾移除 .lift 时几何已等于常态 → 零跳变。
-     计算校验：lp=1 → top=5-8=-3px、radius=25px；lp=0 → top=5px、radius=22px（= 常态值）。
+     计算校验：lp=1 → top=5-8=-3px、radius=--nav-r+3px；lp=0 → top=5px、radius=--nav-r（= 常态值）。
      ★R176 外扩 11px→8px（泡只超出栏上下各 3px）：用户"长按后的导航栏放大效果收小一点，同时那个胶囊泡也一起"
      —— 栏的 padding 同步 9px 10px → 8px 9px（高度 +6px → +4px）。 */
   --lp:1;
   top:calc(5px - 8px * var(--lp));bottom:calc(5px - 8px * var(--lp));
-  border-radius:calc(22px + 3px * var(--lp));
+  border-radius:calc(var(--nav-r) + 3px * var(--lp));
   /* ★★R182② 不再在这里另写一套 background / border：皮已经全部搬进基础规则、由 --lp 连续驱动
      （弧顶镜面 alpha = .92*--lp、三段 alpha 渐变 = 20+3*lp / 15-3*lp / 11+7*lp，
        lp=1 时正好等于原来这套 23%/12%/18%）。这样「浮起 ↔ 常态」根本没有"换装"动作，
