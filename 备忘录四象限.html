@@ -3238,8 +3238,11 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
      本块在样式表最末尾、级联必胜 → 若留 hidden，手机端（≤560px）的底栏又会变回
      「hidden + visible-y → visible-y 被算成 auto」→ 泡一溢出栏外就冒纵向滚动条。
      clip 与 visible 是合法组合、永不产生滚动条，见基础 .bottom-nav 处的完整说明。 */
-  .bottom-nav{padding:6px 8px;gap:2px;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 12px);}
-  .nav-tab{flex:1 1 0%;min-width:0;padding:6px 2px 4px;gap:2px;}
+  /* ★R192f 窄屏与宽屏口径统一（用户："宽屏贴合了，窄屏不贴合"）：这条块**在文件末尾**，
+     压过前面所有 .bottom-nav/.nav-tab 断点 → 窄屏曾固定 内距 8px + gap 2px（左边距 10、图标文字又拉开 2px）。
+     现改成与基础规则一致：水平内距 4px、gap 0。 */
+  .bottom-nav{padding:6px 4px;gap:0;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 12px);}
+  .nav-tab{flex:1 1 0%;min-width:0;padding:6px 2px 4px;gap:0;}
   .nav-tab svg{width:22px;height:22px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:10px;transform:scale(0.88);transform-origin:center top;line-height:1.1;}
   .nav-batch{height:34px;font-size:12px;padding:0 6px;gap:4px;}
@@ -12896,13 +12899,29 @@ function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.
    ★R190 曾改成"贴内容"（墨迹 + 2×内边距 → 只占格子 48~60%），用户拿参考图回来纠正：
    高度/贴边本来就对，缺的是**宽度**。故 R192 回到整格口径（两侧各留 4px 呼吸），
    并把 R190 那套"墨迹测量 + --ink-w"整套删除（不留死代码）。 */
-var NAV_PILL_SIDE=2;   /* 胶囊与格子左右边的留白（参考图 ≈ 4~6px） */
+var NAV_PILL_SIDE=2;   /* 胶囊与格子左右边的留白（参考图 ≈ 块宽 4~6px；这里 1px + 栏内距 4px = 离栏边 6px） */
+/* ★R192f 用**小数 rect** 而不是 offsetWidth/offsetLeft（后者是整数量）：
+   格子宽常是 96.4 这类小数，取整后胶囊中心与格子中心会差 1.5px（烟测 R144⑦ 实测 1.56 红）。
+   l 的口径 = 相对底栏**padding box**（绝对定位元素的包含块）的小数偏移。 */
+var _navPillCache={};   /* ★R192f 常态几何缓存（idx → {w,l}） */
 function _navPillBox(idx){
   var tabs=_navTabs(),t=tabs[idx]||tabs[0];
   if(!t)return {w:0,l:0};
-  var tw=t.offsetWidth||0;
-  var w=tw?Math.max(28,tw-NAV_PILL_SIDE*2):0;
-  return {w:w,l:t.offsetLeft+NAV_PILL_SIDE};
+  var nav=document.getElementById('bottomNav');
+  if(!nav)return {w:0,l:0};
+  /* ★★浮起/归位期一律读**常态缓存**：栏内距在 lift 期会变（tab 宽度跟着变），
+     若每帧现量，归位弹簧就在追一个"移动靶"→ 宽度 95% 进度比几何晚 ~580ms（烟测 R175① 实测），
+     视觉上就是"位置先到位、宽度慢慢磨"。缓存后目标恒定 = 弹簧一次收敛；
+     终态也必然等于常态几何（R170.5 的两条一致性断言）。 */
+  var lift=(typeof _navLift!=='undefined')&&(_navLift.lifting||_navLift.settling);
+  var c=_navPillCache[idx];
+  if(lift&&c)return {w:c.w,l:c.l};
+  var nr=nav.getBoundingClientRect(),tr=t.getBoundingClientRect();
+  var padBoxLeft=nr.left+(parseFloat(getComputedStyle(nav).borderLeftWidth)||0);
+  var w=Math.max(28,tr.width-NAV_PILL_SIDE*2);
+  var l=(tr.left-padBoxLeft)+NAV_PILL_SIDE;
+  if(!lift)_navPillCache[idx]={w:w,l:l};
+  return {w:w,l:l};
 }
 /* ★★R172① 底栏「常态高度」取值器 —— 浮起/归位期底栏会靠 padding 长高 6px（用户要的"导航栏也变大"），
    但**布局消费者**（body 底部留白 / 日历按视口反算格子高）必须看到**常态**高度：
