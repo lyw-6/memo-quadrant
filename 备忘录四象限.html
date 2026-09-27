@@ -2616,7 +2616,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
 .app-sub{font-size:12px;font-weight:400;color:var(--text-tertiary);letter-spacing:0;}
 
 /* ===== 底部导航栏（图标 + 文字）===== */
-.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+.bottom-nav{--nav-pill-pad:16px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2734,14 +2734,14 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .nav-tab svg{width:24px;height:24px;flex-shrink:0;}
 .nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:11px;}
 /* ★R190 hover 胶囊（贴内容）：宽度 = --ink-w（JS 每帧量墨迹）+ 2×--nav-pill-pad，与选中胶囊同公式 */
-.nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(var(--ink-w,44px) + var(--nav-pill-pad,14px) * 2);border-radius:22px;background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
+.nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(var(--ink-w,44px) + var(--nav-pill-pad,16px) * 2);border-radius:22px;background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
 /* ★R190 桌面档（≥1024）：手机那一套尺寸在大屏上偏小（实测桌面栏高 62 / 图标 24 / 字 11，
    手机 59 / 22 / 10，几乎没涨）→ 宽屏再放大一档：栏内距 8/10、图标 28、字号 13。
    ⚠️①必须写在 .nav-tab / .nav-tab svg / label 基础规则**之后**：同特异性"后者胜"，
       写在前面会被基础规则的 24px/11px 反杀（首跑实测：栏宽生效了、图标字号没生效）。
    ⚠️②断点取 1024 而不是 900：烟测多个手势块用 900×820，撞上会让浮起/归位几何断言整片飘。 */
 @media (min-width:1024px){
-  .bottom-nav{padding:6px 10px;max-width:760px;--nav-pill-pad:16px;}
+  .bottom-nav{padding:6px 10px;max-width:760px;--nav-pill-pad:24px;}   /* ★R191 用户："默认胶囊大小是不是小了点" → 16→24（胶囊 71→87，占格 48%→59%） */
   .nav-tab{padding:7px 2px 6px;gap:3px;font-size:12px;}
   .nav-tab svg{width:28px;height:28px;}
   .nav-tab span,.nav-tab .nav-label{font-size:13px;}
@@ -12887,7 +12887,7 @@ function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.
    "hover 底与选中胶囊 footprint 不一致"。
    ★墨迹宽度用 Range.selectNodeContents 量（R183 量箭头墨迹同款手法，比 offsetWidth 可靠：
    窄屏 label 是 width:100% 被拉满的块级盒，offsetWidth 拿到的是 tab 宽而不是字的宽度）。 */
-var NAV_PILL_PAD=14;
+var NAV_PILL_PAD=16;
 function _navTabInk(t){
   if(!t)return 0;
   var w=0;
