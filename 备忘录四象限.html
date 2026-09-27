@@ -2616,7 +2616,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
 .app-sub{font-size:12px;font-weight:400;color:var(--text-tertiary);letter-spacing:0;}
 
 /* ===== 底部导航栏（图标 + 文字）===== */
-.bottom-nav{--nav-pill-pad:16px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2733,15 +2733,16 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    ⚠️窄屏（≤560px）有自己的覆盖（22px + 10px×0.88），**不受本条影响**。 */
 .nav-tab svg{width:24px;height:24px;flex-shrink:0;}
 .nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:11px;}
-/* ★R190 hover 胶囊（贴内容）：宽度 = --ink-w（JS 每帧量墨迹）+ 2×--nav-pill-pad，与选中胶囊同公式 */
-.nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(var(--ink-w,44px) + var(--nav-pill-pad,16px) * 2);border-radius:22px;background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
+/* ★R192 hover 胶囊：宽度 = calc(100% − 8px) —— 与 JS `_navPillBox()`（整格宽 − 2×NAV_PILL_SIDE）
+   同一个公式，hover 底与选中胶囊继续同 footprint（R182① 不变量）。 */
+.nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(100% - 8px);border-radius:22px;background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
 /* ★R190 桌面档（≥1024）：手机那一套尺寸在大屏上偏小（实测桌面栏高 62 / 图标 24 / 字 11，
    手机 59 / 22 / 10，几乎没涨）→ 宽屏再放大一档：栏内距 8/10、图标 28、字号 13。
    ⚠️①必须写在 .nav-tab / .nav-tab svg / label 基础规则**之后**：同特异性"后者胜"，
       写在前面会被基础规则的 24px/11px 反杀（首跑实测：栏宽生效了、图标字号没生效）。
    ⚠️②断点取 1024 而不是 900：烟测多个手势块用 900×820，撞上会让浮起/归位几何断言整片飘。 */
 @media (min-width:1024px){
-  .bottom-nav{padding:6px 10px;max-width:760px;--nav-pill-pad:24px;}   /* ★R191 用户："默认胶囊大小是不是小了点" → 16→24（胶囊 71→87，占格 48%→59%） */
+  .bottom-nav{padding:6px 10px;max-width:760px;}
   .nav-tab{padding:7px 2px 6px;gap:3px;font-size:12px;}
   .nav-tab svg{width:28px;height:28px;}
   .nav-tab span,.nav-tab .nav-label{font-size:13px;}
@@ -12836,10 +12837,9 @@ function renderBottomNav(){
    · 与 positionNavPill 的关系：lift 期间胶囊由本模块接管，positionNavPill 必须让位（见其首行守卫），
      否则 ResizeObserver / resize / render 里的任何一次重排都会把浮起态覆盖回常态位置。
    · 长按后浏览器还会补一次 click：用 suppressClick 吃掉，避免连切两次。 */
-var NAV_PILL_EXTRA=44;   /* ★R170.4 浮起泡比常态选中胶囊宽出的像素（原 10 → 20；用户："能否和被选中态的胶囊还宽点"）。
-                            ★R190 20→44：胶囊改成"贴内容"后常态只有 ~71px，与泡高(~70)几乎相等 →
-                            「压圆/拉长」的形态行程只剩 11px（实测），方向×速度的手感基本没了。
-                            浮起态多留宽（71+44=115）→ 行程回到 ~45px，形态语义保住。 */
+var NAV_PILL_EXTRA=20;   /* ★R170.4 浮起泡比常态胶囊宽出的像素（用户："能否和被选中态的胶囊还宽点"）。
+                            ★R190 曾 20→44（当时常态收窄到 71px，不给外扩就没有形态行程）；
+                            ★R192 常态宽回到"整格 − 8"（桌面 138）→ 行程足够，退回 20。 */
 var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素（用户：微微超过一点点、能看到后面的边框） */
 /* ★★R170.5 弹簧调参 —— **DAMP 越小阻尼越大**（这个方向我第一版搞反了，实测轨迹一路振荡：
    197→157→185→166→179，42 帧都没收敛）。阻尼比近似 ζ = −ln(DAMP) / (2·√K)：
@@ -12880,66 +12880,19 @@ var _navLift={lifting:false,settling:false,entering:false,enterT0:0,idx:-1,start
 var _navSettle={x:0,tx:0,w:0,tw:0,vx:0,vw:0,t0:0,lp:1,tlp:0,vlp:0};   /* ★R175① lp/tlp/vlp = 浮起度弹簧 */
 function _navNow(){return (window.performance&&performance.now)?performance.now():Date.now();}
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
-/* ★★R190 胶囊几何的**唯一来源**：宽度 = 内容墨迹 + 左右各 NAV_PILL_PAD，居中落在 tab 内 ——
-   不再跟"tab 等分整条栏"走。改前实测：桌面 tab 138.8px 而内容(图标+文字)仅 ~41px
-   → 胶囊左右各吊着 ~49px 空白（用户："胶囊宽度是不是太宽了"）。
-   ★hover 底必须共用同一个公式（CSS 侧读 --ink-w + --nav-pill-pad），否则又变回 R182① 修过的
-   "hover 底与选中胶囊 footprint 不一致"。
-   ★墨迹宽度用 Range.selectNodeContents 量（R183 量箭头墨迹同款手法，比 offsetWidth 可靠：
-   窄屏 label 是 width:100% 被拉满的块级盒，offsetWidth 拿到的是 tab 宽而不是字的宽度）。 */
-var NAV_PILL_PAD=16;
-function _navTabInk(t){
-  if(!t)return 0;
-  var w=0;
-  for(var i=0;i<t.children.length;i++){
-    var c=t.children[i];
-    if(getComputedStyle(c).display==='none')continue;
-    try{
-      var rg=document.createRange();rg.selectNodeContents(c);
-      var b=rg.getBoundingClientRect();
-      if(b.width>w)w=b.width;
-    }catch(e){}
-  }
-  return w;
-}
-/* ★取"常态墨迹"：优先 tab 上的缓存；缓存缺失**且**当前正处于浮起态（nav-lift 下 label 排版不同，
-   现量只会拿到图标 24px → 归位终态比常态窄 ~19px，实测 52 vs 71）→ 回落到上一次的常态值。 */
-var _navLastRestInk=0;
-function _navInkOf(t){
-  var v=parseFloat(t&&t._inkW);
-  if(v>0)return v;
-  var nav=document.getElementById('bottomNav');
-  if(nav&&nav.classList.contains('nav-lift')&&_navLastRestInk>0)return _navLastRestInk;
-  return _navTabInk(t);
-}
-/* 内边距读 CSS 的 --nav-pill-pad（桌面断点 14→16），JS 与 CSS 两侧共用一个值 */
-function _navPillPad(){
-  var nav=document.getElementById('bottomNav');
-  var v=nav?parseFloat(getComputedStyle(nav).getPropertyValue('--nav-pill-pad')):NaN;
-  return (isFinite(v)&&v>0)?v:NAV_PILL_PAD;
-}
+/* ★★R192 胶囊几何（口径＝用户给的参考图）：宽度 = **整格宽 − 两侧各 NAV_PILL_SIDE**、居中落在 tab 内；
+   高度由 CSS 决定（上下各留 ~5px）。
+   参考图（酷安底栏）实测：选中块宽 ≈ 整格宽（甚至压过格缝）、高 ≈ 栏高 87%、到边 ~5px。
+   ★R190 曾改成"贴内容"（墨迹 + 2×内边距 → 只占格子 48~60%），用户拿参考图回来纠正：
+   高度/贴边本来就对，缺的是**宽度**。故 R192 回到整格口径（两侧各留 4px 呼吸），
+   并把 R190 那套"墨迹测量 + --ink-w"整套删除（不留死代码）。 */
+var NAV_PILL_SIDE=4;   /* 胶囊与格子左右边的留白（参考图 ≈ 4~6px） */
 function _navPillBox(idx){
   var tabs=_navTabs(),t=tabs[idx]||tabs[0];
   if(!t)return {w:0,l:0};
   var tw=t.offsetWidth||0;
-  /* ★必须读**常态**墨迹缓存：浮起/归位期栏 padding 与 tab 布局都在变（nav-lift 下 label 排版不同），
-     此刻现量会拿到浮起态的墨迹 → 归位终态比常态窄 ~19px（实测 52 vs 71）= "先回正再收起"的老毛病
-     （R170.5 的终态一致性）。缓存只在非浮起期刷新（见 _navInkSync）。 */
-  var ink=_navInkOf(t);
-  var w=tw?(Math.min(tw,ink+_navPillPad()*2)):0;
-  return {w:w,l:t.offsetLeft+(tw-w)/2};
-}
-/* 把每个 tab 的墨迹宽度写进 --ink-w，供 CSS 的 hover 胶囊读（同公式 → 同 footprint） */
-function _navInkSync(force){
-  if(!force&&(_navLift.lifting||_navLift.settling))return;   /* ★浮起期量到的是浮起态墨迹，会污染缓存 */
-  var tabs=_navTabs(),mx=0;
-  for(var i=0;i<tabs.length;i++){
-    var ink=_navTabInk(tabs[i]);
-    if(ink>mx)mx=ink;
-    var v=ink.toFixed(1)+'px';
-    if(tabs[i]._inkW!==v){tabs[i]._inkW=v;tabs[i].style.setProperty('--ink-w',v);}
-  }
-  if(mx>0)_navLastRestInk=mx;
+  var w=tw?Math.max(28,tw-NAV_PILL_SIDE*2):0;
+  return {w:w,l:t.offsetLeft+NAV_PILL_SIDE};
 }
 /* ★★R172① 底栏「常态高度」取值器 —— 浮起/归位期底栏会靠 padding 长高 6px（用户要的"导航栏也变大"），
    但**布局消费者**（body 底部留白 / 日历按视口反算格子高）必须看到**常态**高度：
@@ -13317,9 +13270,6 @@ function _navEnterLift(startIdx){
   var t0=tabs0[_navLift.idx];
   if(t0){var nr0=nav.getBoundingClientRect();_navMorph.center=nr0.left+t0.offsetLeft+t0.offsetWidth/2;}
   _navMorph.pc=_navMorph.center;   /* ★R186 pc 与手指落点同起点：首帧平滑不产生位移 */
-  /* ★R190 进浮起前先刷新一次墨迹缓存：此时还没加 nav-lift，量到的是**常态**排版，
-     归位/浮起期的胶囊几何才能落在常态盒上（终态一致性，R170.5）。 */
-  _navInkSync(true);
   nav.classList.add('nav-lift');
   var pill=_ensureNavPill();
   if(pill){
@@ -13539,7 +13489,6 @@ function positionNavPill(retry){
   if(pill.parentNode!==nav)return;
   var active=nav.querySelector('.nav-tab.active');
   if(!active||nav.classList.contains('batch-mode')){pill.style.opacity='0';return;}
-  _navInkSync();   /* ★R190 hover 胶囊与选中胶囊共用墨迹宽度 */
   var tabsA=_navTabs(),ai=-1;
   for(var ai2=0;ai2<tabsA.length;ai2++){if(tabsA[ai2]===active)ai=ai2;}
   var bxA=_navPillBox(ai<0?_navCurrentIndex():ai),w=bxA.w,l=bxA.l;
