@@ -2354,7 +2354,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
   /* ★ 2026-09-01 修复：窄屏底部导航"成一坨"——6 个 tab(备忘录/四象限/今日/月/日历/统计)默认 min-width:48px+各自撑宽,
      在窄容器里总宽超限被 overflow-x 挤压成团。改为 flex:1 1 0 均分容器+min-width:0,永不溢出;
      图标/文字等比缩小,整体更紧凑不挤 */
-  .bottom-nav{padding:4px 6px;gap:1px;width:calc(100% - 12px);}
+  .bottom-nav{padding:4px 5px;gap:1px;width:calc(100% - 12px);}
   .nav-tab{min-width:0;flex:1 1 0;padding:5px 1px 3px;font-size:12px;gap:1px;border-radius:var(--nav-r);
            overflow:hidden;align-items:center;justify-content:center;text-align:center;}
   .nav-tab svg{width:19px;height:19px;flex-shrink:0;}
@@ -2387,7 +2387,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
      480 已经设了"padding 4px 6px / gap 1px / width calc(100% - 12px) / font 9px"，
      但 5 个 9 字 nav-tab(备忘录四象限/今日月日历)仍溢出。
      缩 svg 18 + font 8 + height auto，让 5 tab 真正均分 */
-  .bottom-nav{padding:3px 4px;gap:1px;width:calc(100% - 8px);}
+  .bottom-nav{padding:3px 3px;gap:1px;width:calc(100% - 8px);}
   .nav-tab{padding:4px 1px 3px;font-size:12px;gap:1px;border-radius:var(--nav-r);}
   .nav-tab svg{width:20px;height:20px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:none!important;} /* ★ 手机端 nav 只显示图标，彻底解决中文最小字号粘连 */
@@ -2621,7 +2621,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    映射：外层 `border-radius:999px`（浏览器自动钳到半高，栏高怎么变都是全圆端）；
    内层 `--nav-r`：桌面 26 / 基准 22 / 窄屏 20 —— 本应用胶囊更宽扁（2.3:1），同比例会更显方，故取"看得出是圆角矩形"的上限，
    并始终 < 外层（内 < 外）。 */
-.bottom-nav{--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:6px 8px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+.bottom-nav{--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:6px 6px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));max-width:640px;/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2752,7 +2752,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       写在前面会被基础规则的 24px/11px 反杀（首跑实测：栏宽生效了、图标字号没生效）。
    ⚠️②断点取 1024 而不是 900：烟测多个手势块用 900×820，撞上会让浮起/归位几何断言整片飘。 */
 @media (min-width:1024px){
-  .bottom-nav{padding:6px 10px;max-width:760px;--nav-r:26px;}
+  .bottom-nav{padding:6px 8px;max-width:760px;--nav-r:26px;}
   .nav-tab{padding:7px 2px 6px;gap:3px;font-size:12px;}
   .nav-tab svg{width:28px;height:28px;}
   .nav-tab span,.nav-tab .nav-label{font-size:13px;}
@@ -2762,7 +2762,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 /* 底部导航选中指示：独立滑块胶囊，切换视图时滑动 + 形变过渡（不随 innerHTML 重建而闪跳）
    ★R142 胶囊保持 primary 渐变观感（用户定稿：不一定要透明玻璃）。
    ★R165 原先「拖动期由玻璃泡接管、真 pill 藏起防双泡」的 liq-drag 交接规则已随泡一并删除。 */
-.nav-pill{position:absolute;top:5px;bottom:5px;left:0;width:0;border-radius:var(--nav-r);pointer-events:none;z-index:0;opacity:0;
+.nav-pill{position:absolute;top:3px;bottom:3px;left:0;width:0;border-radius:var(--nav-r);pointer-events:none;z-index:0;opacity:0;
   --lp:0;   /* ★R182② 浮起度：0=常态皮 / 1=玻璃皮。由归位弹簧每帧 inline 写（同 .nav-pill.lift 的 --lp:1） */
   /* ★★R182② 皮肤改成**全部由 --lp 连续驱动**（原来只在 .nav-pill.lift 里另写一套，摘类那一帧整块换装）。
      两个理由：
@@ -2912,10 +2912,10 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      —— 而位置/宽度弹簧早就收完了，于是用户看到「泡先回正 → 停一下 → 才收起来」。
      现在归位弹簧每帧写 --lp，几何与位置/宽度**同一条时间轴**收敛；收尾移除 .lift 时几何已等于常态 → 零跳变。
      计算校验：lp=1 → top=5-8=-3px、radius=--nav-r+3px；lp=0 → top=5px、radius=--nav-r（= 常态值）。
-     ★R176 外扩 11px→8px（泡只超出栏上下各 3px）：用户"长按后的导航栏放大效果收小一点，同时那个胶囊泡也一起"
+     ★R176 外扩 11px→8px；★R192d 常态留白 5→3px、外溢 8→6px（超出量仍 3px）：用户"长按后的导航栏放大效果收小一点，同时那个胶囊泡也一起"
      —— 栏的 padding 同步 9px 10px → 8px 9px（高度 +6px → +4px）。 */
   --lp:1;
-  top:calc(5px - 8px * var(--lp));bottom:calc(5px - 8px * var(--lp));
+  top:calc(3px - 6px * var(--lp));bottom:calc(3px - 6px * var(--lp));
   border-radius:calc(var(--nav-r) + 3px * var(--lp));
   /* ★★R182② 不再在这里另写一套 background / border：皮已经全部搬进基础规则、由 --lp 连续驱动
      （弧顶镜面 alpha = .92*--lp、三段 alpha 渐变 = 20+3*lp / 15-3*lp / 11+7*lp，
@@ -12896,7 +12896,7 @@ function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.
    ★R190 曾改成"贴内容"（墨迹 + 2×内边距 → 只占格子 48~60%），用户拿参考图回来纠正：
    高度/贴边本来就对，缺的是**宽度**。故 R192 回到整格口径（两侧各留 4px 呼吸），
    并把 R190 那套"墨迹测量 + --ink-w"整套删除（不留死代码）。 */
-var NAV_PILL_SIDE=4;   /* 胶囊与格子左右边的留白（参考图 ≈ 4~6px） */
+var NAV_PILL_SIDE=2;   /* 胶囊与格子左右边的留白（参考图 ≈ 4~6px） */
 function _navPillBox(idx){
   var tabs=_navTabs(),t=tabs[idx]||tabs[0];
   if(!t)return {w:0,l:0};
