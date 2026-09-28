@@ -508,7 +508,7 @@ body.kb-edit .hist-actions{display:inline-flex;}
    补 padding-left:9px 让标签与复选框左对齐(用户反馈"标签太靠左") */
 .memo-list.compact .memo-item .memo-after,
 .memo-list.compact .memo-item .memo-after-row,
-.memo-list.compact .memo-item .memo-meta{min-width:0;overflow:hidden;padding-left:9px;}
+.memo-list.compact .memo-item .memo-meta{min-width:0;overflow:hidden;padding-left:9px;margin-left:0;} /* ★R198 margin-left:0：紧凑视图维持复选框对齐体系，不吃列表视图的 +6px */
 /* !important 是必须的：上方「标签族尺寸令牌」块(.memo-expand,.cat-trigger,.quadrant-tag)整体带 !important,
    普通声明压不过它。这里只在【紧凑视图】范围内覆盖，通用令牌块本身不动。 */
 .memo-list.compact .memo-item .quadrant-tag{flex-shrink:0;min-width:0;height:18px!important;line-height:18px!important;font-size:10px!important;padding-left:4px!important;padding-right:4px!important;border-radius:5px!important;overflow:hidden;}
@@ -1141,9 +1141,12 @@ body.no-done-circle .swipe-fore > .checkbox{display:none;}
 .memo-item:not(.expanded) .memo-content{
   max-height:7.5em;overflow:hidden;
 }
+/* ★R198 渐隐加强（用户："长内容省略的效果感觉不明显"）：旧值 72% 才开始淡出＝只有最后一行的
+   下半截变淡，几乎看不出"下面还有内容"。现提前到 58% 开始、96% 完全消失 → 被截断的最后一行
+   大半隐去，一眼可读出"被省略了"；中间加一段 .38 缓冲避免硬边。 */
 .memo-item.long:not(.expanded) .memo-content{
-  -webkit-mask-image:linear-gradient(to bottom,#000 72%,transparent);
-  mask-image:linear-gradient(to bottom,#000 72%,transparent);
+  -webkit-mask-image:linear-gradient(to bottom,#000 55%,rgba(0,0,0,.38) 78%,transparent 96%);
+  mask-image:linear-gradient(to bottom,#000 55%,rgba(0,0,0,.38) 78%,transparent 96%);
 }
 /* 编辑态 / 已展开:完整显示,不再限高(去掉原 50vh 小框限制)。
    注意:选择器需与 .memo-item:not(.expanded) .memo-content 特异性同级且在后方,
@@ -1190,8 +1193,12 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 .memo-meta>*{display:inline-flex;align-items:center;gap:2px;padding:0 6px;height:22px;line-height:22px;font-size:var(--text-xs);border-radius:var(--radius-xs);white-space:nowrap;flex-shrink:0;}
 .cat-select-wrap{position:relative;display:inline-block;overflow:visible!important;flex-shrink:0;padding:0;}
 /* 分类下拉已从 .memo-item 移出挂到 body(避免被 content-visibility 裁切),故改用独立类选择器 */
-/* ★确保 memo-after 与 memo-content 左边缘严格对齐:两者共享 .memo-body 起始线 */
-.memo-body .memo-after{margin-left:0;}
+/* ★R198 展开/收起按钮与分类标签行往右与【正文文字】对齐（用户："和文字对齐不要和边框对齐"）：
+   .memo-content 普通态/编辑态 padding-left 都是 6px（正文文字左缘 = body+6px），
+   而 .memo-after 盒子左缘 = body+0（贴边）→ 盒子看起来"和边框对齐"。
+   改 +6px：标签族的【可见底色盒】左缘与正文文字左缘严格同一像素（实测 327→333）。
+   ⚠️紧凑视图有自己的对齐体系（复选框 padding-left:9px，见 509 行块）→ 在该块内归零。 */
+.memo-body .memo-after{margin-left:6px;}
 .cat-dropdown{position:fixed;min-width:80px;max-width:50vw;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow-popup);z-index:10000;overflow:visible;opacity:0;transform:scale(.96);pointer-events:none;transition:opacity .12s ease,transform .12s ease;/* 只过渡透明度/缩放,不过渡 top/left 定位(否则打开时从旧位置滑入=“从外面进来”效果) */}
 .cat-dropdown.open{opacity:1;transform:scale(1);pointer-events:auto;}
 .cat-dropdown .select-option{padding:3px 8px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:background .15s;color:var(--text);white-space:nowrap;}
@@ -17601,9 +17608,18 @@ function createTodoEditable(text,cls){
       try{
         var _s=window.getSelection();
         if(_s&&_s.rangeCount&&ed.contains(_s.getRangeAt(0).startContainer)){
-          var _r=_s.getRangeAt(0);
+          /* ★R198 修「回车＝给上一行添加一行、光标到新行行首」（用户实测 'A⏎213⏎' 变 'A\n\n213'）：
+             根因＝下面 _zwClean 用 nodeValue 原地剥 ZWSP 后，Chrome 会把**停在旧 ZWSP 附近**
+             （节点末尾 / 剥空后的空文本节点）的选区锚点**规范化**挪位，随后取到的 _r 已不是光标
+             真实位置（实测锚点落到空文本节点边界）→ '\n' 插到上一行末尾而非光标处。
+             修法＝剥 ZWSP **前**先把光标换算成 value 坐标（_edGetOffset，剥 ZWSP 口径），
+             剥完（顺带删掉剥 ZWSP 产生的空文本节点——它就是锚点规范化的落脚点）再用
+             _edSetOffset 从 value 坐标恢复光标 → 此时的 range 必然在正确位置。 */
+          var _off=_edGetOffset(ed);
           /* 不变量清理：ZWSP 至多一个且只在内容末尾；插入前全量剥掉旧 ZWSP（空文本节点=无渲染影响） */
-          (function _zwClean(p){for(var c=p.lastChild;c;c=c.previousSibling){if(c.nodeType===3){if(c.nodeValue.indexOf('\u200B')>=0)c.nodeValue=c.nodeValue.replace(/\u200B/g,'');}else if(c.nodeType===1&&!_edIsChk(c))_zwClean(c);}})(ed);
+          (function _zwClean(p){for(var c=p.lastChild;c;c=c.previousSibling){if(c.nodeType===3){if(c.nodeValue.indexOf('\u200B')>=0)c.nodeValue=c.nodeValue.replace(/\u200B/g,'');if(!c.nodeValue.length&&c.parentNode)c.parentNode.removeChild(c);}else if(c.nodeType===1&&!_edIsChk(c))_zwClean(c);}})(ed);
+          _edSetOffset(ed,_off);
+          var _r=_s.getRangeAt(0);
           _r.deleteContents();
           var _tn=document.createTextNode('\n');
           _r.insertNode(_tn);
