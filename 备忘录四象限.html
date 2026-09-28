@@ -2858,10 +2858,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.55),
     inset 0 -1px 0 color-mix(in srgb, var(--color-primary,#6366f1) 10%, transparent),
-    /* ⚠️下面两条是**占位层**（完全透明、长度为 0，肉眼零影响），只为让层数与 inset 标记与 .lift 的
-       5 层逐一对齐 —— 见本条开头理由②：对不齐就完全不插值。别删！ */
+    /* ⚠️下面三条是**占位层**（完全透明、长度为 0，肉眼零影响），只为让层数与 inset 标记与 .lift 的
+       5 层逐一对齐 —— 见本条开头理由②：对不齐就完全不插值。别删！
+       ★★R199 第 4 层原来不是占位：`0 6px 18px 22%主色` 的「紧贴阴影」（R182 设计=选中态落影感），
+       用户实测反馈"感觉有阴影啊，能否去掉" → 改回纯透明占位。浮起/归位的外柔晕是 .lift 那层
+       `46% * --lp` 自己给的（随形体淡出，收尾直接归零而不是落到 22%），效果不减。 */
     inset 0 0 0 0 transparent,
-    0 6px 18px color-mix(in srgb, var(--color-primary,#6366f1) 22%, transparent),
+    0 0 0 0 transparent,
     0 0 0 0 transparent;
   /* ★★R182② 皮肤过渡：声明必须写在**基础规则**上（父状态被撤掉时靠它兜住），写成 `.lift` 里的话
      摘类那一刻规则一起消失 → 又是一次瞬跳（同 R170 的"状态类里别写 transition"）。
