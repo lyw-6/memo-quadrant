@@ -1169,7 +1169,7 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
    inset 描边占 2px，原 padding 6px → 光标/文字距框内缘仅 4px，观感"贴着边框"。
    只加在 :focus（正在打字的临时态）：行首光标距框 8px；⚠️.expanded 展开阅读态保持 6px
    —— 展开态是长文阅读，文字要继续与下方标签行严格对齐（R198），错位 4px 在阅读态很明显。 */
-.memo-item .memo-content:focus{padding:0 10px;}
+.memo-item .memo-content:focus{padding:6px 10px;}   /* ★R199b 上下也补 6px（用户："光标和边框底部距离呢"）—— 末行光标底距下框 6px、首行光标顶距上框 6px */
 .memo-expand{display:none;padding:0 6px;height:22px;line-height:22px;font-size:var(--text-xs);color:var(--text-secondary,#64748b);background:color-mix(in srgb,var(--text-secondary,#64748b) 13%,transparent);border:none;border-radius:var(--radius-xs);cursor:pointer;font-family:inherit;align-items:center;flex-shrink:0;align-self:flex-start;margin-left:0;transition:background .15s ease;font-weight:500;}
 .memo-expand:hover{background:color-mix(in srgb,var(--text-secondary,#64748b) 24%,transparent);}
 /* 展开/收起按钮：仅长备忘(内容被截断,带 .long 类)才显示；位于分类标签正上方单独一行 */
