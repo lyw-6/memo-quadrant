@@ -2373,7 +2373,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
   /* ★ 2026-09-01 修复：窄屏底部导航"成一坨"——6 个 tab(备忘录/四象限/今日/月/日历/统计)默认 min-width:48px+各自撑宽,
      在窄容器里总宽超限被 overflow-x 挤压成团。改为 flex:1 1 0 均分容器+min-width:0,永不溢出;
      图标/文字等比缩小,整体更紧凑不挤 */
-  .bottom-nav{--nav-px:4px;--nav-py:4px;padding:var(--nav-py) var(--nav-px);gap:0;width:calc(100% - 12px);}
+  .bottom-nav{--nav-px:4px;--nav-py:4px;padding:var(--nav-py) var(--nav-px);gap:0;width:calc(100% - 16px);}   /* ★R199d 12→16（两侧各 8px）：留出长按 --nav-grow 6px 的膨胀空间（用户："宽度稍微短一点点"） */
   .nav-tab{min-width:0;flex:1 1 0;padding:5px 1px 3px;font-size:12px;gap:0;border-radius:var(--nav-r);
            overflow:hidden;align-items:center;justify-content:center;text-align:center;}
   .nav-tab svg{width:19px;height:19px;flex-shrink:0;}
@@ -2406,7 +2406,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
      480 已经设了"padding 4px 6px / gap 1px / width calc(100% - 12px) / font 9px"，
      但 5 个 9 字 nav-tab(备忘录四象限/今日月日历)仍溢出。
      缩 svg 18 + font 8 + height auto，让 5 tab 真正均分 */
-  .bottom-nav{--nav-px:2px;--nav-py:3px;padding:var(--nav-py) var(--nav-px);gap:0;width:calc(100% - 8px);}
+  .bottom-nav{--nav-px:2px;--nav-py:3px;padding:var(--nav-py) var(--nav-px);gap:0;width:calc(100% - 14px);}   /* ★R199d 8→14：同上，留长按膨胀空间 */
   .nav-tab{padding:4px 1px 3px;font-size:12px;gap:0;border-radius:var(--nav-r);}
   .nav-tab svg{width:20px;height:20px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:none!important;} /* ★ 手机端 nav 只显示图标，彻底解决中文最小字号粘连 */
@@ -2982,7 +2982,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      ★R176 外扩 11px→8px；★R192d 常态留白 5→3px、外溢 8→6px（超出量仍 3px）：用户"长按后的导航栏放大效果收小一点，同时那个胶囊泡也一起"
      —— 栏的 padding 同步 9px 10px → 8px 9px（高度 +6px → +4px）。 */
   --lp:1;
-  top:calc(3px - 6px * var(--lp));bottom:calc(3px - 6px * var(--lp));
+  top:calc(3px - 10px * var(--lp));bottom:calc(3px - 10px * var(--lp));   /* ★R200b 外扩 6→9→10px（用户两轮："高度比导航栏再高一点"）：浮起泡高 = 栏高 + 12px、上下各探出栏外 6px（常态留白 3px + border 1px 之外再溢出 6px） */
   border-radius:calc(var(--nav-r) + 3px * var(--lp));
   /* ★★R182② 不再在这里另写一套 background / border：皮已经全部搬进基础规则、由 --lp 连续驱动
      （弧顶镜面 alpha = .92*--lp、三段 alpha 渐变 = 20+3*lp / 15-3*lp / 11+7*lp，
@@ -3308,7 +3308,7 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
   /* ★R192f 窄屏与宽屏口径统一（用户："宽屏贴合了，窄屏不贴合"）：这条块**在文件末尾**，
      压过前面所有 .bottom-nav/.nav-tab 断点 → 窄屏曾固定 内距 8px + gap 2px（左边距 10、图标文字又拉开 2px）。
      现改成与基础规则一致：水平内距 4px、gap 0。 */
-  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);gap:0;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 12px + var(--nav-grow));}   /* ★R195 浮起外扩量 */
+  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);gap:0;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 16px + var(--nav-grow));}   /* ★R199d 12→16（两侧各 8px）：手机端留出长按 --nav-grow 6px 的膨胀空间（用户："宽度稍微短一点点"）。⚠️本块在文件末尾、级联必胜 —— 2376/2409 两个窄屏块的 width 全被这条反杀成死代码，改手机宽度必须改这里 */
   .nav-tab{flex:1 1 0%;min-width:0;padding:6px 2px 4px;gap:0;}
   .nav-tab svg{width:22px;height:22px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:10px;transform:scale(0.88);transform-origin:center top;line-height:1.1;}
@@ -12956,7 +12956,7 @@ var NAV_SETTLE_MS=1200;                         /* settle 兜底时长 */
 /* ★R172① 入场滑行时长（ms）：这段由 CSS 过渡驱动，帧循环超时后交回跟手。
    取 260ms = 与过渡曲线同长；再长会让"点一下就切"显得拖沓。 */
 var NAV_ENTER_MS=260;
-var _navLift={lifting:false,settling:false,entering:false,enterT0:0,idx:-1,startIdx:-1,suppressClick:false};
+var _navLift={lifting:false,settling:false,entering:false,enterT0:0,idx:-1,startIdx:-1,suppressClick:false,pressX:0,moved:false};
 var _navSettle={x:0,tx:0,w:0,tw:0,vx:0,vw:0,t0:0,lp:1,tlp:0,vlp:0};   /* ★R175① lp/tlp/vlp = 浮起度弹簧 */
 function _navNow(){return (window.performance&&performance.now)?performance.now():Date.now();}
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
@@ -13058,7 +13058,7 @@ function _navLitClear(){
     tabs[k].style.setProperty('--la','100%');tabs[k].style.setProperty('--lb','100%');
   }
 }
-function _navPlacePill(idx,lift){
+function _navPlacePill(idx,lift,centerX){
   var tabs=_navTabs(),pill=_ensureNavPill();
   if(idx<0||!tabs[idx])return;
   var bx=_navPillBox(idx),w=bx.w,l=bx.l;   /* ★R190 贴内容盒（不再整格宽） */
@@ -13067,8 +13067,21 @@ function _navPlacePill(idx,lift){
     /* 浮起：宽 +10px（左右各外溢 5px）；高度由 CSS 的 .nav-pill.lift 上下外扩负责。
        ★不再叠 translateY —— 那会让「上边超出栏外的部分」比下边多（用户实测上 7px / 下 2.9px 不对称），
        浮起感改由阴影 + 高光 + 整体变大承担。 */
-    pill.style.width=(w+NAV_PILL_EXTRA)+'px';
-    pill.style.transform='translateX('+(l-NAV_PILL_EXTRA/2)+'px)';
+    var w2=w+NAV_PILL_EXTRA,tx=l-NAV_PILL_EXTRA/2;
+    /* ★R199d 按哪泡落在哪（用户："长按点在边缘时，会收缩一下往右边移"）：
+       旧版入场目标恒为 **tab 中心**（_navPlacePill 与 _navMorph.center 都初始化成中心），
+       手指按在泡/格边缘时泡与手脱开 —— 微动后帧循环接管，泡从中心弹向手指（钳到外溢边界）
+       ＝肉眼看到"泡先缩一下再往旁边挪"。修＝入场目标与 m.center 都改用**手指落点**（钳到与
+       帧循环同一套整格±NAV_OVER 边界），按下瞬间泡就在手指下方。 */
+    if(typeof centerX==='number'){
+      var nvL=document.getElementById('bottomNav').getBoundingClientRect().left;
+      var last2=tabs[tabs.length-1];
+      var minL=tabs[0].offsetLeft-NAV_OVER,maxL=last2.offsetLeft+last2.offsetWidth-w2+NAV_OVER;
+      if(maxL<minL)maxL=minL;
+      tx=Math.max(minL,Math.min(maxL,centerX-w2/2-nvL-1));   /* -1：transform 0 点=padding box 左缘 */
+    }
+    pill.style.width=w2+'px';
+    pill.style.transform='translateX('+tx+'px)';
   }else{
     pill.style.width=w+'px';
     pill.style.transform='translateX('+l+'px)';
@@ -13144,15 +13157,19 @@ var NAV_MORPH_IDLE=180;       /* ms：最后一次移动过去这么久即判定
    刚度同步再降一档，并**按 ζ 不变调阻尼**（ζ = −ln(DAMP)/(2√K)）：
      · 涨 K=0.09  / DAMP=0.813 → ζ≈0.345（过冲 ~30%）
      · 收 K=0.055 / DAMP=0.860 → ζ≈0.322（过冲 ~32%，收窄侧更慢 = "慢慢黏回来"） */
-var NAV_MORPH_RK_UP=0.04, NAV_MORPH_RUP_DAMP=0.875;
-var NAV_MORPH_RK_DOWN=0.025, NAV_MORPH_RDN_DAMP=0.904;
-/* ★R185 右向"拉长"（m.st）另用一组**更快**的弹簧。理由：两种形变的物理性质不同 ——
-   拉长读起来是"被甩出去的被动拉伸"（要有即时感，滞后了就像"没拉住"），
-   收窄/回弹才是"弹性恢复"（要粘黏）。共用一组参数必然一边不对：
-   实测共用慢参数时"右快拉长"从 180px 掉到 170px（少掉一半 NAV_STRETCH）。
-   ζ 仍取同一档（≈0.33），只是时间尺度不同。 */
-var NAV_MORPH_SK_UP=0.10, NAV_MORPH_SUP_DAMP=0.809;
-var NAV_MORPH_SK_DOWN=0.065, NAV_MORPH_SDN_DAMP=0.849;
+/* ★★R200b 形态**单参数化**（用户："从左往右滑是方圆弧、从右往左滑是圆弧，这两个之间的过渡能否再丝滑一点"）：
+   旧版 r（收窄成圆）与 st（拉长）是**两条独立弹簧**，方向反转瞬间两条同时反向跑 ——
+   宽度 = wBase + (wRound−wBase)·r + st·STRETCH，两弹簧速度不同 → 中间出现平台/拐点 = 生硬。
+   现合并成**一条有符号形状量** shape ∈ [−1,1]（负 = 收窄成圆 / 正 = 拉长），一条弹簧驱动；
+   目标 −1→0→+1 本身连续 → 左右反转全程单调、无交叉、无平台。
+   ζ 保值（−ln(DAMP)/(2√K)）：两套旧参数都在 ζ≈0.334，统一对取中间值同样保持 0.334。 */
+var NAV_MORPH_SH_UP=0.10, NAV_MORPH_SHUP_DAMP=0.684;      /* ζ = −ln(DAMP)/(2√K) ≈ 0.50
+                                                              ⚠️刚度必须比旧双弹簧的 0.04 大一倍多：单参数下方向反转要**一次穿越 0**（行程 |+s|→|−1| ≈ 1.15），
+                                                             旧版 r/st 两条弹簧是**并行**跑的（等效双倍速率）。实测 K=0.055 时烟测环境 10 帧只走完一点点（span 9px < 阈值 12）。 */
+var NAV_MORPH_SH_DOWN=0.08, NAV_MORPH_SHDN_DAMP=0.712;    /* ζ ≈ 0.50 */
+/* ★★R200b 上面这条"拉长另用更快弹簧"的 R185 口径**已随单参数化废止**：
+   两个方向现在共用一条弹簧（否则方向反转时两条同时反向跑＝用户说的"过渡生硬"）。
+   代价：拉长的即时感略降（K 0.10→0.055），换来回弹与拉长同一条时间轴、反向切换完全连续。 */
 /* ★★R185 **速度自适应刚度**：刚度乘以 `1 + (BOOST-1) * s`（s = |vf|/VMAX ∈ [0,1]）。
    为什么需要它：把刚度一律调慢之后，"快拖"在 150ms 内**走不完行程**
    —— 实测快左只到 109.9，而慢拖（900ms）已收敛到 106.3，方向语义被反过来（快拖反而不如慢拖收得窄）。
@@ -13178,8 +13195,8 @@ var NAV_MOTION_VMAX=1.15;
    ★指数平滑**天生不过冲**（无 Q 弹）；TAU 越小越贴手指（用户口径："不要 Q 弹，要跟手要丝滑"）。 */
 var NAV_POS_TAU=36;
 /* ★R175② 删掉 w/dvel（宽度不再单独跑弹簧）；★R178 加 st/vs（右向"拉长"量也走弹簧，原来它直接跟速度 = 1 帧拉满） */
-var _navMorph={vel:0,vf:0,r:0,vr:0,st:0,vs:0,lastX:0,lastT:0,raf:0,center:0,pc:0,fT:0,ff:0};
-function _navMorphReset(){_navMorph.vel=0;_navMorph.vf=0;_navMorph.r=0;_navMorph.vr=0;_navMorph.st=0;_navMorph.vs=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;_navMorph.pc=0;_navMorph.fT=0;_navMorph.ff=0;}
+var _navMorph={vel:0,vf:0,shape:0,vsh:0,lastX:0,lastT:0,raf:0,center:0,pc:0,fT:0,ff:0};
+function _navMorphReset(){_navMorph.vel=0;_navMorph.vf=0;_navMorph.shape=0;_navMorph.vsh=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;_navMorph.pc=0;_navMorph.fT=0;_navMorph.ff=0;}
 function _navMorphStop(){if(_navMorph.raf){cancelAnimationFrame(_navMorph.raf);_navMorph.raf=0;}}
 /* 镜面高光位置 = 泡中心在栏内的相对位置（0~100%）→ 拖到哪，反光流到哪。
    这是"液态"与"静态玻璃"的分界：玻璃靠边缘光，液体靠**反光会动**。 */
@@ -13251,33 +13268,27 @@ function _navMorphFrame(){
        rSoft 由"微椭圆宽度"反解：让 r=rSoft 时 wTgt 正好等于 wSoft。 */
     var span=wBase-wRound;
     var rSoft=span>0?Math.max(0.2,Math.min(1,(wBase-wSoft)/span)):0.7;
-    var rTgt=(vf<-NAV_MORPH_VEPS)?(rSoft+(1-rSoft)*s):0;
     /* ★R178 右向拉长量同组弹簧：旧写法 `wTgt += s*NAV_STRETCH` 里 s 是低通速度的**即时**映射
        → 满宽到最宽只花 1 帧（实测 159→181），"变宽"这一侧完全没有过渡。 */
-    var stTgt=(vf>NAV_MORPH_VEPS)?s:0;
-    /* 不对称弹簧：涨快、收略慢（两侧都是同一档 ζ，惯性靠过冲而不是靠慢） */
-    var rUp=(rTgt>m.r);
+    /* ★R200b 单参数形状（见 NAV_MORPH_SH_* 处注释）：一条弹簧驱动，
+       负 = 收窄成圆、正 = 拉长；目标 −1→0→+1 连续 → 左右反转全程单调无平台。 */
+    var shapeTgt=(vf<-NAV_MORPH_VEPS)?-(rSoft+(1-rSoft)*s):((vf>NAV_MORPH_VEPS)?s:0);
     /* ★R185 速度自适应刚度（慢拖黏、快拖利落）+ 阻尼按 ζ 不变换算 D^√boost */
     /* ⚠️试过把曲线改成 **s²**（想让"慢拖更黏、快拖不变"）：慢拖确实更黏了，但**快拖被拖累**
        —— 快拖起步那几帧 s 还小，s² 让 boost 起不来，实测 150ms 末值从 87.8 退到 97.1，
        于是"慢左末 98.5 > 快左 min 97.1" → 方向语义反转（R170.3⑯ 必红）。**回退到线性 s**。
        结论：这条曲线不能用来做"慢拖更黏"，它只能做"快拖别被基数拖累"。 */
     var rBoost=1+(NAV_MORPH_FAST_BOOST-1)*s, rSqrt=Math.sqrt(rBoost);
-    m.vr+=(rTgt-m.r)*(rUp?NAV_MORPH_RK_UP:NAV_MORPH_RK_DOWN)*rBoost;
-    m.vr*=Math.pow(rUp?NAV_MORPH_RUP_DAMP:NAV_MORPH_RDN_DAMP, rSqrt);
-    m.r+=m.vr;
-    if(m.r<0){m.r=0;if(m.vr<0)m.vr=0;} else if(m.r>1.25){m.r=1.25;if(m.vr>0)m.vr=0;}
-    var stUp=(stTgt>m.st);
-    m.vs+=(stTgt-m.st)*(stUp?NAV_MORPH_SK_UP:NAV_MORPH_SK_DOWN);   /* ★R185 拉长用自己的弹簧对 */
-    m.vs*=(stUp?NAV_MORPH_SUP_DAMP:NAV_MORPH_SDN_DAMP);
-    m.st+=m.vs;
-    if(m.st<0){m.st=0;if(m.vs<0)m.vs=0;} else if(m.st>1.25){m.st=1.25;if(m.vs>0)m.vs=0;}
-    var r=Math.max(0,Math.min(1,m.r));
-    var st=Math.max(0,Math.min(1,m.st));
-    /* ★R175② 单级弹簧：宽度**直接**取 r 算出的目标（r 本身已被弹簧平滑过）。
+    var shUp=(shapeTgt>m.shape);
+    m.vsh+=(shapeTgt-m.shape)*(shUp?NAV_MORPH_SH_UP:NAV_MORPH_SH_DOWN)*rBoost;
+    m.vsh*=Math.pow(shUp?NAV_MORPH_SHUP_DAMP:NAV_MORPH_SHDN_DAMP,rSqrt);
+    m.shape+=m.vsh;
+    if(m.shape<-1.25){m.shape=-1.25;if(m.vsh<0)m.vsh=0;} else if(m.shape>1.25){m.shape=1.25;if(m.vsh>0)m.vsh=0;}
+    var sh=Math.max(-1,Math.min(1,m.shape));
+    /* ★R175② 单级弹簧：宽度**直接**取形状量算出的目标（形状量本身已被弹簧平滑过）。
        原来是「r → wTgt → 宽度弹簧」两级串联 = 两个二阶系统相乘，响应迟钝、行程又长 → 正是"过渡时间太长"。
-       现在一层就够：惯性由 r 的过冲提供，宽度立刻响应。 */
-    var wTgt=wBase+(wRound-wBase)*r+st*NAV_STRETCH;                   /* 连续：拉长 ↔ 满宽胶囊 ↔ 收短（三项都由弹簧驱动） */
+       现在一层就够：惯性由形状量的过冲提供，宽度立刻响应。 */
+    var wTgt=sh>=0?(wBase+NAV_STRETCH*sh):(wBase+(wRound-wBase)*(-sh));   /* 连续：拉长 ↔ 满宽胶囊 ↔ 收窄成圆（同一参数驱动） */
     var w=Math.max(wRound-6,Math.min(wBase+NAV_STRETCH+18,wTgt));
     var nr=nav.getBoundingClientRect(),last=tabs[tabs.length-1];
     /* ★R170.3 边界放宽 NAV_OVER：泡可以微微探出底栏左右边缘（用户要"能看到后面的边框"）。
@@ -13342,7 +13353,7 @@ function _navMorphMove(clientX){
   m.lastX=clientX;m.lastT=now;m.center=clientX;
   if(!m.raf)m.raf=requestAnimationFrame(_navMorphFrame);
 }
-function _navEnterLift(startIdx){
+function _navEnterLift(startIdx,pressX){
   if(_navLift.lifting&&!_navLift.settling)return;   /* 已在跟手态就别重复进；settle 中途再按下 → 直接接管 */
   var nav=document.getElementById('bottomNav');
   if(!nav||nav.classList.contains('batch-mode'))return;
@@ -13361,10 +13372,11 @@ function _navEnterLift(startIdx){
      startIdx 由 pointerdown 命中决定；没命中任何 tab 时兜底为当前视图。 */
   _navLift.idx=(typeof startIdx==='number'&&startIdx>=0)?startIdx:_navCurrentIndex();
   _navMorphReset();
-  /* 帧循环首帧要用 m.center 摆位置 → 先把"手指落点"初始化成按下的那个 tab 的中心；
+  /* 帧循环首帧要用 m.center 摆位置 → 初始化成**手指落点**（★R199d 按哪泡在哪；无 clientX 时兜底 tab 中心），
      否则首帧 m.center=0，泡会被左边界钳住闪一下。 */
   var t0=tabs0[_navLift.idx];
-  if(t0){var nr0=nav.getBoundingClientRect();_navMorph.center=nr0.left+t0.offsetLeft+t0.offsetWidth/2;}
+  if(typeof pressX==='number'){_navMorph.center=pressX;}
+  else if(t0){var nr0=nav.getBoundingClientRect();_navMorph.center=nr0.left+t0.offsetLeft+t0.offsetWidth/2;}
   _navMorph.pc=_navMorph.center;   /* ★R186 pc 与手指落点同起点：首帧平滑不产生位移 */
   nav.classList.add('nav-lift');
   var pill=_ensureNavPill();
@@ -13388,7 +13400,7 @@ function _navEnterLift(startIdx){
     pill.style.setProperty('--lp','1');
     _navMotion(pill,0);   /* ★R184 顺手把运动量清零：别让上一次手势的拖尾残留到这一帧 */
   }
-  _navPlacePill(_navLift.idx,true);
+  _navPlacePill(_navLift.idx,true,pressX);
   _navLitClear();
   /* ★R170.3 进 lift 就启动帧循环 —— 帧循环原来只在 _navMorphMove 里按需启动（拖动才有），
      于是「长按提起但还没动」这一段时间里**光照与形状都不更新**（实测：lit 全空 = 一个图标都不亮）。
@@ -13526,13 +13538,17 @@ function bindNavLift(){
     if(nav.classList.contains('batch-mode'))return;
     var tab=e.target.closest?e.target.closest('.nav-tab'):null;
     _navLift.startIdx=tab?_navIndexAt(tab.getBoundingClientRect().left+tab.getBoundingClientRect().width/2):-1;
+    /* ★R199d 拖动死区：按下后位移 <3px 不进形变/跟手（否则手指在边缘按下时的生理微颤
+       会被当成拖动 → 泡立刻收窄+追手 ＝ 用户看到的"收缩一下往右边移"。超过 3px 一次性放行。 */
+    _navLift.pressX=e.clientX;_navLift.moved=false;
     /* 指针捕获：按下后拖到底栏外面再松手，pointerup 也一定会派发到 nav ——
        否则（桌面端鼠标尤其明显）手势收不到结尾，泡会永远卡在浮起态。 */
     try{if(nav.setPointerCapture)nav.setPointerCapture(e.pointerId);}catch(err){}
-    _navEnterLift(_navLift.startIdx);
+    _navEnterLift(_navLift.startIdx,e.clientX);
   });
   nav.addEventListener('pointermove',function(e){
     if(!_navLift.lifting||_navLift.settling)return;   /* 归位动画期间不接受跟手 */
+    if(!_navLift.moved){if(Math.abs(e.clientX-_navLift.pressX)<3)return;_navLift.moved=true;}
     var i=_navIndexAt(e.clientX);
     if(i>=0&&i!==_navLift.idx)_navLift.idx=i;   /* 只记"松手切哪个"；亮哪个由帧循环按泡的覆盖范围定 */
     _navMorphMove(e.clientX);                   /* ★跟手 + 方向/速度形态（带 Q 弹） */
