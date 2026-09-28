@@ -1165,6 +1165,11 @@ body.no-done-circle .swipe-fore > .checkbox{display:none;}
    但若用户已在编辑态时开启批量,残留的 inset 描边只框正文不框全卡,被误读为"没框完的选中框" */
 body:not(.batch-off) .memo-item .memo-content:focus,
 body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;background:transparent;}
+/* ★R199 编辑态左右内边距 6→10px（用户："边框内能否加点内边距不让光标贴着边框"）：
+   inset 描边占 2px，原 padding 6px → 光标/文字距框内缘仅 4px，观感"贴着边框"。
+   只加在 :focus（正在打字的临时态）：行首光标距框 8px；⚠️.expanded 展开阅读态保持 6px
+   —— 展开态是长文阅读，文字要继续与下方标签行严格对齐（R198），错位 4px 在阅读态很明显。 */
+.memo-item .memo-content:focus{padding:0 10px;}
 .memo-expand{display:none;padding:0 6px;height:22px;line-height:22px;font-size:var(--text-xs);color:var(--text-secondary,#64748b);background:color-mix(in srgb,var(--text-secondary,#64748b) 13%,transparent);border:none;border-radius:var(--radius-xs);cursor:pointer;font-family:inherit;align-items:center;flex-shrink:0;align-self:flex-start;margin-left:0;transition:background .15s ease;font-weight:500;}
 .memo-expand:hover{background:color-mix(in srgb,var(--text-secondary,#64748b) 24%,transparent);}
 /* 展开/收起按钮：仅长备忘(内容被截断,带 .long 类)才显示；位于分类标签正上方单独一行 */
@@ -2645,7 +2650,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    原来只有 padding 竖直 +2px（栏高 +4px），水平 +5px 只是让**内容内缩**、栏外框宽度写死不变 → 看着「单纯变高」。
    加一个外扩量 `--nav-grow`：常态 0、浮起 8px（左右各 4px），所有 width/max-width 都 `+ var(--nav-grow)`。
    ★关键配平：水平内距增量同时 5px→**4px** → 内容盒净变化（−8px padding ＋ 8px 宽度）= **0** → 栏外框膨胀、tab 与图标位置纹丝不动。 */
-.bottom-nav{--nav-grow:0px;--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-px:4px;--nav-py:6px;--nav-r:22px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right) + var(--nav-grow));max-width:calc(640px + var(--nav-grow));/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+.bottom-nav{--nav-grow:0px;--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-px:3px;--nav-py:6px;--nav-r:999px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right) + var(--nav-grow));max-width:calc(640px + var(--nav-grow));/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2688,8 +2693,8 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
 /* ★R194 玻璃主题的底栏常态皮肤（inset 内高光）——**必须在基础 `.bottom-nav` 之后**：
    变量覆盖同样遵循"同特异性后者胜"，写早了会被基础值反杀（R192b 已踩过一次）。 */
 [data-theme="glass"] .bottom-nav{--nav-sh-rest:inset 0 1px 0 rgba(255,255,255,0.32);}
-@media (max-width:560px){ .bottom-nav{--nav-r:20px;} }
-@media (max-width:480px){ .bottom-nav{--nav-r:20px;} }
+@media (max-width:560px){ .bottom-nav{--nav-r:999px;} }
+@media (max-width:480px){ .bottom-nav{--nav-r:999px;} }
 /* ===== 批量操作按钮（★R59 重新设计）=====
    批量操作并入底部导航槽位：复用同一固定条，零额外占用。
    设计要点（四主题统一自适应）：
@@ -2768,7 +2773,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      · 24px 是 Material 3 的导航图标标准尺寸；墨迹 18~20px，与 11px 文字的比 ≈ 2.2×（iOS 2.5× / M3 2×，同区间）
      · 内容块 34 → 38px，底栏 59 → 62px（+3px）；栏更高是**动态算**的（syncFloatingBars / fitCalGrid 都读实时高度）→ 无副作用
    ⚠️窄屏（≤560px）有自己的覆盖（22px + 10px×0.88），**不受本条影响**。 */
-.nav-tab svg{width:38px;height:38px;flex-shrink:0;}   /* ★R195 24→26；★R196 26→28 → 30；★R197 30→38（C 档） */
+.nav-tab svg{width:34px;height:34px;flex-shrink:0;}   /* ★R195 24→26；★R196 26→28 → 30；★R197 30→38；★R199 38→34（与桌面档 clamp 下限衔接，用户"宽屏太大块、只有两种形态"→ 全程连续无跳变） */
 /* ★★R197 图标"视觉重量"补足（用户："图标文字和酷安比就是小点"）——
    像素实测两图（都按**占栏高**归一化，因为两张截图缩放不同）：
      酷安 图标墨迹 42.5~45% 栏高 / 文字 21~22% / 内容总高 76%；
@@ -2786,20 +2791,25 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    → 每个 tab 变宽约 +1.2px、图标/文字仍各自居中（位置自然地随栏「张开」，不做强制零位移）。
    竖直方向同理不补偿：栏从底部向上长高 3px，内容在栏内重新居中（上移 1.5px）—— 这是「栏变大」的自然结果。
    ★图标/文字的**尺寸**只在常态档位里放大（基础 30/14、桌面档 34/16），与长按状态无关。 */
-.nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:17.5px;}   /* ★R195 11→12；★R196 12→13 → 14；★R197 14→17.5（C 档，×1.22） */
+.nav-tab span,.nav-tab .nav-label{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1;font-size:15.5px;}   /* ★R195 11→12；★R196 12→13 → 14；★R197 14→17.5；★R199 17.5→15.5（衔接桌面档 clamp 下限） */
 /* ★R192 hover 胶囊：宽度 = calc(100% − 8px) —— 与 JS `_navPillBox()`（整格宽 − 2×NAV_PILL_SIDE）
-   同一个公式，hover 底与选中胶囊继续同 footprint（R182① 不变量）。 */
-.nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:calc(100% - 8px);border-radius:var(--nav-r);background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
+   同一个公式，hover 底与选中胶囊继续同 footprint（R182① 不变量）。
+   ★R199 NAV_PILL_SIDE 改 0（泡占满整格、离栏边 3px 与垂直同心）→ hover 底同步 100% 保持同 footprint。 */
+.nav-tab::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:100%;border-radius:var(--nav-r);background:transparent;transition:background .2s;pointer-events:none;z-index:-1;}
 /* ★R190 桌面档（≥1024）：手机那一套尺寸在大屏上偏小（实测桌面栏高 62 / 图标 24 / 字 11，
    手机 59 / 22 / 10，几乎没涨）→ 宽屏再放大一档：栏内距 8/10、图标 28、字号 13。
    ⚠️①必须写在 .nav-tab / .nav-tab svg / label 基础规则**之后**：同特异性"后者胜"，
       写在前面会被基础规则的 24px/11px 反杀（首跑实测：栏宽生效了、图标字号没生效）。
    ⚠️②断点取 1024 而不是 900：烟测多个手势块用 900×820，撞上会让浮起/归位几何断言整片飘。 */
 @media (min-width:1024px){
-  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);max-width:calc(760px + var(--nav-grow));--nav-r:26px;}
+  .bottom-nav{--nav-px:3px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);max-width:calc(760px + var(--nav-grow));--nav-r:999px;}   /* ★R199 --nav-r 999px＝自动钳半高（泡高 84 → 弧 42，与栏弧 45 近同心）——固定 26px 在 R197 栏高涨到 90 后两端"看起来是方的"；--nav-px 4→3 配合 NAV_PILL_SIDE=0 让泡离栏边 3px=垂直间隙 */
   .nav-tab{padding:7px 2px 6px;gap:0;font-size:12px;}
-  .nav-tab svg{width:42px;height:42px;}   /* ★R195 28→30；★R196 30→32 → 34；★R197 34→42（C 档，×1.235） */
-  .nav-tab span,.nav-tab .nav-label{font-size:19.5px;}   /* ★R195 13→14；★R196 14→15 → 16；★R197 16→19.5（C 档，×1.22） */
+  /* ★R199 尺寸随视口**连续**缩放（用户："缩小又变小了，只有两种形态吗"）：旧版 1024 断点两侧
+     42↔38 硬跳；现 clamp 线性：1024 → 34px/15.5px（与基础档**零跳变衔接**）、1440 → 38/17.5、
+     ≥1434 恒 38/17.5（不再无限变大，R197 的 42/19.5 用户反馈"太大块"）。栏高随内容自动、
+     navRestHeight() 连带。⚠️烟测 1440 视口 calc 恰好顶格 → 断言仍可写 38px/17.5px。 */
+  .nav-tab svg{width:clamp(34px,calc(24.2px + 0.96vw),38px);height:clamp(34px,calc(24.2px + 0.96vw),38px);}   /* ★R197 34→42；★R199 42→clamp 34~38 */
+  .nav-tab span,.nav-tab .nav-label{font-size:clamp(15.5px,calc(10.6px + 0.48vw),17.5px);}   /* ★R197 16→19.5；★R199 19.5→clamp 15.5~17.5 */
 }
 .nav-tab.active{color:var(--color-primary,#6366f1);}
 .nav-tab.active svg{filter:drop-shadow(0 1px 2px rgba(99,102,241,.4));}
@@ -12953,7 +12963,7 @@ function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.
    ★R190 曾改成"贴内容"（墨迹 + 2×内边距 → 只占格子 48~60%），用户拿参考图回来纠正：
    高度/贴边本来就对，缺的是**宽度**。故 R192 回到整格口径（两侧各留 4px 呼吸），
    并把 R190 那套"墨迹测量 + --ink-w"整套删除（不留死代码）。 */
-var NAV_PILL_SIDE=2;   /* 胶囊与格子左右边的留白（参考图 ≈ 块宽 4~6px；这里 1px + 栏内距 4px = 离栏边 6px） */
+var NAV_PILL_SIDE=0;   /* ★R199 胶囊与格子左右边零留白（整格宽）：配合 --nav-px 3px → 泡离栏边 3px，与垂直 top/bottom 3px 相等 ⇒ 泡弧与栏弧**同心贴合**（用户："左侧还没有贴合，圆弧角度能否贴合"） */
 /* ★R192f 用**小数 rect** 而不是 offsetWidth/offsetLeft（后者是整数量）：
    格子宽常是 96.4 这类小数，取整后胶囊中心与格子中心会差 1.5px（烟测 R144⑦ 实测 1.56 红）。
    l 的口径 = 相对底栏**padding box**（绝对定位元素的包含块）的小数偏移。 */
