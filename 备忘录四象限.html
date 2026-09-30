@@ -2869,7 +2869,11 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
   /* ★★R182② 皮肤过渡：声明必须写在**基础规则**上（父状态被撤掉时靠它兜住），写成 `.lift` 里的话
      摘类那一刻规则一起消失 → 又是一次瞬跳（同 R170 的"状态类里别写 transition"）。
      ⚠️不列 background-image：皮是 --lp 驱动的，列了反而会在 --pill-hx 每帧变化时反复重启过渡。 */
-  transition:transform .42s cubic-bezier(.34,1.28,.5,1), width .42s cubic-bezier(.34,1.28,.5,1), opacity .26s ease,
+  transition:transform .34s cubic-bezier(.22,.61,.36,1), width .34s cubic-bezier(.22,.61,.36,1), opacity .26s ease,
+    /* ★R201 缓动去掉过冲：原来 transform/width 用 `cubic-bezier(.34,1.28,.5,1)`（y2=1.28 = 过冲曲线），
+       在「归位收尾后 positionNavPill 写常态几何」这条路径上生效 —— 实测点最左 tab 时泡冲到 317.7
+       再弹回 304.2（**过冲 13.5px、耗时 580ms**）＝用户说的"切换图标会有很强的弹性 / 手机端还有 Q 弹"。
+       改成标准缓出（同 .22,.61,.36,1，与入场滑行同族），并发时长 .42s→.34s。 */
     box-shadow .3s ease, border-color .3s ease, border-width .3s ease;
 }
 .bottom-nav.batch-mode .nav-pill{opacity:0;}
@@ -3308,7 +3312,7 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
   /* ★R192f 窄屏与宽屏口径统一（用户："宽屏贴合了，窄屏不贴合"）：这条块**在文件末尾**，
      压过前面所有 .bottom-nav/.nav-tab 断点 → 窄屏曾固定 内距 8px + gap 2px（左边距 10、图标文字又拉开 2px）。
      现改成与基础规则一致：水平内距 4px、gap 0。 */
-  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);gap:0;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 16px + var(--nav-grow));}   /* ★R199d 12→16（两侧各 8px）：手机端留出长按 --nav-grow 6px 的膨胀空间（用户："宽度稍微短一点点"）。⚠️本块在文件末尾、级联必胜 —— 2376/2409 两个窄屏块的 width 全被这条反杀成死代码，改手机宽度必须改这里 */
+  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);gap:0;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 20px + var(--nav-grow));}   /* ★R199d 12→16；★R201 16→20（两侧各 10px，用户"再窄一点"）。⚠️本块在文件末尾、级联必胜 —— 2376/2409 两个窄屏块的 width 全被这条反杀成死代码，改手机宽度必须改这里 */
   .nav-tab{flex:1 1 0%;min-width:0;padding:6px 2px 4px;gap:0;}
   .nav-tab svg{width:22px;height:22px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:10px;transform:scale(0.88);transform-origin:center top;line-height:1.1;}
@@ -12941,7 +12945,11 @@ var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素
    · 几何(—lp) 同参 0.20/0.73（必须与宽度完全同参，否则又出现“几何落后一截”）
    · 位置 0.28/0.52 → **0.24/0.58**（ζ≈0.58，~270ms）→ 与宽度时长接近、不再“一快一慢”
    · 栏的 padding 收回 0.2s → **0.28s**，与泡同步收完。 */
-var NAV_SETTLE_K=0.24, NAV_SETTLE_DAMP=0.58;    /* 松手归位·位置弹簧 */
+var NAV_SETTLE_K=0.24, NAV_SETTLE_DAMP=0.46;    /* 松手归位·位置弹簧。★R201 DAMP 0.58→0.46（ζ 0.56→0.80）：
+                                                   用户"从右边导航图标切到左边会有很强的弹性 / 不要 Q 弹" —— 实测点最左 tab 时泡
+                                                   位置冲到最左越过目标 7.4px 再回摆（行程 288px 内可见回弹）。只提位置阻尼：
+                                                   宽度/几何（下面两组，ζ≈0.35）保持，因为那是"收起来"的果冻手感、用户没抱怨；
+                                                   R181① 判的是 width 与 top 同步（不含位置 x），故不受本改动影响。 */
 var NAV_SETTLE_WK=0.20, NAV_SETTLE_WDAMP=0.73;  /* 松手归位·宽度弹簧（慢 + 回弹） */
 /* ★★R175① 松手归位·「浮起度」弹簧（--lp：1=完全浮起 → 0=常态）。
    ★为什么必须补这一条：R174① 只把「位置 / 宽度」分了参数，但浮起的**几何量**（上下外扩 top/bottom、
