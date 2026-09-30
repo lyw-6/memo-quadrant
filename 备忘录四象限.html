@@ -2661,6 +2661,11 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
        clip 比 hidden 更彻底。overflow-clip-margin 只是横向留一点余量，避免圆角处切到描边。 */
   overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;
   -webkit-overflow-scrolling:touch;-webkit-tap-highlight-color:transparent;
+  /* ★R202 touch-action:none —— 手机端"回弹感"的治本项：底栏是纯控制区（无滚动、无缩放需求），
+     默认 auto 时手指在 tab 上轻微纵向移动会被浏览器判成"滚动页面"→ 发 pointercancel 打断手势
+     （泡要么瞬跳回常态、要么被拽回中间格）。声明 none 后浏览器不再抢手势 → 不再产生 cancel。
+     配套：pointercancel 处理已从"立即 teardown"改为"走正常归位动画"（双保险）。 */
+  touch-action:none;
   /* ★R145 底栏是控制区、不是可读文本：禁掉长按选字（别让长按弹出文字选择手柄/文本放大镜）
      ★注：touch-action:pan-y（原 R145，为长按拖拽保留横向 pointer 流）已随 ★R165 的整套
      「长按液态玻璃泡」一并删除 —— 底栏不再有横向手势要吃，回落继承默认值即可。 */
@@ -12950,7 +12955,7 @@ var NAV_SETTLE_K=0.24, NAV_SETTLE_DAMP=0.46;    /* 松手归位·位置弹簧。
                                                    位置冲到最左越过目标 7.4px 再回摆（行程 288px 内可见回弹）。只提位置阻尼：
                                                    宽度/几何（下面两组，ζ≈0.35）保持，因为那是"收起来"的果冻手感、用户没抱怨；
                                                    R181① 判的是 width 与 top 同步（不含位置 x），故不受本改动影响。 */
-var NAV_SETTLE_WK=0.20, NAV_SETTLE_WDAMP=0.73;  /* 松手归位·宽度弹簧（慢 + 回弹） */
+var NAV_SETTLE_WK=0.30, NAV_SETTLE_WDAMP=0.681;  /* 松手归位·宽度弹簧（慢 + 回弹） */
 /* ★★R175① 松手归位·「浮起度」弹簧（--lp：1=完全浮起 → 0=常态）。
    ★为什么必须补这一条：R174① 只把「位置 / 宽度」分了参数，但浮起的**几何量**（上下外扩 top/bottom、
    圆角、外晕）还挂在 `.nav-pill.lift` 类上 —— 归位期间帧循环每帧写 `transition:none`，类上的几何
@@ -12959,12 +12964,12 @@ var NAV_SETTLE_WK=0.20, NAV_SETTLE_WDAMP=0.73;  /* 松手归位·宽度弹簧（
    「能明显看到先回正等一会然后再收起来」。现在几何也进弹簧，三者同起同止。
    ★参数必须与**宽度弹簧一致**（0.34/0.50）：试过 0.30/0.55，几何比宽度晚 ~115ms 收完（4 tab 布局实测），
      于是又冒出一条新的"分段尾巴"（宽度先停、几何还在收）。同参数 = 同起点同速度 = 同时收完。 */
-var NAV_SETTLE_LK=0.20, NAV_SETTLE_LDAMP=0.73;   /* ★R181 与宽度同参（0.34/0.50 → 0.20/0.73） */
+var NAV_SETTLE_LK=0.30, NAV_SETTLE_LDAMP=0.681;   /* ★R181 与宽度同参（0.34/0.50 → 0.20/0.73） */
 var NAV_SETTLE_MS=1200;                         /* settle 兜底时长 */
 /* ★R172① 入场滑行时长（ms）：这段由 CSS 过渡驱动，帧循环超时后交回跟手。
    取 260ms = 与过渡曲线同长；再长会让"点一下就切"显得拖沓。 */
-var NAV_ENTER_MS=260;
-var _navLift={lifting:false,settling:false,entering:false,enterT0:0,idx:-1,startIdx:-1,suppressClick:false,pressX:0,moved:false};
+var NAV_ENTER_MS=180;   /* ★R202 260→180：手机上松手延迟更长，滑行段太长会让"滑到一半才交给弹簧"被看成停顿 */
+var _navLift={lifting:false,settling:false,entering:false,enterT0:0,idx:-1,startIdx:-1,suppressClick:false,pressX:0,moved:false,entPx:null,entT0:0,entV:0};
 var _navSettle={x:0,tx:0,w:0,tw:0,vx:0,vw:0,t0:0,lp:1,tlp:0,vlp:0};   /* ★R175① lp/tlp/vlp = 浮起度弹簧 */
 function _navNow(){return (window.performance&&performance.now)?performance.now():Date.now();}
 function _navTabs(){var nav=document.getElementById('bottomNav');return nav?nav.querySelectorAll('.nav-tab'):[];}
@@ -13255,6 +13260,11 @@ function _navMorphFrame(){
        超时（或手指一动）即交回跟手。 */
     if(_navLift.entering){
       var nrE=nav.getBoundingClientRect(),prE=pill.getBoundingClientRect();
+      /* ★R202 记录滑行期帧间速度（px/帧），供 _navBeginSettle 做速度继承（治"滑到一半顿一下"） */
+      if(_navLift.entPx!=null&&_navLift.entT0&&now>_navLift.entT0){
+        _navLift.entV=(prE.left-_navLift.entPx)/((now-_navLift.entT0)/16.7);
+      }
+      _navLift.entPx=prE.left;_navLift.entT0=now;
       _navSheen(pill,nrE,prE.left+prE.width/2);
       _navMotion(pill,0);                                     /* ★R184 入场滑行期不做运动学处理（尺寸由 CSS 过渡负责） */
       _navLitUpdate(prE.left,prE.right);
@@ -13371,6 +13381,7 @@ function _navEnterLift(startIdx,pressX){
   _navLift.settling=false;          /* 接管 settle：撤销归位动画，回到跟手 */
   _navLift.entering=true;           /* ★R172① 入场滑行：位置/尺寸交给 CSS 过渡（老选中位 → 按下的 tab） */
   _navLift.enterT0=_navNow();
+  _navLift.entPx=null;_navLift.entV=0;   /* ★R202 清掉上一次手势的滑行速度样本 */
   _navLift.suppressClick=true;
   /* ★R172① 接管上一次归位时，必须把 `nav-lift-out`（padding = 常态内距）摘掉：
      它与 `nav-lift`(9px 10px) 同特异性且声明更靠后 → 不摘的话"归位动画没跑完就又按下去"时
@@ -13399,9 +13410,9 @@ function _navEnterLift(startIdx,pressX){
        是"先看到泡滑过去，一按住拖动就立刻粘手"，两者不冲突。 */
     /* ★R182② 皮肤不再列入（background-image）：皮已由 --lp 驱动，列了反而会在 --pill-hx（镜面位置）
        每帧变化时把这条过渡反复重启；几何/阴影/描边仍需要过渡（top/bottom/radius/box-shadow/border-*）。 */
-    pill.style.transition='transform .26s cubic-bezier(.22,.61,.36,1),width .26s cubic-bezier(.22,.61,.36,1),'
-      +'top .26s cubic-bezier(.22,.61,.36,1),bottom .26s cubic-bezier(.22,.61,.36,1),box-shadow .26s ease,'
-      +'border-color .26s ease,border-width .26s ease';
+    pill.style.transition='transform .18s cubic-bezier(.22,.61,.36,1),width .18s cubic-bezier(.22,.61,.36,1),'
+      +'top .18s cubic-bezier(.22,.61,.36,1),bottom .18s cubic-bezier(.22,.61,.36,1),box-shadow .18s ease,'
+      +'border-color .18s ease,border-width .18s ease';
     /* ★R175① 浮起度必须**重置回 1**：上次归位把它收敛到 0 并留在 inline 上，而 inline 优先级高于
        `.nav-pill.lift{--lp:1}` —— 不重置的话第二次点按底栏，泡会一直是"常态大小"（浮不起来）。
        放在 transition 之后写：入场时 --lp 0→1 与加类同帧发生，top/bottom 走 .26s 过渡 = 泡"涨"起来。 */
@@ -13471,7 +13482,15 @@ function _navBeginSettle(tab){
   var lpNow=parseFloat(pill.style.getPropertyValue('--lp'));
   _navSettle.lp=(isFinite(lpNow)?lpNow:1);
   _navSettle.tlp=0;_navSettle.vlp=0;
-  _navSettle.vx=0;_navSettle.vw=0;_navSettle.vcx=0;_navSettle.t0=Date.now();
+  _navSettle.vx=0;_navSettle.vw=0;
+  /* ★R202 速度继承（用户："从日历点回备忘录，胶囊会回弹到今日再回到备忘录""还是有那种阻尼感"）：
+     入场滑行是 CSS 过渡，泡在这段时间里**正快速移动**；而旧代码把归位弹簧初速一律清零
+     → 松手瞬间泡先"急停"，再由弹簧重新加速 ⇒ 视觉上就是"滑到一半顿一下/被拽回来"。
+     现在把滑行期实测的帧间速度接过来（帧循环 entering 分支每帧记 entV，单位 px/帧，与 vcx 同量纲），
+     钳到 ±40px/帧防跳。非滑行期（直接按下）仍为 0 ✓ */
+  var vSeed=(entering&&isFinite(_navLift.entV))?_navLift.entV:0;
+  _navSettle.vcx=Math.max(-40,Math.min(40,vSeed));
+  _navSettle.t0=Date.now();
   _navSettle.cx=_navSettle.x+_navSettle.w/2;   /* ★R190 中心起算（与宽度无关） */
   _navLift.settling=true;
   /* 栏的 padding 与泡的弹簧**同时**收回（★R174① 0.3s → 0.2s，与加快后的宽度弹簧同步收完），
@@ -13583,7 +13602,12 @@ function bindNavLift(){
   }
   nav.addEventListener('pointerup',up);
   nav.addEventListener('pointercancel',function(){
-    if(_navLift.lifting)_navTeardown();
+    /* ★R202 不再瞬跳（用户："电脑端复现不了，但手机浏览器就是有回弹感 / 胶囊会回弹到今日再回到备忘录"）：
+       手机上按底栏时**轻微纵向移动会被判成滚动** → 浏览器发 pointercancel。旧版直接 _navTeardown()
+       把浮起态一次清光 → 泡**瞬间**弹回常态几何（视觉＝"弹一下/回弹"），并且这一帧的 width/transform
+       清空后由 CSS 兜底，与正在跑的归位动画叠在一起就成了"回到某个中间格再回来"。
+       现在改成走**正常归位动画**（目标＝当前视图的 tab，不切视图）→ 无论手势怎么被打断都是平滑收敛。 */
+    if(_navLift.lifting){_navLift.idx=_navCurrentIndex();_navBeginSettle(null);}
   });
   /* 兜底：若指针捕获没生效（老浏览器），仍然能收到结尾 */
   window.addEventListener('pointerup',up);
