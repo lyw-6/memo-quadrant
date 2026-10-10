@@ -219,7 +219,6 @@ body.glass-bg-aurora::before,body.glass-bg-dawn::before,body.glass-bg-sky::befor
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:nowrap;}
 .header h1{font-size:20px;font-weight:700;display:flex;align-items:center;gap:6px;color:var(--text);flex-shrink:0;cursor:pointer;}
 .header h1:hover{opacity:.85;}
-.header-icon{width:28px;height:28px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;flex-shrink:0;}
 .header-actions{display:flex;gap:4px;align-items:center;flex-wrap:nowrap;margin-left:auto;}
 .view-select{min-width:0;}
 .view-select .select-trigger{min-width:0;}
@@ -227,7 +226,7 @@ body.glass-bg-aurora::before,body.glass-bg-dawn::before,body.glass-bg-sky::befor
 /* ★R94 补 html：tap-highlight-color 可继承，挂 html 一层全站生效 ——
    此前设置分组标题(.sec-head 等普通 div)不在下方清单里，手机端点击弹出系统蓝色高亮块。 */
 html{-webkit-tap-highlight-color:transparent;}
-button, .filter-chip, .bottom-btn, .nav-tab, .btn-icon, .batch-btn, .memo-item, .cell-item, .q-check, .seg-btn, .select-trigger, .app-logo, .add-btn, a, summary, .mgh-head, input, textarea, select, [role="button"]{-webkit-tap-highlight-color:transparent;}
+button, .filter-chip, .nav-tab, .btn-icon, .memo-item, .cell-item, .q-check, .seg-btn, .select-trigger, .app-logo, .add-btn, a, summary, .mgh-head, input, textarea, select, [role="button"]{-webkit-tap-highlight-color:transparent;}
 .btn-icon{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .3s cubic-bezier(.34,1.56,.64,1),background .22s ease,color .22s ease,box-shadow .22s ease,border-color .22s ease,opacity .2s ease;flex-shrink:0;font-size:14px;}
 .btn-icon:hover{background:var(--hover-bg);color:var(--text);}
 .btn-icon.active{background:var(--color-primary,#6366f1);color:#fff;border-color:var(--color-primary,#6366f1);}
@@ -243,11 +242,6 @@ button, .filter-chip, .bottom-btn, .nav-tab, .btn-icon, .batch-btn, .memo-item, 
    内联编辑 / 全屏编辑 / 快速添加都会挂 body.kb-edit（见 kbEditStart/kbEditEnd），直接复用它 */
 .hist-actions{display:none;align-items:center;gap:4px;flex-shrink:0;margin:0;background:transparent;border:0;padding:0;border-radius:0;}
 body.kb-edit .hist-actions{display:inline-flex;}
-.hist-actions .hist-btn{width:34px;height:34px;border:none;background:transparent;border-radius:8px;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,color .15s;}
-.hist-actions .hist-btn:hover{background:var(--hover-bg);color:var(--text);}
-.hist-actions .hist-btn:disabled{opacity:.5;cursor:default;color:var(--text-tertiary);background:transparent;}
-.hist-actions .hist-btn:disabled:hover{background:transparent;}
-.hist-actions .hist-btn svg{width:18px;height:18px;pointer-events:none;}
 /* ★R113 顶栏「更多」菜单：回收站 / 统计 / 主题 收口于此，顶栏常驻按钮 8 → 4（搜索·省略视图·更多·设置） */
 .more-wrap-h{position:relative;display:inline-flex;flex:none;}
 .header-more{position:absolute;top:calc(100% + 6px);right:0;z-index:120;display:none;flex-direction:column;gap:1px;padding:5px;min-width:150px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.18);}
@@ -320,12 +314,6 @@ body.kb-edit .hist-actions{display:inline-flex;}
 .select-option.selected{background:var(--hover-bg);font-weight:500;}
 .view-select .select-trigger #view-trigger-icon{display:inline-flex;align-items:center;justify-content:center;}
 .view-select .select-trigger #view-trigger-icon svg{width:16px;height:16px;color:var(--text);}
-.opt-group{display:flex;flex-direction:column;}
-.opt-divider{height:1px;background:var(--border);margin:4px 8px;}
-.opt-ico{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex-shrink:0;color:var(--text-secondary);}
-.opt-ico svg{width:16px;height:16px;}
-.opt-txt{font-size:13px;}
-.select-option.selected .opt-ico{color:var(--primary);}
 /* 排序箭头：仅当前激活状态页签内联显示，方向用 ↑/↓ 表示（自定义顺序时不显示） */
 /* ★R110 「升序/降序」箭头已从状态页签(全部/待办/已完成)移到排序按钮自身(见文末 .sort-dir) */
 .option-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
@@ -979,12 +967,6 @@ body.kb-bar-up .inline-edit-bar{bottom:0!important;border-bottom-left-radius:0;b
    该层叠在 textarea 之上：不透明色块盖住前缀换成可点的真实勾选框 + 完成行画删除线。
    ★R65 外面包一层 .todo-ov-wrap(overflow:hidden 精确罩住 textarea 边框盒)——
    色块/勾选框/删除线物理上不可能再溢出到编辑区外框（clip-path 在部分安卓 WebView 上不可靠）。 */
-.todo-ov-wrap{position:fixed;overflow:hidden;pointer-events:none;display:none;}
-.todo-ov{position:absolute;left:0;top:0;pointer-events:none;}
-.todo-ov .ov-patch{position:absolute;pointer-events:none;}
-.todo-ov .ov-chk{position:absolute;pointer-events:auto;cursor:pointer;margin:0;vertical-align:top;}
-.todo-ov .ov-strike{position:absolute;height:2px;pointer-events:none;opacity:.85;border-radius:1px;}
-.todo-ov-mirror{position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;white-space:pre-wrap;box-sizing:border-box;margin:0;border:0;}
 /* 全屏编辑器属性工具条：时间/分类/紧急程度/加锁（位于 textarea 下方第一行）
    安全区下内边距已移交 .fs-action-bar（关闭/确定行） */
 /* ★R121 水平内边距 10→6：属性行本来就满载（360px 只剩 8px 富余），行尾要接一个「更多」按钮，
@@ -1246,8 +1228,6 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 /* 下拉挂到 body 后不在 .cat-select-wrap 内,尺寸选择器必须挂 .cat-dropdown 才能匹配 */
 .cat-dropdown .select-option .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .cat-trigger{background:transparent;border:none;font-family:inherit;font-weight:500;padding:0 6px;height:22px;line-height:22px;font-size:var(--text-xs);border-radius:var(--radius-xs);cursor:pointer;display:inline-flex;align-items:center;gap:2px;}
-.cat-trigger.cat-pill{font-weight:500;}
-.cat-label-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
 .cat-trigger:hover{opacity:.8;}
 .cat-trigger svg{width:9px;height:9px;opacity:.6;pointer-events:none;transition:transform .15s ease;}
 .cat-trigger.open svg{transform:rotate(180deg);}
@@ -1266,13 +1246,6 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 .memo-list.compact .more-btn .mb-h{display:none;}
 .memo-list.compact .more-btn .mb-v{display:block;}
 .more-btn:hover{background:var(--hover-bg);color:var(--text);}
-.pin-btn{width:26px;height:26px;border-radius:var(--radius-xs);border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:14px;line-height:1;flex-shrink:0;position:relative;}
-.pin-btn::before{content:'';position:absolute;inset:-8px;border-radius:inherit;}
-.pin-btn svg{width:14px;height:14px;pointer-events:none;fill:none;}
-.pin-btn:hover{background:var(--hover-bg);color:var(--text);}
-.pin-btn.on{color:#f59e0b;}
-.pin-btn.on svg{fill:currentColor;}
-.pin-btn.on:hover{background:rgba(245,158,11,.1);color:#f59e0b;}
 .more-menu{position:fixed;min-width:110px;max-width:60vw;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-popup);padding:4px;z-index:9999;opacity:0;pointer-events:none;display:none;transition:opacity .12s ease;}
 .more-menu.open{opacity:1;pointer-events:auto;display:block;}
 .more-item{padding:5px 10px;font-size:var(--text-sm);border-radius:var(--radius-xs);cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--text-secondary);transition:all .15s;white-space:nowrap;}
@@ -1724,7 +1697,6 @@ html.glass-text-dark [data-theme="glass"] .cal-cell .d-sub.jq{color:#34d399;font
 [data-theme="glass"] .confirm-popover,
 [data-theme="glass"] .group-pick-box,
 [data-theme="glass"] .group-color-box,
-[data-theme="glass"] .day-detail-box,
 [data-theme="glass"] .more-menu,
 [data-theme="glass"] .q-drag-clone{
   background:linear-gradient(180deg, var(--glass-tint-3) 0%, rgba(255,255,255,calc(var(--glass-alpha) * 1.4)) 100%), var(--glass-grain);
@@ -1942,22 +1914,6 @@ html.glass-text-dark [data-theme="glass"] .picker-box{
   border-color:rgba(0,0,0,0.45);
 }
 /* —— 批量 / 复制 / 清空按钮：柔和磨砂，不再刺眼 —— */
-[data-theme="glass"] .bottom-btn{
-  background:rgba(255,255,255,0.18);
-  border:1px solid rgba(255,255,255,0.42);
-  color:var(--text-secondary);
-  backdrop-filter:blur(calc(var(--glass-blur) * 1.08)) saturate(var(--glass-sat));
-  -webkit-backdrop-filter:blur(calc(var(--glass-blur) * 1.08)) saturate(var(--glass-sat));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);
-}
-[data-theme="glass"] .bottom-btn:hover{background:rgba(255,255,255,0.34);color:var(--text);}
-[data-theme="glass"] .bottom-btn.active{
-  background:linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,255,255,0.74));
-  color:var(--text);border:1px solid rgba(255,255,255,0.72);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.92),0 2px 10px rgba(0,0,0,.12);
-  backdrop-filter:blur(calc(var(--glass-blur) * 1.12)) saturate(var(--glass-sat));
-  -webkit-backdrop-filter:blur(calc(var(--glass-blur) * 1.12)) saturate(var(--glass-sat));
-}
 /* 日历设置：每周起始 周一/周日 分段按钮 —— 适配毛玻璃主题 */
 [data-theme="glass"] .seg{border:1px solid rgba(255,255,255,0.5);background:rgba(255,255,255,0.16);border-radius:8px;overflow:hidden;backdrop-filter:blur(calc(var(--glass-blur) * 0.7)) saturate(var(--glass-sat));}
 [data-theme="glass"] .seg-btn{background:transparent;color:var(--text-secondary);border:none;}
@@ -2068,8 +2024,6 @@ body.glass-bg-dusk{--glass-bg-image:radial-gradient(1000px 640px at 4% -10%,rgba
 .glass-control>label{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:6px;}
 .glass-control .gc-val{font-variant-numeric:tabular-nums;color:var(--text);font-weight:500;min-width:36px;text-align:right;}
 .glass-control input[type=range]{width:100%;accent-color:var(--color-primary);cursor:pointer;}
-.glass-control .gc-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;cursor:pointer;}
-.glass-control .gc-row>span{color:var(--text);}
 .glass-control input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--color-primary);}
 .quadrant-cell .cell-item .q-check{width:14px;height:14px;border:1.5px solid var(--border);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;} /* ★R56: 与列表页统一为圆形 */
 .quadrant-cell .cell-item .q-check.checked{background:var(--color-primary,#6366f1);border-color:var(--color-primary,#6366f1);}
@@ -2126,7 +2080,6 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
   .settings-section{min-width:0;}
   .settings-section:nth-child(2){border-top:none;}
 }
-.settings-title{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text);}
 .setting-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;}
 /* ★R64 正文字号步进器（设置 → 编辑行为） */
 .font-size-row{justify-content:space-between;}
@@ -2209,12 +2162,6 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 [data-theme="glass"] .empty-state p{color:var(--text-secondary);text-shadow:0 1px 4px rgba(255,255,255,.5);}
 [data-theme="glass"] .day-detail-empty{color:var(--text-secondary);text-shadow:0 1px 6px rgba(255,255,255,.55);}
 [data-theme="glass"] .cell-empty{text-shadow:0 1px 4px rgba(255,255,255,.5);}
-.bottom-bar{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
-.bottom-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:1;min-width:80px;padding:6px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .2s;}
-.bottom-btn:hover{background:var(--hover-bg);color:var(--text);}
-.bottom-btn.danger:hover{background:rgba(239,68,68,.1);color:#e74c3c;border-color:rgba(239,68,68,.3);}
-.bottom-btn svg{width:13px;height:13px;pointer-events:none;}
-.bottom-btn.active{background:var(--color-primary,#6366f1);color:#fff;border-color:var(--color-primary,#6366f1);}
 .picker-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay-bg);z-index:10040;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);}
 .picker-overlay.open{display:flex;}
 .picker-box{background:var(--card-bg);border-radius:16px;padding:16px;width:100%;max-width:380px;box-shadow:0 20px 50px rgba(0,0,0,.2);border:1px solid var(--border);}
@@ -2273,8 +2220,6 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .confirm-popover.danger .confirm-btn.ok{background:#ef4444;}
 .confirm-popover.danger .confirm-btn.ok:hover{background:#dc2626;}
 .confirm-popover::after{content:'';position:absolute;width:12px;height:12px;background:var(--card-bg);border-right:1px solid var(--border);border-bottom:1px solid var(--border);transform:rotate(45deg);left:var(--arrow-left,50%);margin-left:-6px;}
-.confirm-popover.arrow-top::after{bottom:-7px;border-top:none;border-left:none;}
-.confirm-popover.arrow-bottom::after{top:-7px;border-bottom:none;border-right:none;border-top:1px solid var(--border);border-left:1px solid var(--border);}
 @keyframes confirmPop{from{opacity:0;transform:translateY(4px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
 @media (prefers-reduced-motion:reduce){.confirm-popover{animation:none;}}
 /* 确认框改为居中模态:全屏遮罩 + 居中卡片,点击遮罩或 Esc 关闭;不再锚定按钮,也不随页面 scroll/resize 误关(手机端地址栏收缩会误触发 resize) */
@@ -2373,10 +2318,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
   #cat-filter-label,#sort-filter-label{display:none;}
   .memo-item{padding:11px 12px;gap:9px;}
   .memo-content{font-size:var(--memo-font-size,14px);}
-  .bottom-bar{justify-content:stretch;}
-  .bottom-bar .bottom-btn{flex:1 1 auto;justify-content:center;font-size:12px;padding:8px 4px;}
   .batch-bar{gap:4px;padding:6px 8px;width:calc(100% - 12px);}
-  .batch-btn{padding:6px 9px;font-size:12px;flex-shrink:0;}
   .batch-count{font-size:11px;margin-left:0;}
   /* ★R70 窄屏表头改回强制单行：标签超长用省略号截断（flex-wrap:wrap 会让按钮组掉到第二行，用户不接受） */
   .quadrant-cell .cell-header{flex-wrap:nowrap;gap:6px;}
@@ -2431,7 +2373,7 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
   .nav-batch .b-ico svg{width:14px;height:14px;}
   .nav-batch .b-lbl{font-size:11px;} /* ★R59:原 .nav-batch span 已被 .b-lbl 更高特异性覆盖,须同步改名 */
 }
-@media (max-width:480px){body{padding:8px;}.header h1{font-size:17px;}.header-icon{width:24px;height:24px;font-size:11px;}.btn-icon{width:30px;height:30px;}.btn-icon svg{width:14px;height:14px;}.filter-chip{font-size:11px;padding:2px 8px;}
+@media (max-width:480px){body{padding:8px;}.header h1{font-size:17px;}.btn-icon{width:30px;height:30px;}.btn-icon svg{width:14px;height:14px;}.filter-chip{font-size:11px;padding:2px 8px;}
   /* ★ 2026-09-01 修复：超窄屏(<480) header view-select label 仍可见，导致"备忘录|全部备忘录|"挤一行 + 4 个 btn-icon 全部溢出
      加 display:none 与 560 media 对齐——窄屏只留图标不显示视图名(节省空间由 view 标题/header 同等显示) */
   .view-select #view-trigger-label{display:none;}
@@ -2483,7 +2425,6 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 /* 日历视图 */
 .calendar-view{padding:4px 0;}
 .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;position:relative;}
-.cal-head-title{font-size:15px;font-weight:600;color:var(--text);}
 /* ★R170.5 三页滑动：上/当/下三个月并排放在 inner 里（宽 300%），
    拖动时移动 inner → **两侧邻月跟着渐显**（用户："能不能左右拖动时能渐显其他月份的日历日期"）。
    原来只有"当月跟手位移 + 渐隐"→ 拖出来的是一片空白，看不到要去的月份。
@@ -2565,16 +2506,10 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .cdp-list{display:flex;flex-direction:column;gap:4px;max-height:22vh;overflow-y:auto; /* ★R170.4 42vh→22vh：小结面板太高会把日历顶出视口（"一页显示完"靠 fitCalGrid 反算格子高度，面板一高就白算）→ 限高 + 面板内部自己滚 */}
 .cdp-summary{margin-top:8px;}
 .cdp-actions{margin-top:8px;display:flex;gap:8px;}
-.day-detail-box{background:var(--card-bg);border-radius:16px;padding:16px;width:100%;max-width:360px;box-shadow:0 20px 50px rgba(0,0,0,.2);border:1px solid var(--border);max-height:80vh;display:flex;flex-direction:column;}
-.day-detail-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:15px;font-weight:600;color:var(--text);}
-.day-detail-close{width:26px;height:26px;border-radius:6px;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;font-size:15px;}
-.day-detail-close:hover{background:var(--hover-bg);}
-.day-detail-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;}
 .day-detail-item{display:flex;align-items:flex-start;gap:6px;font-size:13px;color:var(--text);padding:6px 8px;background:var(--bg);border-radius:6px;}
 .day-detail-item .di-done{color:var(--text-tertiary);text-decoration:line-through;}
 .day-detail-item .di-cat{font-size:10px;padding:1px 6px;border-radius:8px;flex-shrink:0;}
 .day-detail-empty{text-align:center;color:var(--text-tertiary);font-size:13px;padding:20px 0;}
-.day-detail-actions{display:flex;gap:6px;margin-top:12px;}
 /* 日历：农历 / 假期 */
 .cal-title-btn{background:transparent;border:none;color:var(--text);font-size:15px;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:8px;}
 .cal-title-btn:hover{background:var(--hover-bg);}
@@ -2617,7 +2552,6 @@ body.settings-open #listView,body.settings-open #empty-state,body.settings-open 
 .ym-month:hover{border-color:var(--text-tertiary);}
 .ym-month.active{background:var(--color-primary,#6366f1);color:#fff;border-color:var(--color-primary,#6366f1);}
 /* 当天明细：小结 */
-.day-summary{margin-top:12px;display:flex;flex-direction:column;gap:6px;}
 .day-summary-input{width:100%;min-height:64px;resize:vertical;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:8px;font-size:13px;font-family:inherit;box-sizing:border-box;}
 .day-summary-input:focus{outline:none;border-color:var(--text-tertiary);}
 /* 设置：每周起始 */
@@ -2798,7 +2732,6 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
 /* ★R59：行断点改为一条主题自适应发丝线，让「选择组(取消/全选/已选) / 操作组」分层更清楚 */
 .batch-row-break{flex-basis:100%;height:0;margin:1px 0;padding:0;border:none;border-top:1px solid var(--nb-line);}
 /* ★R59：合并模式提示改主色淡底胶囊，避免与正文色混淆 */
-.batch-hint{flex:0 0 100%;text-align:center;font-size:11px;line-height:1.3;color:var(--color-primary,#6366f1);background:color-mix(in srgb,var(--color-primary,#6366f1) 10%,transparent);border-radius:9px;padding:4px 6px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-tap-highlight-color:transparent;}
 /* ★R59：玻璃主题——按钮降不透明度，避免实心面把底栏的毛玻璃糊掉 */
 [data-theme="glass"] .bottom-nav{--nb-surface:rgba(255,255,255,0.24);--nb-surface-hi:rgba(255,255,255,0.38);--nb-line:var(--glass-edge);}
 [data-theme="glass"] .nav-batch{box-shadow:inset 0 1px 0 var(--glass-edge),inset 0 -1px 0 var(--glass-edge-bot);}
@@ -3170,13 +3103,6 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .batch-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(56px + env(safe-area-inset-bottom));z-index:135;display:none;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 10px;background:var(--card-bg);border:1px solid var(--border);border-radius:18px;box-shadow:0 -2px 14px rgba(0,0,0,.10);width:calc(100% - 20px);max-width:640px;box-sizing:border-box;-webkit-tap-highlight-color:transparent;justify-content:flex-start;}
 .batch-bar.open{display:grid;}
 .batch-bar .batch-count{grid-column:1/-1;text-align:center;font-size:11px;color:var(--text-tertiary);margin-bottom:2px;}
-.batch-bar .batch-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;border-radius:10px;padding:8px 2px;font-size:11px;line-height:1.15;cursor:pointer;font-family:inherit;font-weight:500;background:var(--bg);color:var(--text);transition:all .15s;min-height:50px;}
-.batch-bar .batch-btn .b-ico{font-size:17px;line-height:1;pointer-events:none;flex-shrink:0;}
-.batch-bar .batch-btn .b-lbl{font-size:11px;line-height:1.15;pointer-events:none;text-align:center;}
-.batch-bar .batch-btn:hover{filter:brightness(.96);}
-.batch-bar .batch-btn.danger{background:var(--danger,#ef4444);color:#fff;}
-.batch-bar .batch-btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text-secondary);}
-.batch-bar .batch-btn:disabled,.batch-bar .batch-btn.disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
 .batch-bar::-webkit-scrollbar{display:none;}
 .batch-count{margin-left:auto;font-size:12px;color:var(--text-secondary);white-space:nowrap;}
 
@@ -3314,12 +3240,6 @@ body.batch-on .memo-list .memo-index{display:none;}
 
 /* ===== 底部工具栏（批量/复制/清空）===== */
 
-.tool-btn{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 4px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap;}
-.tool-btn svg{width:15px;height:15px;flex-shrink:0;}
-.tool-btn:hover{background:var(--hover-bg);color:var(--text);}
-.tool-btn.active{background:var(--color-primary);color:#fff;border-color:var(--color-primary);}
-.tool-btn.danger{color:#ef4444;border-color:rgba(239,68,68,.4);}
-.tool-btn.danger:hover{background:rgba(239,68,68,.1);color:#ef4444;}
 /* 设置按钮激活反馈（齿轮旋转） */
 .btn-icon svg{transition:transform .3s ease;}
 #settings-btn.active svg{transform:rotate(60deg);}
@@ -12277,7 +12197,6 @@ var memoListEl=document.getElementById('listView');
 var quadrantViewEl=document.getElementById('quadrantView');
 var trashViewEl=document.getElementById('trashView');
 var emptyStateEl=document.getElementById('empty-state');
-var toastEl=document.getElementById('toast');
 var settingsPanel=document.getElementById('settings-panel');
 /* ★R84 设置面板开/关 → body.settings-open（隐藏下方备忘录）。用 MO 监听 class,
    一处覆盖全部开关点位(settings-btn toggle/closeSettings/自动开/切视图关)且不怕新增路径漏接。 */
@@ -12304,19 +12223,10 @@ var timeHour2=document.getElementById('time-hour2');
 var timeMin2=document.getElementById('time-min2');
 var rangeDurEl=document.getElementById('range-dur');
 var singleCapEl=document.getElementById('single-cap');
-var viewDropdownEl=null;
-var viewLabelEl=document.getElementById('view-label');
 var calendarViewEl=document.getElementById('calendarView');
 var statsViewEl=document.getElementById('statsView');
 var _lastView=null;
 function fadeView(el){if(!el)return;el.classList.remove('view-fade');void el.offsetWidth;el.classList.add('view-fade');}
-var dayDetailOverlayEl=document.getElementById('dayDetailOverlay');
-var dayDetailListEl=document.getElementById('dayDetailList');
-var dayDetailTitleEl=document.getElementById('dayDetailTitle');
-var dayDetailCloseEl=document.getElementById('dayDetailClose');
-var dayDetailCopyEl=document.getElementById('dayDetailCopy');
-var daySummaryInputEl=document.getElementById('daySummaryInput');
-var daySummarySaveEl=document.getElementById('daySummarySave');
 var clearDoneBtn=document.getElementById('clear-done-btn');
 var pickerPreview=document.getElementById('picker-preview');
 var themeIconSun=document.getElementById('theme-icon-sun');
@@ -12588,7 +12498,6 @@ var openSwipeEl=null;       // 当前左滑展开的操作条所属 memo-item
 var ICON_PIN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>';
 var ICON_TAG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5V5a2 2 0 0 1 2-2h6.5a2 2 0 0 1 1.41.59l7 7a2 2 0 0 1 0 2.82l-6.5 6.5a2 2 0 0 1-2.82 0l-7-7a2 2 0 0 1-.59-1.41z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>';
 var ICON_LOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
-var ICON_UNLOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
 var ICON_COPY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 var ICON_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 var ICON_EDIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>';
@@ -12625,7 +12534,6 @@ var isDragging=false;
 var dragTarget=null;
 var dragOffset=0;
 var dragOffsetX=0; // R39:横向抓取偏移(克隆需跟随手指左右移动,省略视图是两列网格)
-var _dragLastRX=0,_dragLastRY=0; // R39:上次重排时的手指坐标(网格重排抖动抑制)
 var dragTimer=null;
 var dragPending=false;
 var dragIsTouch=false;
@@ -12710,7 +12618,6 @@ function loadData(){
 }
 function getDefaultCategories(){var r={};for(var k in DEFAULT_CATEGORIES)r[k]={label:DEFAULT_CATEGORIES[k].label,color:DEFAULT_CATEGORIES[k].color};return r;}
 function saveData(){var data={memos:memos,deleted:deleted,archived:archived,categories:categories,stats:stats,daySummaries:daySummaries,weekStart:weekStart,viewPrefs:viewPrefs,batchEnabled:batchEnabled,memo_groups:memo_groups,collapsedGroups:collapsedGroups,lockHash:lockHash,adminHash:adminHash,lockHint:lockHint,version:7};localStorage.setItem(STORAGE_KEY,JSON.stringify(data));updateStats();showSaveHint();scheduleCommit();}
-var _saveHintHide=null;
 function showSaveHint(){}
 function generateId(){return 'm'+Date.now().toString(36)+Math.random().toString(36).substr(2,6);}
 function generateCatKey(){return 'c'+Date.now().toString(36)+Math.random().toString(36).substr(2,4);}
@@ -19016,79 +18923,11 @@ var _todoOvs=[];
 /* ★R67 光学对齐：行盒中心 ≠ 字形墨迹中心（微软雅黑 ascent 16/descent 4，墨迹中心比行盒中心
    低 ~0.5px@15px；安卓 MiSans 等偏差更大）——按勾选框所对文字的**墨迹中心**居中，字体无关。
    用 canvas TextMetrics 实测（actualBoundingBox 为墨迹、fontBoundingBox 为行盒），按字号缓存。 */
-var _ovInkCache={};
-function _ovInkShift(fsz,fam){
-  var key=fsz+'|'+fam;
-  if(_ovInkCache[key]!=null)return _ovInkCache[key];
-  var sh=0;
-  try{
-    var cv=document.createElement('canvas').getContext('2d');
-    cv.font=fsz+'px '+(fam||'sans-serif');
-    var m=cv.measureText('待办事项'); /* 用 CJK 采样，勾选框主要对汉字 */
-    if(m&&m.actualBoundingBoxAscent!=null&&m.fontBoundingBoxAscent!=null){
-      sh=((m.actualBoundingBoxAscent-m.actualBoundingBoxDescent)-(m.fontBoundingBoxAscent-m.fontBoundingBoxDescent))/2*-1;
-    }
-  }catch(_){ }
-  if(!(sh>-3&&sh<3))sh=0;
-  _ovInkCache[key]=sh;
-  return sh;
-}
-function _ovParseC(c){
-  if(!c)return null;
-  if(c.charAt(0)==='#'){
-    var h=c.slice(1);
-    if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-    if(h.length===8)return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16),parseInt(h.slice(6,8),16)/255];
-    return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16),1];
-  }
-  var m=c.match(/rgba?\(([^)]+)\)/);
-  if(!m)return null;
-  var p=m[1].split(/[,\/\s]+/).filter(function(x){return x!=='';}).map(parseFloat);
-  if(p.length<3)return null;
-  if(p.length<4||isNaN(p[3]))p[3]=1;
-  return [p[0],p[1],p[2],p[3]];
-}
 /* ★R65 遮罩底色：沿父链收集半透明背景，找到第一个不透明底后**按顺序叠乘合成**
    （此前只会取"第一个不透明色"，毛玻璃卡片是半透的 → 一路兜底到 #fff，深色/玻璃主题下
    就是一块突兀的白底。玻璃主题最底层是壁纸渐变，无法取样，用各主题定义的 --ov-solid-bg 近似。）
    ★R66 返回 {css, opaque}：opaque=false 表示底色只是 --ov-solid-bg 近似值（玻璃/半透链），
    此时色块改走"毛玻璃模式"（透明底 + backdrop-filter 模糊压字），不再画死色块 → 根治白底。 */
-function _ovEffBg(el){
-  var stack=[],base=null;
-  while(el){
-    try{
-      var pc=_ovParseC(getComputedStyle(el).backgroundColor);
-      if(pc){
-        if(pc[3]>=0.999){base=pc;break;}
-        stack.push(pc);
-      }
-    }catch(_){}
-    if(el===document.documentElement)break;
-    el=el.parentElement;
-  }
-  var opaque=!!base;
-  if(!base){
-    try{
-      var fb=_ovParseC(getComputedStyle(document.documentElement).getPropertyValue('--ov-solid-bg'));
-      if(fb)base=fb;
-    }catch(_){}
-  }
-  if(!base)base=[255,255,255,1];
-  for(var i=stack.length-1;i>=0;i--){
-    var s=stack[i],a=s[3];
-    base=[s[0]*a+base[0]*(1-a),s[1]*a+base[1]*(1-a),s[2]*a+base[2]*(1-a),1];
-  }
-  return {css:'rgb('+Math.round(base[0])+','+Math.round(base[1])+','+Math.round(base[2])+')',opaque:opaque};
-}
-function _ovRects(el){
-  if(!el)return [];
-  try{
-    var r=document.createRange();r.selectNodeContents(el);
-    var rs=r.getClientRects(),out=[];
-    for(var i=0;i<rs.length;i++){if(rs[i].width>0&&rs[i].height>0)out.push(rs[i]);}
-    return out;
-  }catch(_){return [];}
-}
 function stopTodoOverlay(ta){
   for(var i=_todoOvs.length-1;i>=0;i--){
     var o=_todoOvs[i];
@@ -19103,109 +18942,6 @@ function stopTodoOverlay(ta){
 }
 /* ★R65 退格键智能删前缀：光标紧跟在 [ ]/[x] 前缀(含尾随空格)末尾时，一次 Backspace 删掉
    整个前缀——不用先把 "[x]" 三个字符逐个删完（保留行首缩进，与真实待办 App 一致） */
-function attachTodoBackspace(ta){
-  ta.addEventListener('keydown',function(e){
-    if(e.key!=='Backspace'||e.ctrlKey||e.metaKey||e.altKey)return;
-    var ss=ta.selectionStart,se=ta.selectionEnd;
-    if(ss!==se||ss<=0)return;
-    var nl=ta.value.lastIndexOf('\n',ss-1);
-    var head=ta.value.slice(nl+1,ss);
-    var m=head.match(/^([ \t]*)\[[ xX]\][ \t]*$/);
-    if(!m)return;
-    e.preventDefault();
-    var del=head.length-m[1].length;
-    ta.value=ta.value.slice(0,ss-del)+ta.value.slice(ss);
-    try{ta.setSelectionRange(ss-del,ss-del);}catch(_){}
-    try{ta.dispatchEvent(new Event('input',{bubbles:true}));}catch(_){}
-  });
-}
-function _ovToggleLine(ta,line){
-  var lines=String(ta.value||'').split('\n');
-  var l=lines[line]; if(l==null)return;
-  var nm=l.replace(/^([ \t]*)\[([ xX])\]/,function(_m,ind,c){return ind+((c==='x'||c==='X')?'[ ]':'[x]');});
-  if(nm===l)return;
-  var ss=ta.selectionStart,se=ta.selectionEnd;
-  lines[line]=nm; ta.value=lines.join('\n'); // ★ [ ]↔[x] 等长,光标偏移不变
-  try{ta.setSelectionRange(ss,se);}catch(_){}
-  try{ta.dispatchEvent(new Event('input',{bubbles:true}));}catch(_){}
-  try{ta.focus({preventScroll:true});}catch(_){}
-}
-function _ovUpdate(o){
-  var ta=o.ta,ov=o.ov,wrap=o.wrap,mir=o.mir;
-  if(!ta||!ta.isConnected){wrap.style.display='none';ov.innerHTML='';return;}
-  var val=ta.value||'';
-  var r=ta.getBoundingClientRect();
-  if(!/(^|\n)[ \t]*\[[ xX]\]/.test(val)||r.width<20||r.height<8){wrap.style.display='none';ov.innerHTML='';return;}
-  wrap.style.display='block';
-  var _vw=window.innerWidth,_vh=window.innerHeight;
-  /* ★R79 wrap 罩"ta ∩ 滚动容器可视区"交集：ta 被格子滚出可视区后,ta 本体被格子 overflow:hidden
-     裁掉,但 wrap 是 fixed 挂 body 不受格子裁剪——勾选框曾因此"漏"到别的象限。求交集钳制。 */
-  var _cl=r.left,_ct=r.top,_cr=r.right,_cb=r.bottom;
-  var _sc=ta.closest?ta.closest('.cell-items'):null;
-  if(_sc){var _sr=_sc.getBoundingClientRect();if(_sr.height>4){_cl=Math.max(_cl,_sr.left);_ct=Math.max(_ct,_sr.top);_cr=Math.min(_cr,_sr.right);_cb=Math.min(_cb,_sr.bottom);}}
-  if(_cr-_cl<4||_cb-_ct<4){wrap.style.display='none';ov.innerHTML='';return;} /* 完全滚出可视区 */
-  // ★R65 wrap(overflow:hidden) 精确罩住可见区域：色块/勾选框/删除线物理上不可能溢出到编辑区外
-  wrap.style.left=_cl+'px';wrap.style.top=_ct+'px';
-  wrap.style.width=(_cr-_cl)+'px';wrap.style.height=(_cb-_ct)+'px';
-  ov.style.left=(-_cl)+'px';ov.style.top=(-_ct)+'px';
-  ov.style.width=_vw+'px';ov.style.height=_vh+'px';
-  var cs=getComputedStyle(ta);
-  var props=['fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing','wordSpacing','textIndent','tabSize','paddingTop','paddingRight','paddingBottom','paddingLeft','wordBreak','overflowWrap','whiteSpace','direction','textRendering','fontKerning'];
-  for(var p=0;p<props.length;p++){try{mir.style[props[p]]=cs[props[p]];}catch(_){}}
-  mir.style.width=ta.clientWidth+'px';
-  mir.style.top=(r.top+parseFloat(cs.borderTopWidth||0)-ta.scrollTop)+'px';
-  mir.style.left=(r.left+parseFloat(cs.borderLeftWidth||0)-ta.scrollLeft)+'px';
-  var fsz=parseFloat(cs.fontSize)||14;
-  var chk=fsz*1.12; // 勾选框随字号自适应（与显示态 1.12em 一致）
-  var lines=val.split('\n'),html='';
-  for(var i=0;i<lines.length;i++){
-    var mm=lines[i].match(/^([ \t]*)\[([ xX])\]([ \t]*)([\s\S]*)$/);
-    if(mm)html+='<span data-l="'+i+'">'+escapeHtml(mm[1])+'<span class="mk">'+escapeHtml('['+mm[2]+']')+'</span>'+escapeHtml(mm[3])+'<span class="tx">'+escapeHtml(mm[4])+'</span></span>\n';
-    else html+=escapeHtml(lines[i])+'\n';
-  }
-  mir.innerHTML=html;
-  var _eb=_ovEffBg(ta),col=cs.color||'currentColor';
-  /* ★R66 内框（可视区）钳制：就地编辑聚焦时 textarea 用 inset 0 0 0 2px 描边环当"编辑区外框"，
-     且上下 padding 为 0 → 末行行盒直接贴到边框盒边缘，色块(+1px 外扩)会盖到描边环上。
-     把色块/勾选框一律钳制在「边框盒内缩 max(边框宽,2px)」的矩形里，物理上碰不到外框。 */
-  var _inT=r.top+Math.max(parseFloat(cs.borderTopWidth||0)||0,2);
-  var _inB=r.bottom-Math.max(parseFloat(cs.borderBottomWidth||0)||0,2);
-  var _inL=r.left+Math.max(parseFloat(cs.borderLeftWidth||0)||0,2);
-  var _inR=r.right-Math.max(parseFloat(cs.borderRightWidth||0)||0,2);
-  var mks=mir.querySelectorAll('.mk'),out='';
-  for(var k=0;k<mks.length;k++){
-    var mk=mks[k],line=parseInt(mk.parentNode.getAttribute('data-l'),10);
-    var tx=mk.parentNode.querySelector('.tx');
-    var mr=_ovRects(mk)[0]; if(!mr)continue;
-    var trs=_ovRects(tx);
-    var right=trs.length?trs[0].left:(mr.right+mr.width/3);
-    var done=/^[ \t]*\[[xX]\]/.test(lines[line]||'');
-    // ★R65 勾选框以**文字矩形**（tx 首个视觉行）垂直居中——mk 与 tx 同行，但用文字矩形对齐最稳
-    var anchor=(trs.length&&trs[0].height>4)?trs[0]:mr;
-    var _taTop=_inT,_taBot=_inB; /* ★R66 钳制到内框（避开描边环） */
-    var _ctop=anchor.top+(anchor.height-chk)/2+_ovInkShift(fsz,cs.fontFamily); /* ★R67 按墨迹中心光学居中 */
-    if(_ctop+chk>_taBot)_ctop=_taBot-chk;
-    if(_ctop<_taTop)_ctop=_taTop;
-    /* ★R66 色块：坐标钳制到内框；玻璃/半透链(opaque=false)改走毛玻璃模式——
-       透明底 + backdrop-filter 模糊把裸 [x] 文字糊掉，视觉与周围玻璃一致，不再出现死白色块 */
-    var _pl=Math.max(mr.left-1,_inL),_pt=Math.max(mr.top-1,_inT);
-    var _pr2=Math.min(right,_inR),_pb=Math.min(mr.top+mr.height+1,_inB);
-    var _pw=_pr2-_pl,_ph=_pb-_pt;
-    if(_pw>0&&_ph>0){
-      var _pst=_eb.opaque?('background:'+_eb.css+';'):'background:transparent;backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);';
-      out+='<div class="ov-patch" style="left:'+_pl+'px;top:'+_pt+'px;width:'+_pw+'px;height:'+_ph+'px;'+_pst+'"></div>';
-    }
-    out+='<span class="ov-chk todo-chk'+(done?' done':'')+'" data-line="'+line+'" style="font-size:'+fsz+'px;left:'+mr.left+'px;top:'+_ctop+'px;">'+TODO_CHK_SVG+'</span>';
-    if(done){for(var j=0;j<trs.length;j++){var t=trs[j];out+='<div class="ov-strike" style="left:'+t.left+'px;top:'+(t.top+t.height*0.58)+'px;width:'+t.width+'px;background:'+col+'"></div>';}}
-  }
-  ov.innerHTML=out;
-  var chks=ov.querySelectorAll('.ov-chk');
-  for(var c=0;c<chks.length;c++){(function(el){
-    el.addEventListener('mousedown',function(e){e.preventDefault();}); // 保住 textarea 焦点与光标
-    el.addEventListener('click',function(e){e.stopPropagation();e.preventDefault();_ovToggleLine(ta,parseInt(el.getAttribute('data-line'),10));});
-  })(chks[c]);
-  }
-}
 /* 绑定工具条行为（属性弹层 + 列表按钮 + 回车续行 + 增删重排）
    opts:{mask:可选遮罩(弹层定位参考),timers:可选数组(轮询定时器由调用方统一清理),onSaved:文本变化回调}
    返回 {refresh, cleanup, sync} */
