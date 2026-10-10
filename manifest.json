@@ -1,0 +1,13 @@
+{
+  "name": "备忘录四象限",
+  "short_name": "备忘录",
+  "description": "四象限备忘录 · 待办 · 日历 · 统计",
+  "start_url": "./备忘录四象限.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#6366f1",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
