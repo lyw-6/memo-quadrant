@@ -922,7 +922,12 @@ body.kb-bar-up .inline-edit-bar{bottom:0!important;border-bottom-left-radius:0;b
 @media (max-width:560px){.inline-edit-bar{left:6px;right:6px;gap:3px;padding:5px 6px;}.inline-edit-bar .fs-meta-btn{height:28px;font-size:11px;padding:0 6px;}.inline-edit-bar .ib-new{width:28px;height:28px;}.inline-edit-bar .ib-new svg{width:14px;height:14px;}.inline-edit-bar .ib-done{height:28px;min-width:40px;padding:0 10px;}}
 /* ★R61 待办项：内容里的 `[ ]` / `[x]` 在列表显示态渲染成可点勾选框（inline SVG，跟随主题色） */
 /* ★R68 列表悬挂缩进容器（见 renderContentHtml）：首行 0 起、续行挂 1.5em */
-.li-line{display:inline-block;box-sizing:border-box;max-width:100%;padding-left:1.5em;text-indent:-1.5em;vertical-align:baseline;} /* ★R76 box-sizing:border-box——原 content-box 下实际宽=100%+1.5em,长文本/勾选框被顶出卡片框 */
+.li-line{display:inline-block;box-sizing:border-box;max-width:100%;padding-left:1.5em;text-indent:-1.5em;vertical-align:baseline;word-break:break-all;} /* ★R76 box-sizing:border-box——原 content-box 下实际宽=100%+1.5em,长文本/勾选框被顶出卡片框 */
+/* ★R204 word-break:break-all：UAX#14 禁止数字间断行 → 长数字/字母串是单个不可断单元，
+   break-word 的应急断行从下一行才开始（overflow-wrap:anywhere 实测同样无效）→
+   "1. " 后整行空白、正文整体掉到第二行才开始排（用户截图实锤）。
+   break-all 给每个字符间发断行机会 → 首行从 "1. " 后填满再换行，续行仍挂 1.5em。
+   中文逐字可断不受影响；英文长词会在行尾硬切——对比整行浪费是更小的代价。 */
 /* ★R65 勾选框改 em 相对尺寸：跟随正文字号(设置里可调)自动缩放，vertical-align 也用 em 基准——
    任何字号下都与文字垂直居中（此前固定 16px/-3px 在大字号下明显偏低） */
 /* ★R83 对齐修复：inline-flex 的基线=首个 flex 项(svg 底边)的合成基线，叠加负 va 会把整框压低（真机截图实测框中心比文字低 4px）。
