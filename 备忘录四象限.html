@@ -923,6 +923,11 @@ body.kb-bar-up .inline-edit-bar{bottom:0!important;border-bottom-left-radius:0;b
 /* ★R61 待办项：内容里的 `[ ]` / `[x]` 在列表显示态渲染成可点勾选框（inline SVG，跟随主题色） */
 /* ★R68 列表悬挂缩进容器（见 renderContentHtml）：首行 0 起、续行挂 1.5em */
 .li-line{display:inline-block;box-sizing:border-box;max-width:100%;padding-left:1.5em;text-indent:-1.5em;vertical-align:baseline;word-break:break-all;} /* ★R76 box-sizing:border-box——原 content-box 下实际宽=100%+1.5em,长文本/勾选框被顶出卡片框 */
+/* ★R204b 前缀列定宽：前缀 "1. "/"• " 实宽只有 ~0.8~1.1em，而悬挂量写死 1.5em
+   → 续行比首行正文深 ~0.4em（用户截图实锤"第二行的 6 和第一行的 6 没对齐"）。
+   前缀装进 .li-pfx（min-width:1.5em，3 位数序号自动加宽）→ 正文与续行都从 1.5em 起严格对齐。
+   ★text-indent 是继承属性，li-pfx 内必须重置回 0，否则前缀自身再左移 1.5em。 */
+.li-pfx{display:inline-block;min-width:1.5em;text-indent:0;} /* ★可编辑 span（勿加 user-select:none——前缀文本要可选中/可编辑） */
 /* ★R204 word-break:break-all：UAX#14 禁止数字间断行 → 长数字/字母串是单个不可断单元，
    break-word 的应急断行从下一行才开始（overflow-wrap:anywhere 实测同样无效）→
    "1. " 后整行空白、正文整体掉到第二行才开始排（用户截图实锤）。
@@ -17352,7 +17357,25 @@ function _todoAlignQueue(){
 function _edLineFrag(line){
   var frag=document.createDocumentFragment();
   var m=line.match(/^([ \t]*)(\[[ xX]\][ \t]*)([\s\S]*)$/);
-  if(!m){ if(line)frag.appendChild(document.createTextNode(line)); return frag; }
+  if(!m){
+    /* ★R204b 列表行（ol/ul）前缀拆进 .li-pfx 定宽列：与预览态同构，续行缩进=正文起点。
+       li-pfx 是普通可编辑 SPAN → _edText/_edWalkLen/_edDistTo/_edGetOffset/_edSetOffset
+       递归穿透，值与光标零影响；ArrowRight 实测逐字符穿过前缀（1→8 无跳变）。
+       ★曾试 contenteditable=false 原子化（同 todo-chk），实测更差：方向键跳过整个前缀
+       （无法微调），End 仍被截断 → 弃。End/Home 截断由 keydown 拦截自算行界修复。 */
+    var _lm=line.match(/^([ \t]*)((?:\d{1,3}[.)]|[\u2022\-\*])[ \t]+)([\s\S]*)$/);
+    if(_lm){
+      if(_lm[1])frag.appendChild(document.createTextNode(_lm[1]));
+      var _px=document.createElement('span');
+      _px.className='li-pfx';
+      _px.appendChild(document.createTextNode(_lm[2]));
+      frag.appendChild(_px);
+      if(_lm[3])frag.appendChild(document.createTextNode(_lm[3]));
+      else frag.appendChild(document.createTextNode('\u200B')); /* 空正文行：光标落点占位 */
+      return frag;
+    }
+    if(line)frag.appendChild(document.createTextNode(line)); return frag;
+  }
   if(m[1])frag.appendChild(document.createTextNode(m[1]));
   var done=(m[2].charAt(1)==='x'||m[2].charAt(1)==='X');
   var sp=document.createElement('span');
@@ -17435,6 +17458,17 @@ function _edFixEmptyTodo(ed){
     if(has)continue;
     if(tn){ if(tn.nodeValue!=='\u200B'){tn.nodeValue='\u200B';changed=true;} }
     else{ tx.insertBefore(document.createTextNode('\u200B'),tx.firstChild);changed=true; }
+  }
+  /* ★R204b 空 ol/ul 行（li-pfx 后无正文）续补 ZWSP：删空正文后 Chrome 会连 ZWSP 一起删掉，
+     li-line 内只剩原子前缀 → _edSetOffset 找不到落点退到文末。口径同上：只补结构不动值。 */
+  var pfxs=ed.querySelectorAll('.li-pfx');
+  for(var q=0;q<pfxs.length;q++){
+    var pw=pfxs[q],has2=false;
+    for(var pc=pw.nextSibling;pc;pc=pc.nextSibling){
+      if(pc.nodeType===3){ if(pc.nodeValue.replace(/\u200B/g,'').length){has2=true;break;} }
+      else if(pc.nodeType===1){ has2=true;break; }
+    }
+    if(!has2&&pw.parentNode){ pw.parentNode.appendChild(document.createTextNode('\u200B')); changed=true; }
   }
   return changed;
 }
@@ -17619,6 +17653,15 @@ function _edDistTo(ed,node,off){
       if(c===node){
         if(c.nodeType===3)n+=off;
         else if(_edIsChk(c))n+=(off>0?_edPfxLen(c):0);
+        else if(off>0){
+          /* ★R204b 元素锚点：End/Ctrl+Home 等键会把光标锚在**元素**上（(node,off)=第 off 个子节点之前）。
+             li-pfx 引入后 li-line 有了子 span，End 的锚从 TEXT 变 ELEMENT——旧实现此处不累计，
+             offset 恒算成 0 → onEnter cut=0 把整行内容当 tail 拆到新行（烟测 R168②③ 实锤：
+             '1. abc' 一次回车变 '1. \n2. abc'）。按 _edLen 口径累计 node 内前 off 个子节点；
+             node===ed 时直属 BR 计换行、行内元素内部 br 不计（与 _edWalkLen 同口径）。 */
+          var _k=0;
+          for(var _c=node.firstChild;_c&&_k<off;_c=_c.nextSibling,_k++)n+=_edLen(_c,node===ed);
+        }
         found=true;return;
       }
       /* ★R82 bugfix：非目标的文本节点也必须累计长度（漏了它 → 键入后 caret 偏移少算、onEnter 拆错行） */
@@ -17718,6 +17761,21 @@ function createTodoEditable(text,cls){
      挂组件层：就地/全屏/象限三入口行为一致；改 value 走 setter(自带 autoGrow)，
      dispatch input 走各入口既有持久化；renumberLists 延迟重排后续序号。 */
   ed.addEventListener('keydown',function(e){
+    /* ★R204b End/Home 拦截自算行界：li-pfx/li-line 是 inline-block，Chrome 把它当独立行盒，
+       End/ Home 的 lineboundary 移动在其边界截断（实测 '1. abc' 按 End 停在前缀后 offset=3
+       而非行尾 6）→ onEnter 把整行当 tail 拆到新行（烟测 R168②③ 实锤）。按 value 手算：
+       End=当前行行尾、Home=当前行行首、Ctrl/Cmd+Home/End=文档首尾；Shift 保留选择语义。 */
+    if((e.key==='End'||e.key==='Home')&&!e.isComposing){
+      var kv=ed.value,kp=ed.selectionStart;
+      if(typeof kp!=='number')return;
+      var ks,ke;
+      if(e.ctrlKey||e.metaKey){ ks=(e.key==='Home')?0:kv.length; ke=ks; }
+      else if(e.key==='Home'){ ks=kp-kv.slice(0,kp).split('\n').pop().length; ke=ks; }
+      else{ ke=kv.indexOf('\n',kp); if(ke<0)ke=kv.length; ks=ke; }
+      e.preventDefault();
+      try{ ed.setSelectionRange(e.shiftKey?Math.min(ks,kp):ks, e.shiftKey?Math.max(ke,kp):ke); }catch(_){}
+      return;
+    }
     if(e.key!=='Backspace'||e.ctrlKey||e.metaKey||e.altKey||e.isComposing)return;
     var v=ed.value,p=ed.selectionStart,se=ed.selectionEnd;
     if(typeof p!=='number'||p<=0||p!==se)return; /* 行首/有选区/无光标:走默认 */
@@ -17880,6 +17938,12 @@ function renderContentHtml(text){
     /* ★R68 悬挂缩进：列表项(圆点/短横/星号/数字点)与待办行换行后对齐到文字起点，不再顶回行首。
        inline-block+负 text-indent：首行从 0 起、续行挂在 1.5em；块内自带换行不产生空行 */
     if(_edIsListText(rawLines[i]||'')){
+      /* ★R204b ol/ul 前缀拆进 .li-pfx 定宽列（与编辑态 _edLineFrag 同一正则）：
+         续行缩进(1.5em)=正文起点，两态严格对齐；todo 行前缀是 chk 结构，不在本步处理 */
+      var _lm=(lines[i]||'').match(/^([ \t]*)((?:\d{1,3}[.)]|[\u2022\-\*])[ \t]+)([\s\S]*)$/);
+      if(_lm&&!/^([ \t]*)\[[ xX]\]/.test(rawLines[i]||'')){
+        lines[i]=_lm[1]+'<span class="li-pfx">'+_lm[2]+'</span>'+_lm[3];
+      }
       lines[i]='<span class="li-line">'+lines[i]+'</span>';
     }
   }
