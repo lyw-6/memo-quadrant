@@ -2761,7 +2761,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    ③ ghost（取消）= 透明底 + 次级文字，视觉权重最低。
    ④ 图标全部内联 SVG(currentColor)，替代原 emoji —— 彩色 emoji 与主题色冲突且跨端大小不一。
    ⑤ 玻璃主题单独降不透明度（见 [data-theme="glass"] 覆盖），保留毛玻璃通透感。 */
-.bottom-nav{--nb-surface:color-mix(in srgb,var(--text) 5%,var(--card-bg));--nb-surface-hi:color-mix(in srgb,var(--text) 11%,var(--card-bg));--nb-line:color-mix(in srgb,var(--text) 12%,transparent);
+.bottom-nav{--nb-surface:color-mix(in srgb,var(--text) 7%,var(--card-bg));--nb-surface-hi:color-mix(in srgb,var(--text) 12%,var(--card-bg));--nb-line:color-mix(in srgb,var(--text) 18%,transparent); /* ★R214 5/11/12 → 7/12/18（用户截图：浅色主题下按钮描边几乎不可见、"面"与底栏同色，整排像散落的文字） */
   /* ★R172③ hover 文字色令牌（各主题自动算出协调值，不必逐主题写死） */
   --nav-hover-fg:color-mix(in srgb,var(--color-primary,#6366f1) 48%,var(--text-secondary));}
 .nav-batch{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:5px;height:36px;padding:0 8px;border:1px solid var(--nb-line);background:var(--nb-surface);color:var(--text);border-radius:11px;font-size:12px;font-weight:500;line-height:1;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s,border-color .15s,color .15s,transform .1s;overflow:hidden;-webkit-tap-highlight-color:transparent;}
@@ -2776,6 +2776,21 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
 .nav-batch.ghost{color:var(--text-secondary);background:transparent;}
 .nav-batch.ghost:active{background:var(--nb-surface);}
 .bottom-nav.batch-mode{overflow:visible;}
+/* ★R214 批量模式圆角修正（用户："底下的多选工具栏样式怎么这么怪异"）：
+   根因 = 容器 fixed 999px 全圆端是**单行导航**的胶囊语言；批量模式内容变两行（高 ~88px）后
+   999px 会钳成半径 44px 的巨弧 → 首行「取消」左端与「已选 N」右端被弧线切进去（截图实锤：
+   "已选 0" 半边压在弧内）。多行容器必须退回常规圆角，维持「外圆角 > 内圆角」分档
+   （容器 18px > 按钮 11px）；--nav-r 同步收紧（批量下泡隐藏，但令牌保持一致防两态切换跳变）。 */
+.bottom-nav.batch-mode{border-radius:18px;--nav-r:14px;}
+/* ★R214 两行栅格对齐：原来首行是「取消/全选 = flex:1 两等分 + 已选N 靠右(auto)」，
+   次行是 4 等分 → 桌面宽屏下首行按钮 349px、次行 187px，两行格子完全对不齐（"怪异"的一半来源）。
+   把「已选 N」也变成 flex:1 的等宽格（文字居中）→ 两行同为 4 列，列宽一致。 */
+/* ★R214 行内栅格对齐：原来首行是「取消/全选 = flex:1 两等分 + 已选N(auto, 靠右)」，
+   次行是 4 等分 → 宽屏下首行按钮 349px、次行 187px，两行格子完全对不上（"怪异"的一半来源）。
+   把「已选 N」也变成等宽格、文字居中（★注意 2832 行 `#bottomNav .batch-count`(1,1,0) 特异性命中它，
+   所以这里必须写 `#bottomNav.batch-mode .batch-count`(1,2,0) 才压得住）；
+   同时撤掉主色胶囊底（整格大的淡蓝色块会被误读成"可点按钮"）→ 中性灰字居中。 */
+#bottomNav.batch-mode .batch-count{flex:1 1 0;margin-left:0;justify-content:center;background:transparent;color:var(--text-tertiary);}
 /* ★R40：批量操作按钮从 5 个增至 7 个（新增 置顶 / 合并），单行在 360px 屏每格不足 38px，
    图标 + 两字会被挤成省略号 → 改成两行。行断用 flex-basis:100% 的空 div(.batch-row-break)强制换行。 */
 .bottom-nav.batch-mode{flex-wrap:wrap;row-gap:6px;}
