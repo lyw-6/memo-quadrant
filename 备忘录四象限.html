@@ -941,6 +941,11 @@ body.kb-bar-up .inline-edit-bar{bottom:0!important;border-bottom-left-radius:0;b
 /* ★R82 编辑态：勾选框为 ed 内真实 DOM —— 防拖选扯散；编辑态与只读态同一套样式 */
 .todo-chk{-webkit-user-select:none;user-select:none;}
 [contenteditable="true"] .todo-chk{cursor:pointer;}
+/* ★R203 Chrome 清空残留兜底：全选删除后 Chrome 会把被删段落（li-line 的 text-indent:-1.5em）
+   的 computed 样式内联复制到新建段落 <div style="text-indent:-22.5px"> 上，随后输入的文字
+   整段左移出编辑框。JS 会在 input 后剥掉脏样式；此条 !important 先行挡住视觉左偏。
+   只重置块级 div/p——悬挂缩进壳 .li-line 是 span，不受影响。 */
+[contenteditable="true"] div,[contenteditable="true"] p{text-indent:0!important;}
 /* ★R63 编辑态待办可视化层：textarea 只能画纯文本，行首 [ ]/[x] 在编辑时是"裸文本"。
    该层叠在 textarea 之上：不透明色块盖住前缀换成可点的真实勾选框 + 完成行画删除线。
    ★R65 外面包一层 .todo-ov-wrap(overflow:hidden 精确罩住 textarea 边框盒)——
@@ -17480,6 +17485,95 @@ function _edFixTodoInput(ed){
     _edSetOffset(ed,pos);
   }catch(_){}
 }
+/* ★R203 Chrome 清空残留净化。
+   症状（真 Chromium 探针实测）：编号行(.li-line = padding-left:1.5em + text-indent:-1.5em)
+   全选删除后，Chrome 把被删段落的 computed 样式内联复制到重建段落上——
+   输入后 DOM 变 <div style="text-indent:-22.5px"><span style="background-color:transparent;...">新文字</span></div>
+   → 文字整段左移 22.5px 出编辑框（探针实测文字 left=-0.5 / 内容左缘=22）。
+   多行时残留多个 div 块：_edText 对 DIV 计 '\n' → 存库值凭空多出空行（单行残留 1 个 div
+   看不出、多行就异常）；清空后只余孤立 <br> 时 value 也停在 "\n" 而非 ""。
+   input 后（非组合中）调用：①剥所有后代内联 style（chk 子树除外）
+   ②DIV/P 还原为行模型——有内容才按需补 <br> 占位换行（与 _edText 的 DIV 计 '\n' 口径一致），空块直接拆掉
+   ③未知内联元素（B/I/U/FONT 等，浏览器富文本残留）unwrap 成纯文本
+   ④编辑区只剩孤立 <br> 时清成真空。
+   ★判据必须与"本轮能修掉的东西"严格一致（烟测实锤：判了 need 却不修 → 修完仍 need →
+   dispatch input → input 再 normalize → 无限递归 Maximum call stack size exceeded），
+   故 collect 必须把全部 need 源头处理掉，且 dispatch 前复查 need 仍真则放弃派发（递归保险丝）。
+   先记 value 偏移动 DOM，完事恢复光标；_edNorm 防重入。 */
+function _edNeedNormalize(ed){
+  var all=ed.querySelectorAll('*');
+  for(var i=0;i<all.length;i++){
+    var el=all[i],nn=el.nodeName;
+    if(el.hasAttribute&&el.hasAttribute('style'))return true;
+    if(nn==='DIV'||nn==='P')return true;
+    if(nn!=='BR'&&nn!=='SPAN'&&!_edIsChk(el))return true;
+  }
+  return !!(ed.childNodes.length===1&&ed.firstChild&&ed.firstChild.nodeName==='BR'); /* 孤立 <br> */
+}
+function _edHasContent(n,dir){ /* dir<0 向左遍历兄弟链，否则向右 */
+  for(var c=n;c;c=(dir<0)?c.previousSibling:c.nextSibling){
+    if(c.nodeType===3){ if(c.nodeValue.replace(/\u200B/g,'').length)return true; }
+    else if(c.nodeType===1&&c.nodeName!=='BR')return true;
+  }
+  return false;
+}
+function _edNormalize(ed){
+  if(!ed||ed._edNorm||ed._composing||!_edNeedNormalize(ed))return false;
+  var pos=null,sel=null;
+  try{
+    sel=window.getSelection();
+    if(sel&&sel.rangeCount&&ed.contains(sel.getRangeAt(0).startContainer))pos=_edGetOffset(ed);
+  }catch(_){}
+  ed._edNorm=true;
+  try{
+    /* ① 孤立 <br>：清成真空（value "\n"→""） */
+    if(ed.childNodes.length===1&&ed.firstChild.nodeName==='BR')ed.removeChild(ed.firstChild);
+    /* ② 剥内联 style（不进 chk 子树，SVG 样式不动）+ 收集 DIV/P 与未知内联元素 */
+    var blocks=[],junk=[];
+    (function collect(p){
+      for(var c=p.firstChild;c;c=c.nextSibling){
+        if(c.nodeType!==1)continue;
+        if(_edIsChk(c))continue;
+        if(c.hasAttribute&&c.hasAttribute('style'))c.removeAttribute('style');
+        if(c.nodeName==='DIV'||c.nodeName==='P'){blocks.push(c);continue;}
+        if(c.nodeName!=='BR'&&c.nodeName!=='SPAN'){junk.push(c);continue;} /* B/I/U/FONT 等：unwrap */
+        collect(c);
+      }
+    })(ed);
+    /* ③ DIV/P → 行模型 unwrap（空块不留 br） */
+    for(var i=0;i<blocks.length;i++){
+      var b=blocks[i]; if(!b.parentNode)continue;
+      var hasContent=_edHasContent(b.firstChild,1);
+      var prevContent=_edHasContent(b.previousSibling,-1); /* 前面有真内容才需要占位换行 */
+      if(hasContent&&prevContent)b.parentNode.insertBefore(document.createElement('br'),b);
+      var nextContent=_edHasContent(b.nextSibling,1);
+      var frag=document.createDocumentFragment();
+      while(b.firstChild)frag.appendChild(b.firstChild);
+      var last=frag.lastChild;
+      b.parentNode.replaceChild(frag,b);
+      if(hasContent&&nextContent&&last&&last.parentNode)last.parentNode.insertBefore(document.createElement('br'),last.nextSibling);
+    }
+    /* ③b 未知内联元素 unwrap（B/I/U/FONT 等富文本残留 → 纯文本；块级语义由 ③ 的 br 补齐） */
+    for(var j=0;j<junk.length;j++){
+      var jk=junk[j]; if(!jk.parentNode)continue;
+      var jf=document.createDocumentFragment();
+      while(jk.firstChild)jf.appendChild(jk.firstChild);
+      jk.parentNode.replaceChild(jf,jk);
+    }
+  }catch(_){}
+  ed._edNorm=false;
+  if(pos!=null){
+    try{
+      if(document.activeElement!==ed)ed.focus({preventScroll:true});
+      _edSetOffset(ed,Math.min(pos,_edWalkLen(ed)));
+    }catch(_){}
+  }
+  /* ★R203 递归保险丝：判据与修复范围意外失配时（修完仍 need），放弃派发 input，
+     宁可本轮值稍脏也不能无限递归爆栈（烟测实锤 Maximum call stack size exceeded） */
+  if(_edNeedNormalize(ed))return true;
+  try{ed.dispatchEvent(new Event('input',{bubbles:true}));}catch(_){}
+  return true;
+}
 function _edIsChk(c){return c.nodeType===1&&c.getAttribute&&c.getAttribute('data-pfx')!=null;}
 function _edText(ed){
   /* ★R83f：只有 ed 直属的 br 是行分隔(计 '\n')；行内 span 里的 br 是 Chromium 对空行内元素
@@ -17661,13 +17755,33 @@ function createTodoEditable(text,cls){
   ed.addEventListener('beforeinput',function(e){
     if(ed._edProg)return;
     if((e.inputType==='insertParagraph'||e.inputType==='insertLineBreak')&&!e.isComposing){
+      /* ★R203 幂等窗：手机输入法偶现对一次回车连发两个 insertParagraph（间隔<5ms），
+         第二个不吞就会多一行 =「换行两次」。窗口取 12ms——只命中程序性双发，
+         人类最快连按两次回车也 ≥40ms（探针实测 Playwright 极速双按 ~20ms，30ms 窗会误吞，
+         收紧到 12ms 后双按放行、双发仍拦住）。吞的时候照样 preventDefault，
+         防浏览器对第二个事件再执行默认插入。 */
+      var _now=Date.now();
+      if(ed._edParaAt&&_now-ed._edParaAt<12){ try{if(e.cancelable)e.preventDefault();}catch(_){ } return; }
       e.preventDefault();
-      /* ★R83c：不再用 execCommand('insertLineBreak')——pre-wrap 下 Chrome 会一次插两个 "\n" 文本节点
-         (换行+空行占位)，序列化凭空多一条空行。手动插单个 "\n" 文本节点：
-         .memo-content 是 pre-wrap，"\n" 即渲染换行；_edText/_edWalkLen 对文本节点按字符计数，天然一致。
-         选区异常时兜底退回 execCommand。 */
+      /* ★R203 主通路前置条件：选区必须在编辑区内。手机输入法组合结束/候选上屏后选区偶发
+         悬空(rangeCount=0 或锚点不在 ed)，旧代码此时落兜底 execCommand('insertLineBreak')
+         ——真 Chromium 探针实测它在 pre-wrap 下一次插两个换行(value 'X'→'X\n\n')，
+         就是「偶现换行两次」的根因。改为先把光标放回编辑区（优先 _lastSel，退回文末），
+         再走同一条手动插 '\n' 通路；实在拿不回选区宁可不换行也不双换行。 */
+      var _s=window.getSelection(),_in=false;
+      try{ _in=!!(_s&&_s.rangeCount&&ed.contains(_s.getRangeAt(0).startContainer)); }catch(_){ }
+      if(!_in){
+        try{
+          var _p=(typeof ed._lastSel==='number'&&ed._lastSel>=0)?ed._lastSel:_edWalkLen(ed);
+          if(document.activeElement!==ed)ed.focus({preventScroll:true});
+          _edSetOffset(ed,_p);
+          _s=window.getSelection();
+          _in=!!(_s&&_s.rangeCount&&ed.contains(_s.getRangeAt(0).startContainer));
+        }catch(_){ }
+      }
+      if(!_in)return;
+      ed._edParaAt=_now;
       try{
-        var _s=window.getSelection();
         if(_s&&_s.rangeCount&&ed.contains(_s.getRangeAt(0).startContainer)){
           /* ★R198 修「回车＝给上一行添加一行、光标到新行行首」（用户实测 'A⏎213⏎' 变 'A\n\n213'）：
              根因＝下面 _zwClean 用 nodeValue 原地剥 ZWSP 后，Chrome 会把**停在旧 ZWSP 附近**
@@ -17701,7 +17815,8 @@ function createTodoEditable(text,cls){
           return;
         }
       }catch(_){}
-      ed._edProg=true;try{document.execCommand('insertLineBreak');}catch(_){ }ed._edProg=false;
+      /* ★R203 旧兜底 execCommand('insertLineBreak') 实测一次插两个换行（换行两次的根因），已弃用。
+         走到这里＝选区始终拿不回：宁可不换行也不能双换行；结构由 input 后的 _edNormalize 兜底。 */
     }
   });
   /* 粘贴一律转纯文本（富 HTML 会污染行结构）；列表行多行拍平由 bindFsMetaBar 的 _pasteHook 优先接管 */
@@ -17740,9 +17855,9 @@ function createTodoEditable(text,cls){
   ed.addEventListener('compositionstart',function(){ed._composing=true;});
   ed.addEventListener('compositionend',function(){
     ed._composing=false;
-    setTimeout(function(){if(ed.isConnected)_edFixTodoInput(ed);},0);
+    setTimeout(function(){if(ed.isConnected){_edFixTodoInput(ed);_edNormalize(ed);}},0);
   });
-  ed.addEventListener('input',function(){if(!ed._composing)_edFixTodoInput(ed);});
+  ed.addEventListener('input',function(){if(!ed._composing){_edFixTodoInput(ed);_edNormalize(ed);}});
   return ed;
 }
 function renderContentHtml(text){
