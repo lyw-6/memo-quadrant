@@ -875,6 +875,18 @@ body.fs-editing{overflow:hidden;}
 .fs-edit-ok{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;gap:5px;height:30px;padding:0 16px;border:none;border-radius:15px;background:var(--color-primary,#6366f1);color:#fff;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;flex-shrink:0;box-shadow:0 3px 10px color-mix(in srgb,var(--color-primary,#6366f1) 38%,transparent),inset 0 1px 0 rgba(255,255,255,.25);-webkit-tap-highlight-color:transparent;transition:transform .12s ease,filter .15s ease;}
 .fs-edit-ok svg{width:15px;height:15px;flex:none;pointer-events:none;}
 .fs-edit-ok:active{transform:scale(.96);filter:brightness(.94);}
+/* ★R213b 全屏编辑器「预览」切换（用户：编辑态看到的永远是 ** 原文，长文后半段的加粗只能退出编辑+展开卡片才看得到）
+   — 编辑区隐藏、同尺寸只读渲染层顶上；渲染复用 renderContentHtml（与列表卡片同一函数），不碰 contenteditable 内核。 */
+.fs-preview{display:none;flex:1;min-height:0;overflow-y:auto;width:100%;box-sizing:border-box;padding:20px 22px 16px;font-size:15px;line-height:1.6;color:var(--text);white-space:break-spaces;overscroll-behavior:contain;}
+body.fs-previewing .fs-edit-area{display:none;}
+body.fs-previewing .fs-preview{display:block;}
+.fs-preview .memo-content{font-size:inherit;line-height:inherit;white-space:inherit;}
+.fs-preview .todo-chk{pointer-events:none;} /* 预览只读：勾选框不可点（要改就回编辑态） */
+.fs-preview-empty{color:var(--text-tertiary);}
+.fs-action-bar .fs-preview-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;} /* ★R213b 窄屏 390 下 5 按钮 flex:1 ≈70px，「返回编辑」4字会折行 → 文案用两字「编辑」+ nowrap 兜底 */
+.fs-action-bar .fs-preview-btn svg{width:15px;height:15px;flex:none;pointer-events:none;}
+.fs-action-bar .fs-preview-btn:hover{background:color-mix(in srgb,var(--text) 8%,var(--card-bg));color:var(--text);}
+.fs-action-bar .fs-preview-btn.on{background:var(--color-primary,#6366f1);border-color:var(--color-primary,#6366f1);color:#fff;}
 /* 就地编辑（列表/象限内联 textarea）：右下角「确定」悬浮按钮。
    点击 = 触发 blur → 走完整保存/退出逻辑；编辑结束由 exitMemoEdit/象限 blur 移除。 */
 .inline-edit-ok{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:9950;display:inline-flex;align-items:center;justify-content:center;gap:5px;height:40px;padding:0 20px;border:none;border-radius:20px;background:var(--color-primary,#6366f1);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;box-shadow:0 5px 16px color-mix(in srgb,var(--color-primary,#6366f1) 42%,transparent),inset 0 1px 0 rgba(255,255,255,.28);-webkit-tap-highlight-color:transparent;transition:transform .12s ease,filter .15s ease;}
@@ -19386,6 +19398,7 @@ function openFullEdit(id){
      否则新按钮会把「标签 / 紧急」压扁换行 —— 正是 R112 那个老坑。 */
   box.innerHTML=
     '<div class="fs-edit-area"></div>'+
+    '<div class="fs-preview"></div>'+
     '<div class="fs-meta-bar">'+fsMetaBarHtml()+
       /* 行尾「更多」：收着 复制 / 剪切 / 删除（★R121 从顶部那行搬来的）。
          只挂在全屏编辑器的属性行上——fsMetaBarHtml() 就地编辑栏也在用，那条浮条窄得多、放不下。 */
@@ -19395,6 +19408,7 @@ function openFullEdit(id){
     '<div class="fs-action-bar">'+
       '<button type="button" class="fs-undo" title="撤销输入 (Ctrl+Z)" aria-label="撤销输入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg></button>'+
       '<button type="button" class="fs-redo" title="重做输入 (Ctrl+Shift+Z)" aria-label="重做输入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h1"/></svg></button>'+
+      '<button type="button" class="fs-preview-btn" title="预览最终效果" aria-label="预览"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg><span class="pv-label">预览</span></button>'+
       '<span class="fs-bar-sep"></span>'+
       '<button type="button" class="fs-close" title="关闭并保存"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>关闭</button>'+
       '<button type="button" class="fs-edit-ok" title="完成编辑"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>确定</button>'+
@@ -19471,7 +19485,7 @@ function openFullEdit(id){
     // ★ 2026-09-02：「+」新增的备忘在全屏编辑器里内容为空就关闭 → 直接删除，不弹确认、不留空白条目。
     // 延后一拍：让 fs-cut/fs-del 等「先 closeFs 后 softDelete」的分支先跑完，避免重复处理已删除条目。
     setTimeout(function(){ try{ discardFreshAddIfBlank(id,ta.value); }catch(_){ } },0);
-    if(mask.parentNode)mask.parentNode.removeChild(mask);document.body.classList.remove('fs-editing');document.removeEventListener('keydown',onKey);if(typeof _fsBar!=='undefined'&&_fsBar)_fsBar.cleanup();
+    if(mask.parentNode)mask.parentNode.removeChild(mask);document.body.classList.remove('fs-editing');document.body.classList.remove('fs-previewing'); /* ★R213b 退出预览态标记，防下次打开残留 */ document.removeEventListener('keydown',onKey);if(typeof _fsBar!=='undefined'&&_fsBar)_fsBar.cleanup();
     // 清理 fs 属性弹层与轮询定时器
     var strayFs=document.querySelectorAll('.fs-dropdown'); for(var fi=0;fi<strayFs.length;fi++)strayFs[fi].remove();
     if(_fsTimers){for(var ti=0;ti<_fsTimers.length;ti++){clearInterval(_fsTimers[ti]);clearTimeout(_fsTimers[ti]);}_fsTimers=[];}
@@ -19486,6 +19500,35 @@ function openFullEdit(id){
   // Esc / 关闭 / 点遮罩 = 放弃编辑：仅恢复被清空的内容(不留空白卡片)，不弹确认框
   function onKey(e){ if(e.key==='Escape'){ try{fsResolveEmpty();}catch(_){} closeFs(); } }
   document.addEventListener('keydown',onKey);
+  /* ★R213b 预览切换：编辑区 → 只读渲染视图（列表卡片同一渲染函数）。要点：
+     ① 渲染源是 **当前编辑中的内容**（ta.value，可能还没落盘），不是 memo.text；
+     ② 字号跟随双指缩放后的编辑字号（在 _pvWrap 上设 font-size，内含 .memo-content 走 inherit）；
+     ③ 预览态不改任何数据，"关闭/确定"照常读 ta.value 保存；返回编辑时恢复光标位置。 */
+  var _pvWrap=box.querySelector('.fs-preview');
+  var _pvBtn=box.querySelector('.fs-preview-btn');
+  var _pvOn=false,_pvSel=null;
+  function _pvRender(){
+    var txt=ta.value||'';
+    var inner=txt?renderContentHtml(txt):'<span class="fs-preview-empty">（暂无内容）</span>';
+    _pvWrap.innerHTML='<div class="memo-content">'+inner+'</div>';
+    try{_pvWrap.style.fontSize=(parseFloat(getComputedStyle(ta).fontSize)||15)+'px';}catch(_){}
+  }
+  if(_pvBtn&&_pvWrap){
+    _pvBtn.addEventListener('click',function(e){
+      e.stopPropagation();
+      _pvOn=!_pvOn;
+      if(_pvOn){
+        try{var _s=ta.selectionStart;if(typeof _s==='number')_pvSel=_s;}catch(_){}
+        _pvRender();
+      }
+      document.body.classList.toggle('fs-previewing',_pvOn);
+      _pvBtn.classList.toggle('on',_pvOn);
+      _pvBtn.title=_pvOn?'返回编辑':'预览最终效果';
+      _pvBtn.setAttribute('aria-label',_pvOn?'返回编辑':'预览');
+      var _lb=_pvBtn.querySelector('.pv-label');if(_lb)_lb.textContent=_pvOn?'编辑':'预览';
+      if(!_pvOn){ try{ta.focus();if(_pvSel!=null)ta.setSelectionRange(_pvSel,_pvSel);}catch(_){} }
+    });
+  }
   box.querySelector('.fs-close').addEventListener('click',function(e){
     e.stopPropagation();
     var _r=''; try{ _r=fsResolveEmpty(); }catch(_){}
