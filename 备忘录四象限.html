@@ -875,6 +875,19 @@ body.fs-previewing .fs-preview{display:block;}
 .fs-action-bar .fs-preview-btn svg{width:15px;height:15px;flex:none;pointer-events:none;}
 .fs-action-bar .fs-preview-btn:hover{background:color-mix(in srgb,var(--text) 8%,var(--card-bg));color:var(--text);}
 .fs-action-bar .fs-preview-btn.on{background:var(--color-primary,#6366f1);border-color:var(--color-primary,#6366f1);color:#fff;}
+/* ★R216b 手机端加高：34→40px（用户"感觉小了点"；触控高度对齐 40px 档） */
+@media (max-width:560px){
+  .fs-action-bar button{height:40px;border-radius:13px;}
+  .fs-action-bar{padding:8px 10px calc(14px + env(safe-area-inset-bottom));}
+}
+/* ★R216b 输入法弹出（body.fs-kb，由 _fitToVV 按 innerHeight−visualViewport.height>120 判定）：
+   操作栏从「透明浮条」变「通栏工具条」——实色底 + 上边框占满整行，按钮自适应加高 44px，
+   确定按钮 flex 1.6 占更大份额（用户："不要胶囊了，直接占满这一行，给确定留大一点位置"）。 */
+body.fs-kb .fs-action-bar{gap:6px;padding:6px 8px calc(8px + env(safe-area-inset-bottom));background:var(--card-bg);border-top:1px solid var(--border);}
+body.fs-kb .fs-action-bar button{height:44px;border-radius:12px;}
+body.fs-kb .fs-action-bar .fs-edit-ok{flex:1.6;padding:0 24px;font-size:14px;}
+[data-theme="glass"] body.fs-kb .fs-action-bar{background:rgba(255,255,255,calc(var(--glass-alpha) * 1.15));backdrop-filter:blur(calc(var(--glass-blur) * 1.1)) saturate(var(--glass-sat));-webkit-backdrop-filter:blur(calc(var(--glass-blur) * 1.1)) saturate(var(--glass-sat));}
+html.glass-text-dark [data-theme="glass"] body.fs-kb .fs-action-bar{background:rgba(15,23,42,calc(var(--glass-alpha) * 1.3));}
 /* 就地编辑（列表/象限内联 textarea）：右下角「确定」悬浮按钮。
    点击 = 触发 blur → 走完整保存/退出逻辑；编辑结束由 exitMemoEdit/象限 blur 移除。 */
 .inline-edit-ok{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:9950;display:inline-flex;align-items:center;justify-content:center;gap:5px;height:40px;padding:0 20px;border:none;border-radius:20px;background:var(--color-primary,#6366f1);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;box-shadow:0 5px 16px color-mix(in srgb,var(--color-primary,#6366f1) 42%,transparent),inset 0 1px 0 rgba(255,255,255,.28);-webkit-tap-highlight-color:transparent;transition:transform .12s ease,filter .15s ease;}
@@ -19169,7 +19182,12 @@ function openFullEdit(id){
   // ★ 2026-08-31 修复：mask 高度跟 visualViewport 走(键盘/浏览器工具栏开关时实时缩放)，
   // 让底部工具栏始终在可视区内、不被键盘/工具栏盖住。旧实现 inset:0 = 布局视口高度(包含工具栏之下)→ 手机端 meta 按钮被覆盖。
   var _vv=window.visualViewport;
-  function _fitToVV(){ if(_vv){ mask.style.height=_vv.height+'px'; mask.style.top=_vv.offsetTop+'px'; } }
+  function _fitToVV(){ if(_vv){ mask.style.height=_vv.height+'px'; mask.style.top=_vv.offsetTop+'px'; }
+    /* ★R216b 键盘弹出判定：可视区高度比窗口小 120px 以上 = 输入法在位 → 操作栏切「通栏工具条」态 */
+    try{ var _kb=!!(_vv&&window.innerHeight-_vv.height>120);
+      if(document.body.classList.contains('fs-kb')!==_kb)document.body.classList.toggle('fs-kb',_kb);
+    }catch(_){ }
+  }
   _fitToVV();
   if(_vv){ _vv.addEventListener('resize',_fitToVV); _vv.addEventListener('scroll',_fitToVV); }
   var ta=box.querySelector('.fs-edit-area');
@@ -19236,7 +19254,7 @@ function openFullEdit(id){
     // ★ 2026-09-02：「+」新增的备忘在全屏编辑器里内容为空就关闭 → 直接删除，不弹确认、不留空白条目。
     // 延后一拍：让 fs-cut/fs-del 等「先 closeFs 后 softDelete」的分支先跑完，避免重复处理已删除条目。
     setTimeout(function(){ try{ discardFreshAddIfBlank(id,ta.value); }catch(_){ } },0);
-    if(mask.parentNode)mask.parentNode.removeChild(mask);document.body.classList.remove('fs-editing');document.body.classList.remove('fs-previewing'); /* ★R213b 退出预览态标记，防下次打开残留 */ document.removeEventListener('keydown',onKey);if(typeof _fsBar!=='undefined'&&_fsBar)_fsBar.cleanup();
+    if(mask.parentNode)mask.parentNode.removeChild(mask);document.body.classList.remove('fs-editing');document.body.classList.remove('fs-previewing');document.body.classList.remove('fs-kb'); /* ★R213b/R216b 退出预览态与键盘工具条态标记，防下次打开残留 */ document.removeEventListener('keydown',onKey);if(typeof _fsBar!=='undefined'&&_fsBar)_fsBar.cleanup();
     // 清理 fs 属性弹层与轮询定时器
     var strayFs=document.querySelectorAll('.fs-dropdown'); for(var fi=0;fi<strayFs.length;fi++)strayFs[fi].remove();
     if(_fsTimers){for(var ti=0;ti<_fsTimers.length;ti++){clearInterval(_fsTimers[ti]);clearTimeout(_fsTimers[ti]);}_fsTimers=[];}
