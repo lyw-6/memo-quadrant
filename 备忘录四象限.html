@@ -875,10 +875,16 @@ body.fs-previewing .fs-preview{display:block;}
 .fs-action-bar .fs-preview-btn svg{width:15px;height:15px;flex:none;pointer-events:none;}
 .fs-action-bar .fs-preview-btn:hover{background:color-mix(in srgb,var(--text) 8%,var(--card-bg));color:var(--text);}
 .fs-action-bar .fs-preview-btn.on{background:var(--color-primary,#6366f1);border-color:var(--color-primary,#6366f1);color:#fff;}
-/* ★R216b 手机端加高：34→40px（用户"感觉小了点"；触控高度对齐 40px 档） */
+/* ★R216b 手机端加高：34→40px（用户"感觉小了点"；触控高度对齐 40px 档）
+   ★R216c 补漏（用户复测"没做"实锤）：「确定」被 .fs-action-bar .fs-edit-ok{height:34px}（0,2,0）
+   压住，上面的 button 通配（0,1,1）落不到它 → 手机上整排 40 就它 34，反而是最矮的。
+   ★属性行只温和加高 28→32（图标 28→32、gap 4→3 腾宽度）：R121 在 360px 宽度上本来就只有
+   ~8px 富余，加到 36 会把「标签/紧急」挤到 36px 宽（烟测 R121⑨ 实锤裁字）；32px 档实测
+   63px+ 不压扁。操作行底 padding 14→12 补回编辑区高度（R121③ ≥700 的口径）。 */
 @media (max-width:560px){
   .fs-action-bar button{height:40px;border-radius:13px;}
-  .fs-action-bar{padding:8px 10px calc(14px + env(safe-area-inset-bottom));}
+  .fs-action-bar .fs-edit-ok{height:40px;border-radius:13px;}
+  .fs-action-bar{padding:8px 10px calc(12px + env(safe-area-inset-bottom));}
 }
 /* ★R216b 输入法弹出（body.fs-kb，由 _fitToVV 按 innerHeight−visualViewport.height>120 判定）：
    操作栏从「透明浮条」变「通栏工具条」——实色底 + 上边框占满整行，按钮自适应加高 44px，
@@ -940,7 +946,7 @@ body.kb-bar-up .inline-edit-bar{bottom:0!important;border-bottom-left-radius:0;b
    → 续行比首行正文深 ~0.4em（用户截图实锤"第二行的 6 和第一行的 6 没对齐"）。
    前缀装进 .li-pfx（min-width:1.5em，3 位数序号自动加宽）→ 正文与续行都从 1.5em 起严格对齐。
    ★text-indent 是继承属性，li-pfx 内必须重置回 0，否则前缀自身再左移 1.5em。 */
-.li-pfx{display:inline-block;min-width:1.5em;text-indent:0;} /* ★可编辑 span（勿加 user-select:none——前缀文本要可选中/可编辑） */
+.li-pfx{display:inline-block;min-width:1.5em;text-indent:0;} /* ★R217 编辑态是 contenteditable=false 原子 span（保正文不被并进前缀）；勿加 user-select:none——前缀文本要可选中可复制 */
 /* ★R209 内联语法样式：**粗体** / ==高亮== / 链接（预览态渲染，编辑态显示原文） */
 .md-b{font-weight:700;}
 .md-hl{background:rgba(250,204,21,.38);color:inherit;border-radius:3px;padding:0 2px;}
@@ -995,6 +1001,15 @@ body.kb-bar-up .inline-edit-bar{bottom:0!important;border-bottom-left-radius:0;b
 .fs-meta-btn:hover{background:color-mix(in srgb,var(--text) 8%,var(--card-bg));}
 .fs-meta-btn:active{transform:scale(.96);}
 .fs-meta-btn .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+/* ★R216c 手机端属性行温和加高：28→32px。必须写在 996/1001 基础规则**之后**（同特异性靠后者赢，
+   写在前面会被静默压掉——R216b 首版就栽在这）。只动全屏编辑器的属性行；inline-edit-bar 的
+   同名按钮有更高特异性规则（(0,3,0)/(1,1,0)），不受影响。 */
+@media (max-width:560px){
+  .fs-meta-bar{padding:5px 6px 0;gap:3px;}
+  .fs-meta-btn{height:32px;border-radius:16px;}
+  .fs-meta-btn.fs-icon-btn{width:30px;}
+  .fs-meta-sep{height:22px;}
+}
 .fs-meta-btn.is-set{color:var(--color-primary,#6366f1);border-color:color-mix(in srgb,var(--color-primary,#6366f1) 45%,transparent);background:color-mix(in srgb,var(--color-primary,#6366f1) 8%,transparent);}
 /* fs 内分类/象限小弹层（挂 body，fixed 定位） */
 .fs-dropdown{position:fixed;min-width:120px;max-width:60vw;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-popup);padding:4px;z-index:10060;opacity:0;transform:scale(.96);pointer-events:none;transition:all .12s ease;}
@@ -17479,6 +17494,14 @@ function _edLineFrag(line){
       if(_lm[1])frag.appendChild(document.createTextNode(_lm[1]));
       var _px=document.createElement('span');
       _px.className='li-pfx';
+      /* ★R217 前缀必须是**原子不可编辑** span。此前为可编辑 span，Chrome 的插入亲和性会把
+         「停在前缀之后的边界」上的输入并进前一个文本 run（最小复现实锤：正文为空/非空、
+         inline / inline-block、包不包 .li-body 五形态全部变成 <span class="li-pfx">2. 正文</span>），
+         即用户报的「编号后输入文字会错乱的换行」——正文整段继承前缀的 min-width:1.5em +
+         text-indent:0，续行不再悬挂缩进。ce=false 后输入一律落在前缀之后（唯一正确的形态）。
+         ★序列化零影响：_edText/_edWalkLen/_edDistTo 只按文本递归，不看 contenteditable。
+         ★方向键会整体跳过前缀（同 todo-chk），End/Home 已由 keydown 拦截自算行界，不受影响。 */
+      _px.setAttribute('contenteditable','false');
       _px.appendChild(document.createTextNode(_lm[2]));
       frag.appendChild(_px);
       if(_lm[3])frag.appendChild(document.createTextNode(_lm[3]));
@@ -17797,23 +17820,27 @@ function _edLen(node,isBlock){
   for(var c=node.firstChild;c;c=c.nextSibling)n+=_edLen(c,false);
   return n;
 }
-function _edGetOffset(ed){
+/* ★R217 useEnd=true 取选区**尾**偏移：selectionEnd 垫片此前与 selectionStart 同实现（都取 start）
+   → R83f「退格删整个前缀」的 p!==se 判据恒假 → **有选区时**按退格也会走"删前缀"分支
+   （实测：选中正文"二"按退格，值变 '1. 一\n二\n1. 三'——正文没删掉反倒把前缀删了）。 */
+function _edGetOffset(ed,useEnd){
   var sel=window.getSelection();
   if(!sel||!sel.rangeCount)return ed._lastSel||0;
   var r=sel.getRangeAt(0);
-  if(!ed.contains(r.startContainer))return ed._lastSel||0;
-  if(r.startContainer===ed){
+  var cn=useEnd?r.endContainer:r.startContainer, co=useEnd?r.endOffset:r.startOffset;
+  if(!ed.contains(cn))return ed._lastSel||0;
+  if(cn===ed){
     /* ★R108：原实现只认 直属文本/BR/chk，非 chk 的元素(todo-txt 等)整个跳过 → 块级光标位置
        (Chrome 在删空行内元素后会把光标挂到块上)偏移少算整段文字(实测 19 算成 16)。
        改用与 _edWalkLen 同口径的 _edLen 递归累加。 */
     var n=0,c=ed.firstChild,i=0;
-    while(c&&i<r.startOffset){
+    while(c&&i<co){
       n+=_edLen(c,true);
       c=c.nextSibling;i++;
     }
     return n;
   }
-  return _edDistTo(ed,r.startContainer,r.startOffset);
+  return _edDistTo(ed,cn,co);
 }
 function _edSetOffset(ed,pos){
   var acc=0,r=document.createRange(),done=false;
@@ -17840,12 +17867,43 @@ function _edSetOffset(ed,pos){
           var pl=_edPfxLen(c);
           if(pos<acc+pl){try{r.setStartBefore(c);}catch(_){}r.collapse(true);done=true;return;}
           acc+=pl;
-        }else walk(c);
+        }else if(c.classList&&c.classList.contains('li-pfx')){
+          /* ★R217 前缀 span 按"原子"落光标：pos 落在它内部会把**后续输入整段吞进前缀**
+             （DOM 变 <span class="li-pfx">3. 第三项</span>：正文继承前缀的 min-width:1.5em +
+             text-indent:0，续行不再悬挂缩进 = 用户报的「编号后输入文字错乱的换行」）。
+             根因＝前缀文本节点在其后的正文节点之前被命中，且 pos===acc+前缀长 也判进了它。
+             修法：偏移落在前缀区间内 → 停在 span 之前；正好等于前缀末尾 → 交给下一轮循环
+             落进前缀**之后**的正文节点（无后继/后继是 BR 则停在 span 之后）。 */
+          var pl2=_edLen(c,false),nx=c.nextSibling;
+          if(pos<acc+pl2){try{r.setStartBefore(c);}catch(_){}r.collapse(true);done=true;return;}
+          acc+=pl2;
+          if(pos<=acc&&(!nx||nx.nodeName==='BR')){try{r.setStartAfter(c);}catch(_){}r.collapse(true);done=true;return;}
+          /* 有后继正文节点：不做处理，下一轮循环自然落在正文起点 */
+        }
+        else walk(c);
       }
     }
   })(ed);
   if(!done){r.selectNodeContents(ed);r.collapse(false);}
   try{var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);}catch(_){}
+}
+/* ★R217 光标"逃出"前缀 span：点击/浏览器规范化都可能把光标锚在 .li-pfx 的文本节点里
+   （点正文起点时最近的可落点就是前缀末尾）→ 输入被吞进前缀（同 _edSetOffset 那个坑）。
+   插入前把光标挪到 span 之后（正文起点）；返回是否挪过。只动"确实在前缀内"的选区。 */
+function _edEscapePfx(ed){
+  try{
+    var sel=window.getSelection();if(!sel||!sel.rangeCount)return false;
+    var n=sel.getRangeAt(0).startContainer;
+    if(!n||!ed.contains(n))return false;
+    var pf=null;
+    if(n.nodeType===1&&n.classList&&n.classList.contains('li-pfx'))pf=n;
+    else if(n.parentElement&&n.parentElement.closest)pf=n.parentElement.closest('.li-pfx');
+    if(!pf||!ed.contains(pf))return false;
+    var r=document.createRange();
+    r.setStartAfter(pf);r.collapse(true);
+    sel.removeAllRanges();sel.addRange(r);
+    return true;
+  }catch(_){return false;}
 }
 function createTodoEditable(text,cls){
   var ed=document.createElement('div');
@@ -17864,7 +17922,7 @@ function createTodoEditable(text,cls){
     set:function(v){_edBuild(ed,v);if(ed._autoGrow&&typeof autoResize==='function')autoResize(ed);}
   });
   Object.defineProperty(ed,'selectionStart',{get:function(){return _edGetOffset(ed);},set:function(v){ed._lastSel=v;_edSetOffset(ed,v);}});
-  Object.defineProperty(ed,'selectionEnd',{get:function(){return _edGetOffset(ed);},set:function(v){}});
+  Object.defineProperty(ed,'selectionEnd',{get:function(){return _edGetOffset(ed,true);},set:function(v){}});
   ed.setSelectionRange=function(a){ed._lastSel=a;_edSetOffset(ed,a);};
   /* ★R83f 列表标记一次退格删除：光标在列表行标记区内（0<col≤prefixLen）时，退格一次删掉
      整个前缀（1. / • / [ ]）变普通行——业界通用行为。默认行为一次只删 1 个字符，
@@ -17928,6 +17986,9 @@ function createTodoEditable(text,cls){
      _edSetOffset 四处统一剥离 ZWSP，值零污染；ZWSP 不可见、随内容走不碍事。 */
   ed.addEventListener('beforeinput',function(e){
     if(ed._edProg)return;
+    /* ★R217 插入类输入前先把光标挪出 .li-pfx（点击落点/浏览器规范化的兜底，主修在 _edSetOffset）。
+       组合输入中不介入（动选区会打断候选）；组合结束由 compositionend 的 normalize 兜底。 */
+    if(!e.isComposing&&/^insert/.test(e.inputType||'')&&e.inputType!=='insertParagraph'&&e.inputType!=='insertLineBreak')_edEscapePfx(ed);
     if((e.inputType==='insertParagraph'||e.inputType==='insertLineBreak')&&!e.isComposing){
       /* ★R203 幂等窗：手机输入法偶现对一次回车连发两个 insertParagraph（间隔<5ms），
          第二个不吞就会多一行 =「换行两次」。窗口取 12ms——只命中程序性双发，
