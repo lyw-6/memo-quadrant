@@ -242,6 +242,27 @@ button, .filter-chip, .nav-tab, .btn-icon, .memo-item, .cell-item, .q-check, .se
    内联编辑 / 全屏编辑 / 快速添加都会挂 body.kb-edit（见 kbEditStart/kbEditEnd），直接复用它 */
 .hist-actions{display:none;align-items:center;gap:4px;flex-shrink:0;margin:0;background:transparent;border:0;padding:0;border-radius:0;}
 body.kb-edit .hist-actions{display:inline-flex;}
+/* ★R218 编辑态「撤销/重做」浮动接替（用户：编辑偏下的备忘时右上角两个按钮利用不上）
+   根因＝.hist-actions 的宿主 .header 是普通文档流、整页无吸顶元素 → 编辑靠下的备忘时顶栏
+   连同撤销/重做一起滚出视口（实测 390 宽编辑第 16 条：header top −861、按钮 rect top −860，
+   elementFromPoint 命中的是下面的备忘卡）。
+   修法＝顶栏**滚出视口**时把这两个按钮钉到右上角（原位置）浮起来，滚回顶部自动归位；
+   只在编辑态生效，且**排除全屏编辑**（那边底部操作行已有撤销/重做，浮起来会重复一处）。
+   ★别改成"编辑时整条顶栏吸顶"：那会让回收站/统计/主题/设置常驻占屏，与既有
+   「输入时导航消失」的克制风格相反。 */
+body.kb-edit:not(.fs-editing).hist-float .hist-actions{position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;z-index:10040;display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--card-bg);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.16);}
+/* 胶囊里两个按钮**去掉自己的底与描边**（.btn-icon 默认 card-bg+1px border，落在同色胶囊里
+   只剩两个淡淡的白圈，像禁用态）→ 用透明底 + 图标提到 --text，读作"一枚胶囊里的两个动作" */
+body.kb-edit:not(.fs-editing).hist-float .hist-actions .btn-icon{width:34px;height:34px;border:0;background:transparent;color:var(--text);border-radius:999px;}
+body.kb-edit:not(.fs-editing).hist-float .hist-actions .btn-icon svg{width:16px;height:16px;}
+body.kb-edit:not(.fs-editing).hist-float .hist-actions .btn-icon:not(:disabled):hover,
+body.kb-edit:not(.fs-editing).hist-float .hist-actions .btn-icon:not(:disabled):active{background:color-mix(in srgb,var(--text) 12%,transparent);}
+[data-theme="glass"] body.kb-edit:not(.fs-editing).hist-float .hist-actions{background:rgba(255,255,255,calc(var(--glass-alpha) * 1.15));border-color:transparent;-webkit-backdrop-filter:blur(calc(var(--glass-blur) * 1.1)) saturate(var(--glass-sat));backdrop-filter:blur(calc(var(--glass-blur) * 1.1)) saturate(var(--glass-sat));}
+html.glass-text-dark [data-theme="glass"] body.kb-edit:not(.fs-editing).hist-float .hist-actions{background:rgba(15,23,42,calc(var(--glass-alpha) * 1.3));}
+/* ★玻璃主题的 .btn-icon 自带渐变底 + backdrop-filter + inset 高光：把底与描边改成透明后，
+   backdrop-filter 仍然会**按元素矩形模糊背景**（框没了、糊成的圆还在）→ 胶囊里冒出两个淡淡的白圈。
+   这里必须把 backdrop-filter/box-shadow 一并清掉，只留胶囊这一层玻璃。 */
+[data-theme="glass"] body.kb-edit:not(.fs-editing).hist-float .hist-actions .btn-icon{background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
 /* ★R113 顶栏「更多」菜单：回收站 / 统计 / 主题 收口于此，顶栏常驻按钮 8 → 4（搜索·省略视图·更多·设置） */
 .more-wrap-h{position:relative;display:inline-flex;flex:none;}
 .header-more{position:absolute;top:calc(100% + 6px);right:0;z-index:120;display:none;flex-direction:column;gap:1px;padding:5px;min-width:150px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.18);}
@@ -12437,6 +12458,33 @@ function _bindHistBtn(btn,cmd,fallback,emptyMsg){
     fallback();
   });
 }
+/* ★R218 编辑态「撤销/重做」浮动接替（CSS 在同名注释处）：
+   顶栏滚出视口上沿时给 body 挂 .hist-float，让 .hist-actions 钉在右上角原位置。
+   ★判据＝顶栏 rect.bottom<=0（整体滚出）：部分可见时保持原样，避免同一对按钮两处同时出现。
+   ★零开销：浏览态 _histFloatQueue 直接 return，不排 rAF；只有编辑态滚动才逐帧算一次
+   （读一次 getBoundingClientRect，不触发强制同步布局的写操作）。 */
+var _histFloatPending=false;
+function _histFloatApply(){
+  _histFloatPending=false;
+  var b=document.body;if(!b)return;
+  if(!b.classList.contains('kb-edit')||b.classList.contains('fs-editing')){b.classList.remove('hist-float');return;}
+  var h=document.querySelector('.header');
+  if(!h){b.classList.remove('hist-float');return;}
+  var r=h.getBoundingClientRect();
+  b.classList.toggle('hist-float',r.bottom<=0);
+}
+function _histFloatQueue(){
+  if(_histFloatPending)return;
+  var b=document.body;if(!b||!b.classList.contains('kb-edit'))return; /* 浏览态不排帧 */
+  _histFloatPending=true;requestAnimationFrame(_histFloatApply);
+}
+function _histFloatInit(){
+  window.addEventListener('scroll',_histFloatQueue,{passive:true});
+  window.addEventListener('resize',_histFloatQueue);
+  if(window.visualViewport){try{visualViewport.addEventListener('resize',_histFloatQueue);}catch(_){}}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_histFloatInit);
+else _histFloatInit();
 // ===== 搜索：按内容过滤 =====
 function matchSearch(memo){
   if(!currentSearch)return true;
@@ -14267,6 +14315,7 @@ function _kbSpacer(px){
 function kbEditStart(ta){
   document.body.classList.add('kb-edit');
   try{updateHistButtons();}catch(_){} /* ★R122 进入编辑态立刻亮撤销键,别让用户对着 700ms 灰按钮空点 */
+  try{_histFloatQueue();}catch(_){} /* ★R218 已经在页面下方进编辑 → 顶栏早已滚出 → 撤销/重做立刻浮到右上角 */
   var item=ta.closest?ta.closest('.memo-item'):null;
   var el=item||ta;
   /* ★R77 四象限内联编辑：滚动发生在 .cell-items 格子容器内(原生滚动)，页面级顶起
@@ -14386,6 +14435,7 @@ function kbEditStart(ta){
 }
 function kbEditEnd(){
   document.body.classList.remove('kb-edit');
+  document.body.classList.remove('hist-float'); /* ★R218 退出编辑 → 撤销/重做回到顶栏（防残留浮起） */
   try{updateHistButtons();}catch(_){} /* ★R122 离开编辑态 → 撤销按钮回到按 histIndex 判空 */
   document.body.classList.remove('kb-bar-up'); /* ★R69 */
   _cbDisarm(); /* ★R108 退出编辑 → 收起「回到编辑位置」按钮 */
