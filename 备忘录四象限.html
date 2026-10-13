@@ -280,7 +280,7 @@ html.glass-text-dark [data-theme="glass"] body.kb-edit:not(.fs-editing).hdr-off 
 .bloom-mask{position:fixed;inset:0;z-index:44;display:none;background:rgba(0,0,0,.10);}
 body.bloom-on .bloom-mask{display:block;}
 body.bloom-on #fabAdd{transform:rotate(45deg);}
-.bloom-item{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border:1px solid var(--border);border-radius:50%;background:var(--card-bg);color:var(--text-secondary);box-shadow:0 4px 12px rgba(0,0,0,.14);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;opacity:0;pointer-events:none;transform:translate(0,0) scale(.35);
+.bloom-item{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border:1px solid var(--border);border-radius:50%;background:var(--card-bg);color:var(--text-secondary);box-shadow:0 4px 12px rgba(0,0,0,.14);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none;opacity:0;pointer-events:none;transform:translate(0,0) scale(.35);
   transition:transform .36s cubic-bezier(.34,1.56,.64,1),opacity .16s ease,background .15s,color .15s,border-color .15s;
   transition-delay:calc(var(--i,0) * 32ms);}
 body.bloom-on .bloom-item{opacity:1;pointer-events:auto;transform:translate(var(--dx,0px),var(--dy,0px)) scale(1);}
@@ -3482,7 +3482,6 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
       <div class="header-more" id="headerMore" role="menu">
         <button class="hm-item" type="button" id="trash-btn-top" title="回收站" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg><span>回收站</span><span class="hm-tail" id="hmTrashTail"></span></button>
         <button class="hm-item" type="button" id="stats-btn-top" title="统计" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="11" width="3" height="9"/><rect x="11" y="6" width="3" height="14"/><rect x="16" y="14" width="3" height="6"/></svg><span>统计</span><span class="hm-tail" id="hmStatsTail"></span></button>
-        <div id="hmActions"></div>
         <div class="hm-row" role="group" aria-label="主题">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="17.6" cy="10.6" r="1.2" fill="currentColor" stroke="none"/><circle cx="8.6" cy="7.6" r="1.2" fill="currentColor" stroke="none"/><circle cx="6.6" cy="12.6" r="1.2" fill="currentColor" stroke="none"/><path d="M12 2.5a9.5 9.5 0 0 0 0 19c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1 0-.9.7-1.6 1.6-1.6h1.8a5.8 5.8 0 0 0 5.8-5.8c0-4.9-4.4-7.9-10-7.9z"/></svg>
           <span>主题</span>
@@ -21227,31 +21226,19 @@ function syncHeaderMoreCounts(){
   if(t)t.textContent=deleted.length?String(deleted.length):'';
   var s=document.getElementById('hmStatsTail');
   if(s)s.textContent=memos.length?(memos.length+' 条'):'';
-  syncHeaderMoreActions(); /* ★R219 动作项文案随状态变（管理分组/新建分组、折叠/展开全部）→ 每次开菜单都重算 */
 }
-/* ★R219 顶栏「更多」里补一份与 FAB 长按菜单完全相同的四项动作。
-   起因（用户）："有时候忘了长按右下角那个 + 会弹出菜单选择" —— 长按是个"藏起来的手势"，
-   没有任何视觉线索；把它放进用户本来就会点的「更多」菜单里，功能就变成"找得到"。
-   ★动作函数与 FAB 菜单共用同一批（toggleBatchMode 通过 window 暴露；其余三个本就是顶层函数），
-     图标语言也沿用同一套；文案只有两处动态：有分组才出折叠项、管理分组/新建分组按有无分组。
-   ⚠️图标字符串在这里自备一遍：FAB 那四个常量定义在嵌套作用域里（局部 var），顶层拿不到。 */
-var HM_ICO_BATCH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
-var HM_ICO_DONE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>';
-var HM_ICO_FOLD='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 4 12 9 17 4"/><polyline points="7 20 12 15 17 20"/></svg>';
-function _hmActionsHtml(){
-  var anyOpen=false;
-  for(var i=0;i<memo_groups.length;i++){if(!collapsedGroups[memo_groups[i].id]){anyOpen=true;break;}}
-  return ''
-    +'<button class="hm-item" type="button" data-hmact="batch" role="menuitem">'+HM_ICO_BATCH+'<span>批量操作</span></button>'
-    +'<button class="hm-item" type="button" data-hmact="managegrp" role="menuitem">'+ICON_GROUPS+'<span>'+(memo_groups.length?'管理分组':'新建分组')+'</span></button>'
-    +(memo_groups.length?('<button class="hm-item" type="button" data-hmact="foldgrp" role="menuitem">'+HM_ICO_FOLD+'<span>'+(anyOpen?'折叠全部分组':'展开全部分组')+'</span></button>'):'')
-    +'<button class="hm-item" type="button" data-hmact="clear" role="menuitem">'+HM_ICO_DONE+'<span>清空已完成</span></button>';
-}
-/* 挂进顶栏「更多」的 #hmActions（★R219b 起悬浮快捷钮已撤，改为 R220 的点 + 开花） */
-function syncHeaderMoreActions(){
-  var box=document.getElementById('hmActions');if(!box)return;
-  var h=_hmActionsHtml();
-  if(box._sig!==h){box._sig=h;box.innerHTML=h;} /* 差量：菜单常开时 render 反复调用不重建 DOM */
+/* ★R219 顶栏「更多」里曾补一份与 FAB 长按菜单相同的四项动作（起因：长按是没有视觉线索的手势，
+   用户"忘了长按 + 会弹菜单"）。★R220b 已**整体撤掉**（用户："把…更多里的菜单还原回原来的样子"）：
+   那四项改由「点 + 开花」承担，菜单回到原来的 回收站 / 统计 / 主题 三样，不再重复一份入口。
+   动作派发 `runHeaderMoreAction` 保留 —— 开花的花瓣直接复用它（同一批动作函数）。 */
+/* ★R220b 顶栏「更多」还原成原来那三样（回收站 / 统计 / 主题）：
+   R219 往里塞的四项动作已由「点 + 开花」承担，菜单里不再重复一份（用户："把…更多里的菜单还原回原来的样子"）。
+   ★但那四项动作的**派发口径**留着（runHeaderMoreAction），开花的五片花瓣直接复用它。 */
+function runHeaderMoreAction(a){
+  if(a==='batch'){if(typeof window.toggleBatchMode==='function')window.toggleBatchMode();}
+  else if(a==='managegrp')openGroupManage();
+  else if(a==='foldgrp')toggleAllGroupsFold();
+  else if(a==='clear')clearCompleted();
 }
 /* ★R220 点 + 开花：五项沿左上 1/4 弧弹开。
    位置在 JS 里按"当前可见项数"算（无分组时少一项 → 角度自动重排，不留空档）；
@@ -21283,6 +21270,9 @@ function _bloomLayout(){
   }
 }
 function isBloomOpen(){return document.body.classList.contains('bloom-on');}
+var BLOOM_HOLD_MS=350;   /* ★R220c 触摸端长按多久显示名称 */
+var _bloomHoldT=null;
+function _bloomHoldStop(){if(_bloomHoldT){clearTimeout(_bloomHoldT);_bloomHoldT=null;}}
 function _bloomTip(el){
   var t=document.getElementById('bloomTip');if(!t)return;
   if(el&&el.title){t.textContent=el.title;t.classList.add('on');}
@@ -21294,16 +21284,30 @@ function openBloom(){
 }
 function closeBloom(){
   document.body.classList.remove('bloom-on');
+  _bloomHoldStop(); /* ★R220c 收起时把"长按待显示"的定时器一起掐掉，防收起后才冒出气泡 */
   _bloomTip(null);
 }
 function _bindBloom(){
   var anchor=document.getElementById('bloomAnchor');if(!anchor)return;
   _bloomItems().forEach(function(el){
-    el.addEventListener('mouseenter',function(){_bloomTip(el);});
-    el.addEventListener('mouseleave',function(){_bloomTip(null);});
-    el.addEventListener('touchstart',function(){_bloomTip(el);},{passive:true});
+    /* 鼠标：★显示与隐藏都只认真实指针移动（mousemove）——
+       花瓣是从 + **圆心**弹出去的：①刚开花那一瞬五片都堆在圆心、鼠标又正停在 + 上
+       → 浏览器对"元素移到指针下"这种**几何变化**也触发 mouseenter，刚开花就冒出莫名提示；
+       ②花瓣飞离指针时同理冒出假 mouseleave，会把刚长按出来的提示又抹掉（探针实锤两级都踩到）。
+       mousemove 只在指针真的动过才触发；隐藏交给遮罩上那一个 mousemove（指针不在花瓣上时收起）。 */
+    el.addEventListener('mousemove',function(){_bloomTip(el);});
     el.addEventListener('focus',function(){_bloomTip(el);});
     el.addEventListener('blur',function(){_bloomTip(null);});
+    /* ★R220c 触摸端没有 hover → **长按 350ms 显示名称**（用户："右下角 + 里的按钮长按可以显示提示文字"）。
+       ★快速轻点不显示：触摸就弹提示每点一下都闪一下很吵；要名字就按住。
+       ★只清 touchend/touchcancel：手指轻微位移不该取消长按（touchmove 会误杀）。 */
+    el.addEventListener('touchstart',function(){
+      _bloomHoldStop();
+      _bloomHoldT=setTimeout(function(){_bloomHoldT=null;_bloomTip(el);},BLOOM_HOLD_MS);
+    },{passive:true});
+    el.addEventListener('touchend',function(){_bloomHoldStop();_bloomTip(null);},{passive:true});
+    el.addEventListener('touchcancel',function(){_bloomHoldStop();_bloomTip(null);},{passive:true});
+    el.addEventListener('contextmenu',function(e){e.preventDefault();}); /* 长按别弹系统菜单 */
     el.addEventListener('click',function(e){
       e.stopPropagation();
       var act=el.getAttribute('data-act');
@@ -21313,7 +21317,13 @@ function _bindBloom(){
     });
   });
   var mask=document.getElementById('bloomMask');
-  if(mask)mask.addEventListener('click',closeBloom);
+  if(mask){
+    mask.addEventListener('click',closeBloom);
+    /* 指针在**非花瓣**区域真实移动 → 收起提示（花瓣自己的 mousemove 会重新点亮） */
+    mask.addEventListener('mousemove',function(e){
+      if(!(e.target&&e.target.closest&&e.target.closest('.bloom-item')))_bloomTip(null);
+    });
+  }
   window.addEventListener('scroll',function(){if(isBloomOpen())closeBloom();},{passive:true});
   window.addEventListener('resize',function(){if(isBloomOpen())closeBloom();});
 }
@@ -21519,15 +21529,8 @@ function bindEvents(){
       if(e.target.closest&&(e.target.closest('.theme-opt')||e.target.closest('.hm-row')))return;
       closeHeaderMore();
     });
-    /* ★R219 四项动作（批量操作/管理分组/折叠/清空已完成）的派发。
-       先收菜单再执行（与 FAB 长按菜单同一顺序：动作可能引发 render，菜单先收掉更干净）。 */
-    var hmA=document.getElementById('hmActions');
-    if(hmA)hmA.addEventListener('click',function(e){
-      var it=e.target.closest?e.target.closest('[data-hmact]'):null;if(!it)return;
-      var a=it.getAttribute('data-hmact');
-      closeHeaderMore();
-      runHeaderMoreAction(a);
-    });
+    /* ★R220b 这里原本挂「更多」里那四项动作的派发；菜单还原后已撤
+       （动作改由开花的 `.bloom-item[data-act]` 派发 → runHeaderMoreAction）。 */
     /* ★R118 「点击外部关闭」必须挂**捕获阶段**（与分类下拉 R113 同一个根因）。
        症状：点 ⋯ 开菜单，再点齿轮进设置，菜单一直悬着不收。
        原因：#settings-btn 的 click handler 首行就是 e.stopPropagation()（为了不让
