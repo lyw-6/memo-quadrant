@@ -246,27 +246,44 @@ body.kb-edit .hist-actions{display:inline-flex;}
    根因＝.hist-actions 的宿主 .header 是普通文档流、整页无吸顶元素 → 编辑靠下的备忘时顶栏
    连同撤销/重做一起滚出视口（实测 390 宽编辑第 16 条：header top −861、按钮 rect top −860，
    elementFromPoint 命中的是下面的备忘卡）。
-   修法＝顶栏**滚出视口**时把这两个按钮钉到右上角（原位置）浮起来，滚回顶部自动归位；
-   只在编辑态生效，且**排除全屏编辑**（那边底部操作行已有撤销/重做，浮起来会重复一处）。
+   ★R219 泛化成「顶栏滚出视口 → 右上角接管」一套机制、两态各给一个：
+     · 编辑态（kb-edit）：接管的是「撤销/重做」（.hist-actions）
+     · 浏览态：接管的是「更多」（.more-wrap-h，#more-btn）—— 用户在更多菜单里找得到
+       批量操作/管理分组/折叠/清空已完成，滚到列表深处也不必回头去长按 +
+   两者互斥（同一位置、各自的状态下才出现），不会同屏挤两个胶囊。
    ★别改成"编辑时整条顶栏吸顶"：那会让回收站/统计/主题/设置常驻占屏，与既有
    「输入时导航消失」的克制风格相反。 */
-body.kb-edit:not(.fs-editing).hist-float .hist-actions{position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;z-index:10040;display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--card-bg);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.16);}
+body.kb-edit:not(.fs-editing).hdr-off .hist-actions{position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;z-index:10040;display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--card-bg);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.16);}
 /* 胶囊里两个按钮**去掉自己的底与描边**（.btn-icon 默认 card-bg+1px border，落在同色胶囊里
    只剩两个淡淡的白圈，像禁用态）→ 用透明底 + 图标提到 --text，读作"一枚胶囊里的两个动作" */
-body.kb-edit:not(.fs-editing).hist-float .hist-actions .btn-icon{width:34px;height:34px;border:0;background:transparent;color:var(--text);border-radius:999px;}
-body.kb-edit:not(.fs-editing).hist-float .hist-actions .btn-icon svg{width:16px;height:16px;}
-body.kb-edit:not(.fs-editing).hist-float .hist-actions .btn-icon:not(:disabled):hover,
-body.kb-edit:not(.fs-editing).hist-float .hist-actions .btn-icon:not(:disabled):active{background:color-mix(in srgb,var(--text) 12%,transparent);}
-[data-theme="glass"] body.kb-edit:not(.fs-editing).hist-float .hist-actions{background:rgba(255,255,255,calc(var(--glass-alpha) * 1.15));border-color:transparent;-webkit-backdrop-filter:blur(calc(var(--glass-blur) * 1.1)) saturate(var(--glass-sat));backdrop-filter:blur(calc(var(--glass-blur) * 1.1)) saturate(var(--glass-sat));}
-html.glass-text-dark [data-theme="glass"] body.kb-edit:not(.fs-editing).hist-float .hist-actions{background:rgba(15,23,42,calc(var(--glass-alpha) * 1.3));}
+body.kb-edit:not(.fs-editing).hdr-off .hist-actions .btn-icon{width:34px;height:34px;border:0;background:transparent;color:var(--text);border-radius:999px;}
+body.kb-edit:not(.fs-editing).hdr-off .hist-actions .btn-icon svg{width:16px;height:16px;}
+body.kb-edit:not(.fs-editing).hdr-off .hist-actions .btn-icon:not(:disabled):hover,
+body.kb-edit:not(.fs-editing).hdr-off .hist-actions .btn-icon:not(:disabled):active{background:color-mix(in srgb,var(--text) 12%,transparent);}
+[data-theme="glass"] body.kb-edit:not(.fs-editing).hdr-off .hist-actions{background:rgba(255,255,255,calc(var(--glass-alpha) * 1.15));border-color:transparent;-webkit-backdrop-filter:blur(calc(var(--glass-blur) * 1.1)) saturate(var(--glass-sat));backdrop-filter:blur(calc(var(--glass-blur) * 1.1)) saturate(var(--glass-sat));}
+html.glass-text-dark [data-theme="glass"] body.kb-edit:not(.fs-editing).hdr-off .hist-actions{background:rgba(15,23,42,calc(var(--glass-alpha) * 1.3));}
 /* ★玻璃主题的 .btn-icon 自带渐变底 + backdrop-filter + inset 高光：把底与描边改成透明后，
    backdrop-filter 仍然会**按元素矩形模糊背景**（框没了、糊成的圆还在）→ 胶囊里冒出两个淡淡的白圈。
    这里必须把 backdrop-filter/box-shadow 一并清掉，只留胶囊这一层玻璃。 */
-[data-theme="glass"] body.kb-edit:not(.fs-editing).hist-float .hist-actions .btn-icon{background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
+[data-theme="glass"] body.kb-edit:not(.fs-editing).hdr-off .hist-actions .btn-icon{background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
+/* ★R219 浏览态接管：顶栏滚走后，右上角留一枚「更多」胶囊（与编辑态同一位置、同一外形语言）
+   ★排除 body.q-fs（四象限某格全屏展开，z-index 9999 的 fixed 满屏层）——那时浮出来会压在格子内容上 */
+body:not(.q-fs):not(.kb-edit):not(.fs-editing).hdr-off .more-wrap-h{position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;z-index:10040;display:inline-flex;padding:4px;border-radius:999px;background:var(--card-bg);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.16);}
+body:not(.q-fs):not(.kb-edit):not(.fs-editing).hdr-off .more-wrap-h #more-btn{width:34px;height:34px;border:0;background:transparent;color:var(--text);border-radius:999px;}
+body:not(.q-fs):not(.kb-edit):not(.fs-editing).hdr-off .more-wrap-h #more-btn svg{width:16px;height:16px;}
+body:not(.q-fs):not(.kb-edit):not(.fs-editing).hdr-off .more-wrap-h #more-btn:not(:disabled):hover,
+body:not(.q-fs):not(.kb-edit):not(.fs-editing).hdr-off .more-wrap-h #more-btn:not(:disabled):active{background:color-mix(in srgb,var(--text) 12%,transparent);}
+/* 浮起时菜单要往**左**展开（原 right:0 在窄屏会顶到视口右缘外） */
+body:not(.q-fs):not(.kb-edit):not(.fs-editing).hdr-off .more-wrap-h .header-more{top:calc(100% + 8px);}
+[data-theme="glass"] body:not(.q-fs):not(.kb-edit):not(.fs-editing).hdr-off .more-wrap-h{background:rgba(255,255,255,calc(var(--glass-alpha) * 1.15));border-color:transparent;-webkit-backdrop-filter:blur(calc(var(--glass-blur) * 1.1)) saturate(var(--glass-sat));backdrop-filter:blur(calc(var(--glass-blur) * 1.1)) saturate(var(--glass-sat));}
+html.glass-text-dark [data-theme="glass"] body:not(.q-fs):not(.kb-edit):not(.fs-editing).hdr-off .more-wrap-h{background:rgba(15,23,42,calc(var(--glass-alpha) * 1.3));}
+[data-theme="glass"] body:not(.q-fs):not(.kb-edit):not(.fs-editing).hdr-off .more-wrap-h #more-btn{background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
 /* ★R113 顶栏「更多」菜单：回收站 / 统计 / 主题 收口于此，顶栏常驻按钮 8 → 4（搜索·省略视图·更多·设置） */
 .more-wrap-h{position:relative;display:inline-flex;flex:none;}
 .header-more{position:absolute;top:calc(100% + 6px);right:0;z-index:120;display:none;flex-direction:column;gap:1px;padding:5px;min-width:150px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.18);}
 .header-more.open{display:flex;}
+/* ★R219 四项动作直接接在「统计」下面，**不加分隔线/小标题** —— R114 已定过口径：
+   本菜单只剩一套排版语言（旧的分隔线+小标题方案是刻意删掉的，别再引回来）。 */
 /* ★R114 三行同构：同高(29,R115 收紧) / 同 padding(0 9px) / 同 15px 图标 / 同 13px 字 —— 改一处必须三处一起改 */
 .hm-item{display:flex;align-items:center;gap:8px;width:100%;min-height:29px;padding:0 9px;border:none;background:transparent;border-radius:7px;color:var(--text);font-size:13px;font-family:inherit;text-align:left;cursor:pointer;transition:background .15s,color .15s;}
 .hm-item:hover{background:var(--hover-bg);}
@@ -2856,7 +2873,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       写在前面会被基础规则的 24px/11px 反杀（首跑实测：栏宽生效了、图标字号没生效）。
    ⚠️②断点取 1024 而不是 900：烟测多个手势块用 900×820，撞上会让浮起/归位几何断言整片飘。 */
 @media (min-width:1024px){
-  .bottom-nav{--nav-px:3px;--nav-py:5px;padding:var(--nav-py) var(--nav-px);max-width:calc(760px + var(--nav-grow));--nav-r:999px;}   /* ★R199 --nav-r 999px＝自动钳半高（泡高 84 → 弧 42，与栏弧 45 近同心）——固定 26px 在 R197 栏高涨到 90 后两端"看起来是方的"；--nav-px 4→3 配合 NAV_PILL_SIDE=0 让泡离栏边 3px=垂直间隙；★R212 --nav-py 6→5 */
+  .bottom-nav{--nav-px:3px;--nav-py:5px;padding:var(--nav-py) var(--nav-px);max-width:calc(700px + var(--nav-grow));--nav-r:999px;}   /* ★R199 --nav-r 999px＝自动钳半高（泡高 84 → 弧 42，与栏弧 45 近同心）——固定 26px 在 R197 栏高涨到 90 后两端"看起来是方的"；--nav-px 4→3 配合 NAV_PILL_SIDE=0 让泡离栏边 3px=垂直间隙；★R212 --nav-py 6→5；★R219 上限 760→700（760 比内容列 720 还宽 40px＝两侧各外凸 20px，用户"两边再往里收一收"） */
   .nav-tab{padding:6px 2px 5px;gap:0;font-size:12px;}
   /* ★R212 桌面档不再单独放大：R199 的 clamp(34~38) 连续缩放用户两轮反馈后仍嫌"宽屏太大"，
      统一回 30px/14px（=基础档同值，1024 断点两侧零跳变；窄屏 <560 有更小的独立覆盖不受影响）。
@@ -3364,7 +3381,7 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
   /* ★R192f 窄屏与宽屏口径统一（用户："宽屏贴合了，窄屏不贴合"）：这条块**在文件末尾**，
      压过前面所有 .bottom-nav/.nav-tab 断点 → 窄屏曾固定 内距 8px + gap 2px（左边距 10、图标文字又拉开 2px）。
      现改成与基础规则一致：水平内距 4px、gap 0。 */
-  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);gap:0;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 20px + var(--nav-grow));}   /* ★R199d 12→16；★R201 16→20（两侧各 10px，用户"再窄一点"）。⚠️本块在文件末尾、级联必胜 —— 2376/2409 两个窄屏块的 width 全被这条反杀成死代码，改手机宽度必须改这里 */
+  .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);gap:0;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 32px + var(--nav-grow));}   /* ★R199d 12→16；★R201 16→20；★R219 20→32（两侧各 16px，用户"两边再往里收一收"）。⚠️本块在文件末尾、级联必胜 —— 2376/2409 两个窄屏块的 width 全被这条反杀成死代码，改手机宽度必须改这里 */
   .nav-tab{flex:1 1 0%;min-width:0;padding:6px 2px 4px;gap:0;}
   .nav-tab svg{width:22px;height:22px;flex-shrink:0;}
   .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:10px;transform:scale(0.88);transform-origin:center top;line-height:1.1;}
@@ -3441,6 +3458,7 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
       <div class="header-more" id="headerMore" role="menu">
         <button class="hm-item" type="button" id="trash-btn-top" title="回收站" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg><span>回收站</span><span class="hm-tail" id="hmTrashTail"></span></button>
         <button class="hm-item" type="button" id="stats-btn-top" title="统计" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="11" width="3" height="9"/><rect x="11" y="6" width="3" height="14"/><rect x="16" y="14" width="3" height="6"/></svg><span>统计</span><span class="hm-tail" id="hmStatsTail"></span></button>
+        <div id="hmActions"></div>
         <div class="hm-row" role="group" aria-label="主题">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="17.6" cy="10.6" r="1.2" fill="currentColor" stroke="none"/><circle cx="8.6" cy="7.6" r="1.2" fill="currentColor" stroke="none"/><circle cx="6.6" cy="12.6" r="1.2" fill="currentColor" stroke="none"/><path d="M12 2.5a9.5 9.5 0 0 0 0 19c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1 0-.9.7-1.6 1.6-1.6h1.8a5.8 5.8 0 0 0 5.8-5.8c0-4.9-4.4-7.9-10-7.9z"/></svg>
           <span>主题</span>
@@ -12458,33 +12476,33 @@ function _bindHistBtn(btn,cmd,fallback,emptyMsg){
     fallback();
   });
 }
-/* ★R218 编辑态「撤销/重做」浮动接替（CSS 在同名注释处）：
-   顶栏滚出视口上沿时给 body 挂 .hist-float，让 .hist-actions 钉在右上角原位置。
-   ★判据＝顶栏 rect.bottom<=0（整体滚出）：部分可见时保持原样，避免同一对按钮两处同时出现。
-   ★零开销：浏览态 _histFloatQueue 直接 return，不排 rAF；只有编辑态滚动才逐帧算一次
-   （读一次 getBoundingClientRect，不触发强制同步布局的写操作）。 */
-var _histFloatPending=false;
-function _histFloatApply(){
-  _histFloatPending=false;
+/* ★R218/R219 「顶栏滚出视口 → 右上角接管」（CSS 在同名注释处）：
+   给 body 挂 .hdr-off，让当前状态下该出现的那个控制钉在右上角原位置：
+   编辑态=撤销/重做（.hist-actions，它自己的 display 只在 kb-edit 下生效）；浏览态=更多（.more-wrap-h）。
+   ★判据＝顶栏 rect.bottom<=0（整体滚出）：部分可见时保持原样，避免同一控制两处同时出现。
+   ★零开销：不排帧的路径只有在 fs-editing（全屏编辑，顶栏本就不可见）时；
+   其余每次滚动最多一帧一次 getBoundingClientRect（只读，不触发强制同步布局）。 */
+var _hdrFloatPending=false;
+function _hdrFloatApply(){
+  _hdrFloatPending=false;
   var b=document.body;if(!b)return;
-  if(!b.classList.contains('kb-edit')||b.classList.contains('fs-editing')){b.classList.remove('hist-float');return;}
+  if(b.classList.contains('fs-editing')){b.classList.remove('hdr-off');return;}
   var h=document.querySelector('.header');
-  if(!h){b.classList.remove('hist-float');return;}
+  if(!h){b.classList.remove('hdr-off');return;}
   var r=h.getBoundingClientRect();
-  b.classList.toggle('hist-float',r.bottom<=0);
+  b.classList.toggle('hdr-off',r.bottom<=0);
 }
-function _histFloatQueue(){
-  if(_histFloatPending)return;
-  var b=document.body;if(!b||!b.classList.contains('kb-edit'))return; /* 浏览态不排帧 */
-  _histFloatPending=true;requestAnimationFrame(_histFloatApply);
+function _hdrFloatQueue(){
+  if(_hdrFloatPending)return;
+  _hdrFloatPending=true;requestAnimationFrame(_hdrFloatApply);
 }
-function _histFloatInit(){
-  window.addEventListener('scroll',_histFloatQueue,{passive:true});
-  window.addEventListener('resize',_histFloatQueue);
-  if(window.visualViewport){try{visualViewport.addEventListener('resize',_histFloatQueue);}catch(_){}}
+function _hdrFloatInit(){
+  window.addEventListener('scroll',_hdrFloatQueue,{passive:true});
+  window.addEventListener('resize',_hdrFloatQueue);
+  if(window.visualViewport){try{visualViewport.addEventListener('resize',_hdrFloatQueue);}catch(_){}}
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_histFloatInit);
-else _histFloatInit();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_hdrFloatInit);
+else _hdrFloatInit();
 // ===== 搜索：按内容过滤 =====
 function matchSearch(memo){
   if(!currentSearch)return true;
@@ -14315,7 +14333,7 @@ function _kbSpacer(px){
 function kbEditStart(ta){
   document.body.classList.add('kb-edit');
   try{updateHistButtons();}catch(_){} /* ★R122 进入编辑态立刻亮撤销键,别让用户对着 700ms 灰按钮空点 */
-  try{_histFloatQueue();}catch(_){} /* ★R218 已经在页面下方进编辑 → 顶栏早已滚出 → 撤销/重做立刻浮到右上角 */
+  try{_hdrFloatQueue();}catch(_){} /* ★R218 已经在页面下方进编辑 → 顶栏早已滚出 → 撤销/重做立刻浮到右上角 */
   var item=ta.closest?ta.closest('.memo-item'):null;
   var el=item||ta;
   /* ★R77 四象限内联编辑：滚动发生在 .cell-items 格子容器内(原生滚动)，页面级顶起
@@ -14435,7 +14453,7 @@ function kbEditStart(ta){
 }
 function kbEditEnd(){
   document.body.classList.remove('kb-edit');
-  document.body.classList.remove('hist-float'); /* ★R218 退出编辑 → 撤销/重做回到顶栏（防残留浮起） */
+  try{_hdrFloatQueue();}catch(_){} /* ★R219 退出编辑 → 重算接管者：顶栏仍在视口外时改由「更多」接管（别直接摘类，否则下方没东西接管） */
   try{updateHistButtons();}catch(_){} /* ★R122 离开编辑态 → 撤销按钮回到按 histIndex 判空 */
   document.body.classList.remove('kb-bar-up'); /* ★R69 */
   _cbDisarm(); /* ★R108 退出编辑 → 收起「回到编辑位置」按钮 */
@@ -21174,6 +21192,33 @@ function syncHeaderMoreCounts(){
   if(t)t.textContent=deleted.length?String(deleted.length):'';
   var s=document.getElementById('hmStatsTail');
   if(s)s.textContent=memos.length?(memos.length+' 条'):'';
+  syncHeaderMoreActions(); /* ★R219 动作项文案随状态变（管理分组/新建分组、折叠/展开全部）→ 每次开菜单都重算 */
+}
+/* ★R219 顶栏「更多」里补一份与 FAB 长按菜单完全相同的四项动作。
+   起因（用户）："有时候忘了长按右下角那个 + 会弹出菜单选择" —— 长按是个"藏起来的手势"，
+   没有任何视觉线索；把它放进用户本来就会点的「更多」菜单里，功能就变成"找得到"。
+   ★动作函数与 FAB 菜单共用同一批（toggleBatchMode 通过 window 暴露；其余三个本就是顶层函数），
+     图标语言也沿用同一套；文案只有两处动态：有分组才出折叠项、管理分组/新建分组按有无分组。
+   ⚠️图标字符串在这里自备一遍：FAB 那四个常量定义在嵌套作用域里（局部 var），顶层拿不到。 */
+var HM_ICO_BATCH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+var HM_ICO_DONE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>';
+var HM_ICO_FOLD='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 4 12 9 17 4"/><polyline points="7 20 12 15 17 20"/></svg>';
+function syncHeaderMoreActions(){
+  var box=document.getElementById('hmActions');if(!box)return;
+  var anyOpen=false;
+  for(var i=0;i<memo_groups.length;i++){if(!collapsedGroups[memo_groups[i].id]){anyOpen=true;break;}}
+  var h=''
+    +'<button class="hm-item" type="button" data-hmact="batch" role="menuitem">'+HM_ICO_BATCH+'<span>批量操作</span></button>'
+    +'<button class="hm-item" type="button" data-hmact="managegrp" role="menuitem">'+ICON_GROUPS+'<span>'+(memo_groups.length?'管理分组':'新建分组')+'</span></button>'
+    +(memo_groups.length?('<button class="hm-item" type="button" data-hmact="foldgrp" role="menuitem">'+HM_ICO_FOLD+'<span>'+(anyOpen?'折叠全部分组':'展开全部分组')+'</span></button>'):'')
+    +'<button class="hm-item" type="button" data-hmact="clear" role="menuitem">'+HM_ICO_DONE+'<span>清空已完成</span></button>';
+  if(box._sig!==h){box._sig=h;box.innerHTML=h;} /* 差量：菜单常开时 render 反复调用不重建 DOM */
+}
+function runHeaderMoreAction(a){
+  if(a==='batch'){if(typeof window.toggleBatchMode==='function')window.toggleBatchMode();}
+  else if(a==='managegrp')openGroupManage();
+  else if(a==='foldgrp')toggleAllGroupsFold();
+  else if(a==='clear')clearCompleted();
 }
 
 // ===== ★R110 下拉「尾随 click」抑制 =====
@@ -21371,6 +21416,15 @@ function bindEvents(){
       if(e.target.closest&&(e.target.closest('.theme-opt')||e.target.closest('.hm-row')))return;
       closeHeaderMore();
     });
+    /* ★R219 四项动作（批量操作/管理分组/折叠/清空已完成）的派发。
+       先收菜单再执行（与 FAB 长按菜单同一顺序：动作可能引发 render，菜单先收掉更干净）。 */
+    var hmA=document.getElementById('hmActions');
+    if(hmA)hmA.addEventListener('click',function(e){
+      var it=e.target.closest?e.target.closest('[data-hmact]'):null;if(!it)return;
+      var a=it.getAttribute('data-hmact');
+      closeHeaderMore();
+      runHeaderMoreAction(a);
+    });
     /* ★R118 「点击外部关闭」必须挂**捕获阶段**（与分类下拉 R113 同一个根因）。
        症状：点 ⋯ 开菜单，再点齿轮进设置，菜单一直悬着不收。
        原因：#settings-btn 的 click handler 首行就是 e.stopPropagation()（为了不让
@@ -21456,7 +21510,11 @@ function bindEvents(){
     fab.addEventListener('click',function(e){if(_fabLp){_fabLp=false;e.preventDefault();e.stopImmediatePropagation();return;}addMemo();});
   }
   // 首次使用提示（一次性）
-  try{ if(!localStorage.getItem('memo_fab_hint')){ localStorage.setItem('memo_fab_hint','1'); setTimeout(function(){showToast('长按右下角 + ：批量操作 / 分组折叠 / 清空已完成');},1400); } }catch(_){ }
+  /* ★R219 文案改指「更多」：长按是个藏起来的手势，提示只出现一次必然被忘（用户："有时候忘了
+     长按右下角那个 + 会弹出菜单"）。批量操作/分组/清空已完成 现在在右上角「更多」里常驻可查，
+     提示就把用户指向那个能"随时找到"的入口，长按作为补充保留。
+     ★key 换名（memo_fab_hint → memo_fab_hint2）：老用户也能看到这条新指向一次。 */
+  try{ if(!localStorage.getItem('memo_fab_hint2')){ localStorage.setItem('memo_fab_hint2','1'); setTimeout(function(){showToast('批量操作 / 分组折叠 / 清空已完成 → 右上角「⋯」更多（也可长按右下角 +）');},1400); } }catch(_){ }
   /* ★R91 启动自动快照：每天首次打开留一份（同日已有则跳过），失败静默 */
   try{ snapAuto(); snapRefreshInfo(); }catch(_){ }
   // 省略视图（一行两个）切换
