@@ -21569,10 +21569,9 @@ function bindEvents(){
   if(fab){
     fab.addEventListener('click',function(){if(isBloomOpen())closeBloom();else openBloom();});
   }
-  // 首次使用提示（一次性）
-  /* ★R221 文案：长按菜单已删，只剩"点 + 开花"一条路径，文案不再提长按。
-     key 逐次换名（hint → hint2 → hint3 → hint4 → hint5），保证看过旧文案的人也能看到新指向。 */
-  try{ if(!localStorage.getItem('memo_fab_hint5')){ localStorage.setItem('memo_fab_hint5','1'); setTimeout(function(){showToast('新建备忘 / 批量操作 / 分组 / 清空已完成 → 点右下角 + 展开');},1400); } }catch(_){ }
+  /* ★R222 首次使用提示**整套删除**（用户："把初次打开 html 底部的 toast 去掉"）：
+     那条 1.4s 后从底部升起的 toast 每次重装/换设备都闪一下，属于打扰；开花后四项名字常显，
+     本来也不需要靠这段文字去做发现。key 家族 memo_fab_hint* 一并作废（不再写 localStorage）。 */
   /* ★R91 启动自动快照：每天首次打开留一份（同日已有则跳过），失败静默 */
   try{ snapAuto(); snapRefreshInfo(); }catch(_){ }
   // 省略视图（一行两个）切换
