@@ -271,28 +271,32 @@ html.glass-text-dark [data-theme="glass"] body.kb-edit:not(.fs-editing).hdr-off 
    五项＝新建备忘 / 批量操作 / 管理分组(新建分组) / 折叠全部分组(有分组才出) / 清空已完成。
    ★用户已确认「新建备忘」也放进来（+ 单击不再直接新建 → 新建变两步）。
    ★R219b 那枚「+ 上方 ⋯」随之撤掉：点 + 就能看到全部动作，它成了多余的第二入口。
-   ★几何：定位锚点放在 FAB **圆心**上（right:38px = 14+24；bottom:+120px = 96+24），
-     按钮以锚点为中心用 translate(dx,dy) 弹出去 —— 半径/角度由 JS 按"当前可见项数"算，
-     CSS 只管从 (0,0) 到 (dx,dy) 的过渡（弹簧 + 逐项错帧）。
-   ★半径 130：5 项时相邻弦长 2·130·sin(11.25°)≈50.9 > 44px 按钮，互不重叠。
+   ★R221 起改为**竖直向上排开的胶囊**（图标 + 名称，名字常显）——用户："点击之后能不能就直接
+     显示里面那些按钮的名称"。扇形做不到：等角弧上靠 90° 一侧相邻两项的 Δy 只有 ~10px
+     （sin 在 90° 附近是平的），任何 20px 高的标签都会叠；要摊开半径得加到 260+，直接跑出屏幕。
+   ★几何：锚点 = FAB **顶边**（bottom: 96+48 = 144px，与 #fabAdd 同源同样写 `--nab`）；
+     花瓣 `right:0;bottom:0` 让右缘贴 + 的右缘（同一 14px），再用 translateY(-dy) 一片片往上生长，
+     dy 由 JS 按"当前可见项数"算（无分组时少一项 → 其余自动往下补位，不留空档）。
    ★显示条件与 #fabAdd 同源（下面那条 display:none 规则），"+" 不在时也不会有花瓣。 */
-.bloom-anchor{position:fixed;right:38px;bottom:calc(var(--nab,0px) + 120px + env(safe-area-inset-bottom));width:0;height:0;z-index:47;}
+.bloom-anchor{position:fixed;right:14px;bottom:calc(var(--nab,0px) + 144px + env(safe-area-inset-bottom));width:0;height:0;z-index:47;}
 .bloom-mask{position:fixed;inset:0;z-index:44;display:none;background:rgba(0,0,0,.10);}
 body.bloom-on .bloom-mask{display:block;}
 body.bloom-on #fabAdd{transform:rotate(45deg);}
-.bloom-item{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border:1px solid var(--border);border-radius:50%;background:var(--card-bg);color:var(--text-secondary);box-shadow:0 4px 12px rgba(0,0,0,.14);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none;opacity:0;pointer-events:none;transform:translate(0,0) scale(.35);
-  transition:transform .36s cubic-bezier(.34,1.56,.64,1),opacity .16s ease,background .15s,color .15s,border-color .15s;
+/* ★注意 white-space:nowrap 不能省：absolutely-positioned + right:0 的 0 宽包含块里，
+   auto 宽度走 shrink-to-fit（可用宽度算作 0）→ 只有 nowrap 才让最小内容宽 = 整行宽度。 */
+.bloom-item{position:absolute;right:0;bottom:0;height:40px;padding:0 14px 0 7px;border:1px solid var(--border);border-radius:999px;background:var(--card-bg);color:var(--text);box-shadow:0 5px 14px rgba(0,0,0,.15);display:inline-flex;align-items:center;gap:8px;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none;transform-origin:100% 100%;opacity:0;pointer-events:none;transform:translateY(0) scale(.5);
+  transition:transform .34s cubic-bezier(.34,1.56,.64,1),opacity .16s ease,background .15s,color .15s,border-color .15s;
   transition-delay:calc(var(--i,0) * 32ms);}
-body.bloom-on .bloom-item{opacity:1;pointer-events:auto;transform:translate(var(--dx,0px),var(--dy,0px)) scale(1);}
-.bloom-item svg{width:18px;height:18px;display:block;pointer-events:none;}
-.bloom-item:hover,.bloom-item.active{background:var(--hover-bg);color:var(--text);}
-.bloom-item:active{transform:translate(var(--dx,0px),var(--dy,0px)) scale(.9);}
-/* 新建备忘是本扇区的主动作 → 用主色，与 + 同一套语言 */
+body.bloom-on .bloom-item{opacity:1;pointer-events:auto;transform:translateY(calc(-1 * var(--dy,0px))) scale(1);}
+.bloom-item svg{width:17px;height:17px;display:block;pointer-events:none;flex:none;}
+.bloom-item .bloom-name{font-size:13px;font-weight:500;line-height:1;}
+.bloom-item:hover{background:var(--hover-bg);color:var(--text);}
+/* 按下反馈：必须带上 body.bloom-on（0,2,1 会压掉裸 .bloom-item:active 的 0,2,0 —— 旧版这个
+   active 缩放其实一直没生效） */
+body.bloom-on .bloom-item:active{transform:translateY(calc(-1 * var(--dy,0px))) scale(.96);}
+/* 新建备忘是这片区里的主动作 → 用主色，与 + 同一套语言（名称跟着白） */
 .bloom-item[data-act="new"]{border-color:transparent;background:var(--color-primary,#6366f1);color:#fff;box-shadow:0 6px 16px color-mix(in srgb,var(--color-primary,#6366f1) 42%,transparent);}
-/* 名称气泡：五个花瓣本身只放图标（弧上塞不下文字），名字在**扇区内侧**固定位置显示 ——
-   hover / 按下时出现；桌面鼠标天然可用，触屏按住滑动也会跟着变。 */
-.bloom-tip{position:absolute;right:-4px;bottom:56px;max-width:140px;padding:4px 10px;border-radius:999px;background:var(--card-bg);border:1px solid var(--border);box-shadow:0 4px 14px rgba(0,0,0,.16);color:var(--text);font-size:12px;font-weight:500;white-space:nowrap;opacity:0;transform:translateY(4px);transition:opacity .14s ease,transform .14s ease;pointer-events:none;}
-.bloom-tip.on{opacity:1;transform:translateY(0);}
+.bloom-item[data-act="new"]:hover{filter:brightness(1.06);}
 body.fs-editing .bloom-anchor,body.kb-edit .bloom-anchor,body.line-editing .bloom-anchor,
 body.view-quadrant .bloom-anchor,body.view-calendar .bloom-anchor,body.batch-on .bloom-anchor{display:none!important;}
 body.fs-editing .bloom-mask,body.kb-edit .bloom-mask,body.line-editing .bloom-mask,
@@ -1116,21 +1120,8 @@ body.kb-edit .memo-list{padding-bottom:var(--kb-spacer,0px);}
   box-shadow:0 8px 26px rgba(31,38,135,0.16),inset 0 1px 0 var(--glass-edge),inset 0 -1px 0 var(--glass-edge-bot);
 }
 [data-theme="glass"] .fab-add:active{backdrop-filter:blur(calc(var(--glass-blur)*0.9)) saturate(var(--glass-sat));-webkit-backdrop-filter:blur(calc(var(--glass-blur)*0.9)) saturate(var(--glass-sat));filter:brightness(.96);}
-/* ★R86b FAB 长按菜单重设计：与 + 按钮同语言——大圆角卡片、主色图标、从 FAB 后方升起(fade-in)
-   选择器用 .more-menu.fab-menu 双类压过 .more-menu 基础规则(声明位置更靠后,同特异性会被反杀) */
-.more-menu.fab-menu{min-width:176px;border-radius:16px;padding:6px;transform-origin:100% 100%;transform:scale(.88) translateY(12px);transition:opacity .16s ease,transform .18s cubic-bezier(.34,1.35,.64,1);}
-.more-menu.fab-menu.open{transform:scale(1) translateY(0);}
-.more-menu.fab-menu .more-item{padding:9px 12px;border-radius:10px;font-size:13px;gap:9px;color:var(--text);}
-.more-menu.fab-menu .more-item svg{width:16px;height:16px;color:var(--color-primary,#6366f1);flex-shrink:0;}
-.more-menu.fab-menu .more-item:hover{background:var(--hover-bg);color:var(--text);}
-[data-theme="glass"] .more-menu.fab-menu{
-  background:linear-gradient(180deg,var(--glass-tint-2) 0%,rgba(255,255,255,calc(var(--glass-alpha)*1.05)) 100%);
-  border:1px solid rgba(255,255,255,0.5);
-  backdrop-filter:blur(calc(var(--glass-blur)*1.05)) saturate(var(--glass-sat));
-  -webkit-backdrop-filter:blur(calc(var(--glass-blur)*1.05)) saturate(var(--glass-sat));
-  box-shadow:0 8px 26px rgba(31,38,135,0.16),inset 0 1px 0 var(--glass-edge),inset 0 -1px 0 var(--glass-edge-bot);
-}
-[data-theme="glass"] .more-menu.fab-menu .more-item:hover{background:rgba(255,255,255,.35);}
+/* ★R221 FAB 长按菜单（.more-menu.fab-menu 那套样式，R86b 设计）已删除 —— 动作改为
+   「点 + 开花」的一排带名称胶囊（.bloom-item），不再有这块文字菜单。 */
 /* ★R54: 日历「今」按钮——仅日历视图显示(JS 控制)，位于 + FAB 上方同槽位(回到顶部旧位 144px)
    ★R55: 主题适配——浅/深主题用主色淡染(主色文字+主色描边+主色柔影)，玻璃主题单独磨砂玻璃 */
 #calTodayBtn{position:fixed;right:14px;bottom:calc(144px + env(safe-area-inset-bottom));z-index:45;width:48px;height:48px;border-radius:50%;border:1px solid color-mix(in srgb,var(--color-primary,#6366f1) 32%,transparent);background:color-mix(in srgb,var(--color-primary,#6366f1) 12%,var(--card-bg));color:var(--color-primary,#6366f1);font-size:15px;font-weight:700;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 14px color-mix(in srgb,var(--color-primary,#6366f1) 24%,transparent),inset 0 1px 0 rgba(255,255,255,.25);-webkit-tap-highlight-color:transparent;transition:transform .12s ease,filter .15s ease,background .2s ease,border-color .2s ease;}
@@ -3645,14 +3636,15 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
 
 <div class="batch-bar" id="batchBar" data-page-node-id="U1H1kOezMkyEdXWGjBWAWR"></div>
 <button class="fab-add" id="fabAdd" aria-label="添加备忘录" title="添加备忘录" data-page-node-id="vyo2pdhZjmtHsVKqFmGQld"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="CFxRMDSMH77nlcQM3JQQie"><line x1="12" y1="5" x2="12" y2="19" data-page-node-id="J2MJ4YYFWL2hdQHDwhbrij"/><line x1="5" y1="12" x2="19" y2="12" data-page-node-id="FGooub4Z1Vnx2R58JEDKh9"/></svg></button>
-<!-- ★R220 点 + 开花：五项沿左上弧弹开（第五项"折叠全部分组"无分组时 JS 隐藏，其余项自动重排角度） -->
+<!-- ★R221 点 + 开花：一排「图标 + 名称」胶囊从 + 上方**竖直往上**生长（名字常显，不用 hover/长按）。
+     ★第五项"折叠全部分组"无分组时 JS 隐藏，其余项自动往下补位。
+     ★名称由 bloomSync() 写（有动态文案：管理分组/新建分组、折叠/展开全部），这里放默认值。 -->
 <div class="bloom-anchor" id="bloomAnchor">
-  <div class="bloom-tip" id="bloomTip"></div>
-  <button type="button" class="bloom-item" data-act="new" title="新建备忘" aria-label="新建备忘"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M12 10v6"/></svg></button>
-  <button type="button" class="bloom-item" data-act="batch" title="批量操作" aria-label="批量操作"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
-  <button type="button" class="bloom-item" data-act="managegrp" title="管理分组" aria-label="管理分组"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
-  <button type="button" class="bloom-item" data-act="foldgrp" title="折叠全部分组" aria-label="折叠全部分组"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 4 12 9 17 4"/><polyline points="7 20 12 15 17 20"/></svg></button>
-  <button type="button" class="bloom-item" data-act="clear" title="清空已完成" aria-label="清空已完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg></button>
+  <button type="button" class="bloom-item" data-act="new" title="新建备忘" aria-label="新建备忘"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M12 10v6"/></svg><span class="bloom-name">新建备忘</span></button>
+  <button type="button" class="bloom-item" data-act="batch" title="批量操作" aria-label="批量操作"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="bloom-name">批量操作</span></button>
+  <button type="button" class="bloom-item" data-act="managegrp" title="管理分组" aria-label="管理分组"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg><span class="bloom-name">管理分组</span></button>
+  <button type="button" class="bloom-item" data-act="foldgrp" title="折叠全部分组" aria-label="折叠全部分组"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 4 12 9 17 4"/><polyline points="7 20 12 15 17 20"/></svg><span class="bloom-name">折叠全部分组</span></button>
+  <button type="button" class="bloom-item" data-act="clear" title="清空已完成" aria-label="清空已完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg><span class="bloom-name">清空已完成</span></button>
 </div>
 <div class="bloom-mask" id="bloomMask"></div>
 <button id="calTodayBtn" type="button" title="回到今天">今</button>
@@ -12644,8 +12636,9 @@ var ICON_ADD='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
    而且旋转带过渡（折叠/展开的手感比"换个字"顺）。viewBox 10×10 里墨迹占 x[1.15,8.85] y[2.75,7.85]
    （path 外描 1.5 的圆角描边把尖角磨圆），显示 10px 时墨迹 ≈7.7×5.1 CSS px。 */
 var CARET_ICON='<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M1.9 3.5h6.2L5 7.1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
-/* ★R93 「管理分组」图标：必须放在 IIFE 顶层 —— FAB_ICO_* 定义在 openFabMenu 所在的内层函数里，
-   组头菜单(openGroupMenu) 取不到，会直接抛 ReferenceError 导致菜单压根不弹。 */
+/* ★R93 「管理分组」图标：必须放在 IIFE 顶层 —— 当初同类图标常量定义在 openFabMenu 所在的内层
+   函数里，组头菜单(openGroupMenu) 取不到，会直接抛 ReferenceError 导致菜单压根不弹。
+   （R221 起 FAB 长按菜单已删，但这条"图标常量别塞进内层函数"的教训照旧。） */
 var ICON_GROUPS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>';
 var ICON_BOX='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/></svg>';
 var ICON_BOX_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.3l2.9 2.9L16.4 9.4"/></svg>';
@@ -21240,12 +21233,20 @@ function runHeaderMoreAction(a){
   else if(a==='foldgrp')toggleAllGroupsFold();
   else if(a==='clear')clearCompleted();
 }
-/* ★R220 点 + 开花：五项沿左上 1/4 弧弹开。
-   位置在 JS 里按"当前可见项数"算（无分组时少一项 → 角度自动重排，不留空档）；
-   CSS 只负责 从圆心(0,0) 到 (--dx,--dy) 的过渡（弹簧曲线 + --i 逐项错帧）。 */
-var BLOOM_R=130;
+/* ★R221 点 + 开花：一排「图标 + 名称」胶囊从 + 上方竖直往上生长（名字常显，不用 hover/长按）。
+   纵向位置在 JS 里按"当前可见项数"算（无分组时少一项 → 其余往下补位，不留空档）；
+   CSS 只负责 从 translateY(0) 到 translateY(-dy) 的过渡（弹簧曲线 + --i 逐项错帧）。 */
+var BLOOM_BASE=12;   /* 第一片花瓣离 + 顶边的距离 */
+var BLOOM_STEP=50;   /* 花瓣间距 = 胶囊高 40 + 空隙 10 */
 function _bloomItems(){return [].slice.call(document.querySelectorAll('.bloom-item'));}
 function _bloomVisible(){return _bloomItems().filter(function(el){return el.style.display!=='none';});}
+/* 名称同时写进**可见文字**、title 与 aria-label —— 花上直接看得到名字了，title/aria 仍然保留：
+   桌面悬停有系统提示、读屏也认得出，三处永远同源不会漂。 */
+function _bloomLabel(el,txt){
+  if(!el)return;
+  el.title=txt;el.setAttribute('aria-label',txt);
+  var s=el.querySelector('.bloom-name');if(s)s.textContent=txt;
+}
 function bloomSync(){
   var anyOpen=false;
   for(var i=0;i<memo_groups.length;i++){if(!collapsedGroups[memo_groups[i].id]){anyOpen=true;break;}}
@@ -21253,77 +21254,42 @@ function bloomSync(){
   var fold=document.querySelector('.bloom-item[data-act="foldgrp"]');
   if(fold){
     fold.style.display=has?'':'none';
-    var l1=anyOpen?'折叠全部分组':'展开全部分组';
-    fold.title=l1;fold.setAttribute('aria-label',l1);
+    _bloomLabel(fold,anyOpen?'折叠全部分组':'展开全部分组');
   }
-  var mg=document.querySelector('.bloom-item[data-act="managegrp"]');
-  if(mg){var l2=has?'管理分组':'新建分组';mg.title=l2;mg.setAttribute('aria-label',l2);}
+  _bloomLabel(document.querySelector('.bloom-item[data-act="managegrp"]'),has?'管理分组':'新建分组');
 }
 function _bloomLayout(){
-  var vis=_bloomVisible(),n=vis.length;
-  for(var i=0;i<n;i++){
-    var deg=(n<2)?135:(90+i*(90/(n-1)));        /* 90°=正上方 → 180°=正左方 */
-    var th=deg*Math.PI/180;
-    vis[i].style.setProperty('--dx',(BLOOM_R*Math.cos(th)).toFixed(1)+'px');
-    vis[i].style.setProperty('--dy',(-BLOOM_R*Math.sin(th)).toFixed(1)+'px');
+  var vis=_bloomVisible();
+  for(var i=0;i<vis.length;i++){
+    vis[i].style.setProperty('--dy',(BLOOM_BASE+i*BLOOM_STEP)+'px');
     vis[i].style.setProperty('--i',String(i));
   }
 }
 function isBloomOpen(){return document.body.classList.contains('bloom-on');}
-var BLOOM_HOLD_MS=350;   /* ★R220c 触摸端长按多久显示名称 */
-var _bloomHoldT=null;
-function _bloomHoldStop(){if(_bloomHoldT){clearTimeout(_bloomHoldT);_bloomHoldT=null;}}
-function _bloomTip(el){
-  var t=document.getElementById('bloomTip');if(!t)return;
-  if(el&&el.title){t.textContent=el.title;t.classList.add('on');}
-  else t.classList.remove('on');
-}
 function openBloom(){
   bloomSync();_bloomLayout();
   document.body.classList.add('bloom-on');
 }
 function closeBloom(){
   document.body.classList.remove('bloom-on');
-  _bloomHoldStop(); /* ★R220c 收起时把"长按待显示"的定时器一起掐掉，防收起后才冒出气泡 */
-  _bloomTip(null);
 }
 function _bindBloom(){
   var anchor=document.getElementById('bloomAnchor');if(!anchor)return;
   _bloomItems().forEach(function(el){
-    /* 鼠标：★显示与隐藏都只认真实指针移动（mousemove）——
-       花瓣是从 + **圆心**弹出去的：①刚开花那一瞬五片都堆在圆心、鼠标又正停在 + 上
-       → 浏览器对"元素移到指针下"这种**几何变化**也触发 mouseenter，刚开花就冒出莫名提示；
-       ②花瓣飞离指针时同理冒出假 mouseleave，会把刚长按出来的提示又抹掉（探针实锤两级都踩到）。
-       mousemove 只在指针真的动过才触发；隐藏交给遮罩上那一个 mousemove（指针不在花瓣上时收起）。 */
-    el.addEventListener('mousemove',function(){_bloomTip(el);});
-    el.addEventListener('focus',function(){_bloomTip(el);});
-    el.addEventListener('blur',function(){_bloomTip(null);});
-    /* ★R220c 触摸端没有 hover → **长按 350ms 显示名称**（用户："右下角 + 里的按钮长按可以显示提示文字"）。
-       ★快速轻点不显示：触摸就弹提示每点一下都闪一下很吵；要名字就按住。
-       ★只清 touchend/touchcancel：手指轻微位移不该取消长按（touchmove 会误杀）。 */
-    el.addEventListener('touchstart',function(){
-      _bloomHoldStop();
-      _bloomHoldT=setTimeout(function(){_bloomHoldT=null;_bloomTip(el);},BLOOM_HOLD_MS);
-    },{passive:true});
-    el.addEventListener('touchend',function(){_bloomHoldStop();_bloomTip(null);},{passive:true});
-    el.addEventListener('touchcancel',function(){_bloomHoldStop();_bloomTip(null);},{passive:true});
-    el.addEventListener('contextmenu',function(e){e.preventDefault();}); /* 长按别弹系统菜单 */
+    /* ★R221 名称已常显在胶囊上 → 旧的"hover/长按出气泡"整套机制（_bloomTip + BLOOM_HOLD_MS +
+       mousemove/touchstart 定时器）全部删除：它本来就是为"弧上塞不下文字"打的补丁，
+       现在名字就在花瓣上，再挂一个提示只会重复（用户在意的"同一信息一个入口"）。 */
+    el.addEventListener('contextmenu',function(e){e.preventDefault();}); /* 长按花瓣别弹系统菜单 */
     el.addEventListener('click',function(e){
       e.stopPropagation();
       var act=el.getAttribute('data-act');
       closeBloom();
-      if(act==='new'){addMemo();return;}   /* 新建备忘＝本扇区主动作（用户确认：+ 单击不再直接新建） */
+      if(act==='new'){addMemo();return;}   /* 新建备忘＝本片区的主动作（用户确认：+ 单击不再直接新建） */
       runHeaderMoreAction(act);
     });
   });
   var mask=document.getElementById('bloomMask');
-  if(mask){
-    mask.addEventListener('click',closeBloom);
-    /* 指针在**非花瓣**区域真实移动 → 收起提示（花瓣自己的 mousemove 会重新点亮） */
-    mask.addEventListener('mousemove',function(e){
-      if(!(e.target&&e.target.closest&&e.target.closest('.bloom-item')))_bloomTip(null);
-    });
-  }
+  if(mask)mask.addEventListener('click',closeBloom);
   window.addEventListener('scroll',function(){if(isBloomOpen())closeBloom();},{passive:true});
   window.addEventListener('resize',function(){if(isBloomOpen())closeBloom();});
 }
@@ -21594,34 +21560,19 @@ function bindEvents(){
         if(h>=_maxInnerH-30 && !onMemo)kbEditEnd();
       }
     });
-  /* ===== ★R69/R86b FAB：单击=新增；长按(桌面按住/右键)=弹出「批量操作/清空已完成」菜单 =====
-     ★R94 真机长按松手后菜单闪没+「点了没反应」的根因：触摸抬手后 Chromium 会补发一串
-     兼容鼠标事件(mousedown→mouseup→click)，而 mousedown 一进来就 _fabLp=false，把长按标志
-     冲掉 → 紧随的 click 误判成「单击」直接 addMemo() → render() 的游离菜单清理把打开中的
-     菜单删掉（还偷偷建了个空备忘）。修法：记录最近一次 touch 时间戳，800ms 内的合成
-     mousedown 一律忽略，不再重置 _fabLp。 */
+  /* ===== ★R221 FAB 只有一件事：点一下开花（一排带名字的动作胶囊），再点一下收起 =====
+     ★R69/R86b/R94 那套「长按(桌面按住/右键)弹文字菜单」**已整套删除**（用户："把长按+出现的
+       菜单去掉"）—— 开出花来之后那四项动作已经全部看得到，长按菜单就是重复入口。
+       连带删掉当初为它打的两个补丁：合成鼠标事件守卫（_fabTouchAt/_fabLp，R94 为"真机长按松手
+       后菜单闪没"打的），以及 openFabMenu/closeFabMenu/_fabMenu* 与 .more-menu.fab-menu 样式。 */
   var fab=document.getElementById('fabAdd');
   if(fab){
-    var _fabLpT=null,_fabLp=false,_fabTouchAt=0;
-    var _fabLpFire=function(){_fabLpT=null;_fabLp=true;openFabMenu();};
-    var _fabLpClear=function(){if(_fabLpT){clearTimeout(_fabLpT);_fabLpT=null;}};
-    fab.addEventListener('touchstart',function(e){if(e.touches.length>1)return;_fabTouchAt=Date.now();_fabLp=false;_fabLpT=setTimeout(_fabLpFire,430);},{passive:true});
-    fab.addEventListener('touchmove',_fabLpClear,{passive:true});
-    fab.addEventListener('touchcancel',_fabLpClear,{passive:true});
-    fab.addEventListener('touchend',function(){_fabTouchAt=Date.now();_fabLpClear();if(_fabLp)setTimeout(function(){_fabLp=false;},400);},{passive:true});
-    fab.addEventListener('mousedown',function(e){if(e.button!==0)return;if(Date.now()-_fabTouchAt<800)return;_fabLp=false;_fabLpT=setTimeout(_fabLpFire,520);});
-    fab.addEventListener('mouseup',_fabLpClear);
-    fab.addEventListener('mouseleave',_fabLpClear);
-    fab.addEventListener('contextmenu',function(e){e.preventDefault();_fabLp=true;openFabMenu();setTimeout(function(){_fabLp=false;},400);});
-    /* ★R220 点 + = 开花（五项沿左上弧弹开）；再点一下收起。正/右键与长按仍然开文字菜单。 */
-    fab.addEventListener('click',function(e){if(_fabLp){_fabLp=false;e.preventDefault();e.stopImmediatePropagation();return;}if(isBloomOpen())closeBloom();else openBloom();});
+    fab.addEventListener('click',function(){if(isBloomOpen())closeBloom();else openBloom();});
   }
   // 首次使用提示（一次性）
-  /* ★R219 文案改指"能随时找到"的入口：长按是个藏起来的手势，提示只出现一次必然被忘
-     （用户："有时候忘了长按右下角那个 + 会弹出菜单"）。
-     ★R219b 入口位置改到"下滑后贴在 + 上方"，★R220 再改成"点 + 就开花"→ 文案跟着改，
-     key 逐次换名（hint → hint2 → hint3 → hint4），保证看过旧文案的人也能看到正确指向。 */
-  try{ if(!localStorage.getItem('memo_fab_hint4')){ localStorage.setItem('memo_fab_hint4','1'); setTimeout(function(){showToast('批量操作 / 分组折叠 / 清空已完成 → 点右下角 + 展开，长按 + 也能出文字菜单');},1400); } }catch(_){ }
+  /* ★R221 文案：长按菜单已删，只剩"点 + 开花"一条路径，文案不再提长按。
+     key 逐次换名（hint → hint2 → hint3 → hint4 → hint5），保证看过旧文案的人也能看到新指向。 */
+  try{ if(!localStorage.getItem('memo_fab_hint5')){ localStorage.setItem('memo_fab_hint5','1'); setTimeout(function(){showToast('新建备忘 / 批量操作 / 分组 / 清空已完成 → 点右下角 + 展开');},1400); } }catch(_){ }
   /* ★R91 启动自动快照：每天首次打开留一份（同日已有则跳过），失败静默 */
   try{ snapAuto(); snapRefreshInfo(); }catch(_){ }
   // 省略视图（一行两个）切换
@@ -21711,62 +21662,10 @@ function bindEvents(){
   }
   emptyStateEl.addEventListener('click',function(){addFromEmptyState();});
   emptyStateEl.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();addFromEmptyState();}});
-  /* ★R69 原 #copy-all-btn / #tool-batch 底栏已删,批量开关提取为函数供 FAB 菜单调用 */
-  /* ★R69 FAB 长按菜单：批量操作 / 复制全部 / 清空已完成 */
-  var FAB_ICO_BATCH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
-  var FAB_ICO_DONE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>';
-  var FAB_ICO_FOLD='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 4 12 9 17 4"/><polyline points="7 20 12 15 17 20"/></svg>';
-  window.__fabMenuEl=null;
-  function openFabMenu(){
-    closeFabMenu();
-    closeBloom(); /* ★R220 长按/右键走文字菜单时，把开花收掉（两个入口不会同时开着） */
-    var m=document.createElement('div');
-    m.id='fabMenu';m.className='more-menu fab-menu';
-    /* ★R91 有分组时提供「折叠全部 / 展开全部」一键切换（按当前是否有展开中的组决定文案） */
-    var _anyOpen=false;
-    for(var _gk=0;_gk<memo_groups.length;_gk++){if(!collapsedGroups[memo_groups[_gk].id]){_anyOpen=true;break;}}
-    m.innerHTML='<div class="more-item" data-act="batch">'+FAB_ICO_BATCH+'批量操作</div>'
-      +'<div class="more-item" data-act="managegrp">'+ICON_GROUPS+(memo_groups.length?'管理分组':'新建分组')+'</div>'
-      +(memo_groups.length?('<div class="more-item" data-act="foldgrp">'+FAB_ICO_FOLD+(_anyOpen?'折叠全部分组':'展开全部分组')+'</div>'):'')
-      +'<div class="more-item" data-act="clear">'+FAB_ICO_DONE+'清空已完成</div>';
-    document.body.appendChild(m);
-    window.__fabMenuEl=m;
-    m.querySelectorAll('.more-item').forEach(function(it){
-      it.addEventListener('click',function(e){
-        e.stopPropagation();
-        var a=it.getAttribute('data-act');
-        closeFabMenu();
-        if(a==='batch')toggleBatchMode();
-        else if(a==='managegrp')openGroupManage();
-        else if(a==='foldgrp')toggleAllGroupsFold();
-        else if(a==='clear')clearCompleted();
-      });
-    });
-    var fab=document.getElementById('fabAdd');
-    var fr=fab.getBoundingClientRect();
-    m.classList.add('open');
-    m.style.visibility='hidden';
-    var mh=m.offsetHeight,mw=m.offsetWidth,vw=window.innerWidth,vh=window.innerHeight;
-    var left=fr.right-mw; if(left+mw>vw-8)left=vw-mw-8; if(left<8)left=8;
-    var top=fr.top-mh-10; if(top<8)top=Math.min(fr.bottom+10,vh-mh-8); if(top<8)top=8;
-    m.style.left=left+'px';m.style.top=top+'px';
-    void m.offsetHeight;
-    m.style.visibility='';
-    setTimeout(function(){document.addEventListener('click',_fabMenuDocClose,true);},0);
-    window.addEventListener('scroll',_fabMenuScrollClose,true);
-  }
-  function _fabMenuDocClose(e){
-    var m=window.__fabMenuEl;
-    if(m&&!m.contains(e.target)&&!(e.target.closest&&e.target.closest('#fabAdd')))closeFabMenu();
-  }
-  function _fabMenuScrollClose(){closeFabMenu();}
-  function closeFabMenu(){
-    var m=window.__fabMenuEl;
-    if(m&&m.parentNode)m.parentNode.removeChild(m);
-    window.__fabMenuEl=null;
-    document.removeEventListener('click',_fabMenuDocClose,true);
-    window.removeEventListener('scroll',_fabMenuScrollClose,true);
-  }
+  /* ★R69 原 #copy-all-btn / #tool-batch 底栏已删,批量开关提取为函数供开花的花瓣调用 */
+  /* ★R221 FAB 长按菜单（openFabMenu / closeFabMenu / _fabMenuDocClose / _fabMenuScrollClose +
+     三个 FAB_ICO_* 图标常量 + window.__fabMenuEl）**已整套删除** —— 四项动作改由「点 + 开花」的
+     花瓣派发 runHeaderMoreAction（与顶栏「更多」里那份同源）。 */
   // 批量操作开关（原底栏「批量操作」按钮逻辑，提取为函数）
   /* ★R125 silent=true：长按手势触发的批量切换走静默路径 —— 不 saveData()。
      理由：① 长按是"手势"，不该产生持久化副作用；② saveData 会同步序列化整个 data 并写
