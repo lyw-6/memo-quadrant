@@ -13436,11 +13436,24 @@ var NAV_MOTION_VMAX=1.15;
 /* ★R186 位置的"跟手软度"：泡中心 pc 用「速度前馈 + 指数平滑」逼近手指 ——
    · 稳态匀速拖：前馈 vf*TAU 正好抵消指数平滑的固有滞后 → 泡不拖在手指后面（跟手）；
    · 加速/反向/急停：pc 短暂落后再追上 → 有"质量"的顺滑感，而不是 1:1 硬贴（"死板"的根源）。
-   ★指数平滑**天生不过冲**（无 Q 弹）；TAU 越小越贴手指（用户口径："不要 Q 弹，要跟手要丝滑"）。 */
-var NAV_POS_TAU=36;
+   ★指数平滑**天生不过冲**（无 Q 弹）；TAU 越小越贴手指（用户口径："不要 Q 弹，要跟手要丝滑"）。
+   ★★R223 用户口径反转：「长按拖动时浮起的气泡移动感觉太快了滑滑的感觉，没有像酷安 app 那样
+   稳重缓慢很有质感」—— 调前实测（_r223_probe.js 基线）：慢拖 2.6px/帧 滞后 −0.9px、
+   快拖 1.5px/ms 泡速 = 手指的 99%、快甩 3px/ms 泡速 = 301% ⇒ 前馈把滞后**全抵消**掉了，
+   泡 1:1 钉在手指上 = "轻飘飘、滑"。三个旋钮（一次到位的口径）：
+     ① NAV_POS_TAU 36→68：平滑时间常数近翻倍 = 起步/反向/急停都更"绵"（缓入缓出，这条给"质感"）；
+     ② NAV_POS_FF 1→0.7：前馈只补七成 → 稳态留一段滞后 = 泡像被"拖着走"（有重量）。
+        稳态滞后 ≈ v·TAU·(1−FF)（位置式跟手：稳态泡速必然 = 手指速度，**只加 TAU 不会产生滞后**）；
+     ③ NAV_POS_VMAX = 1.45px/ms（新增，≈24px/帧@s60）：泡**每帧位移上限** → 手指 3px/ms 的快甩
+        泡最多 1.45 = 稳稳追不上，这条是"稳重不飞"的主旋钮；慢拖 0.14px/ms 远低于上限、不受影响。
+   ⚠️三者要一起给：只调 TAU = 更绵但仍 1:1 贴手；只给上限 = 慢拖照旧"滑"。
+   ⚠️**滞后别调过头**：上限太小会让滞后无限累积（试过 VMAX=1.15 → 快甩滞后 118px = "泡在半路上、
+   手指已经到站"，用户要的是"稳重"不是"迟钝"）。手感三档参考（_r223_probe.js 实测口径）：
+   更稳 → VMAX 1.2 / TAU 80；本档（稳重缓慢）= 1.45 / 68；更利落 → VMAX 2.0 / TAU 50。 */
+var NAV_POS_TAU=68, NAV_POS_FF=0.7, NAV_POS_VMAX=1.45;
 /* ★R175② 删掉 w/dvel（宽度不再单独跑弹簧）；★R178 加 st/vs（右向"拉长"量也走弹簧，原来它直接跟速度 = 1 帧拉满） */
-var _navMorph={vel:0,vf:0,shape:0,vsh:0,lastX:0,lastT:0,raf:0,center:0,pc:0,fT:0,ff:0};
-function _navMorphReset(){_navMorph.vel=0;_navMorph.vf=0;_navMorph.shape=0;_navMorph.vsh=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;_navMorph.pc=0;_navMorph.fT=0;_navMorph.ff=0;}
+var _navMorph={vel:0,vf:0,shape:0,vsh:0,lastX:0,lastT:0,raf:0,center:0,pc:0,fT:0,ff:0,pvv:0};
+function _navMorphReset(){_navMorph.vel=0;_navMorph.vf=0;_navMorph.shape=0;_navMorph.vsh=0;_navMorph.lastX=0;_navMorph.lastT=0;_navMorph.center=0;_navMorph.pc=0;_navMorph.fT=0;_navMorph.ff=0;_navMorph.pvv=0;}
 function _navMorphStop(){if(_navMorph.raf){cancelAnimationFrame(_navMorph.raf);_navMorph.raf=0;}}
 /* 镜面高光位置 = 泡中心在栏内的相对位置（0~100%）→ 拖到哪，反光流到哪。
    这是"液态"与"静态玻璃"的分界：玻璃靠边缘光，液体靠**反光会动**。 */
@@ -13553,8 +13566,22 @@ function _navMorphFrame(){
        而不是光标式瞬移。帧长相关系数 aF 保证高刷屏手感一致。 */
     var dtF=m.fT?Math.max(4,Math.min(50,now-m.fT)):16.7;m.fT=now;
     var aF=1-Math.exp(-dtF/NAV_POS_TAU);
-    var pt=m.center+m.ff*(NAV_POS_TAU-dtF/2);   /* ★-dtF/2：指数平滑的固有滞后是 v*(TAU-dt/2)，按这个补才正好，不超前 */
-    m.pc+=(pt-m.pc)*aF;
+    /* ★-dtF/2：指数平滑的固有滞后是 v*(TAU-dt/2)，按这个补才正好，不超前。
+       ★R223 乘 NAV_POS_FF（0.55）= 前馈**只补一半** → 稳态留一段滞后，泡像被拖着走（"稳重"）。 */
+    var pt=m.center+m.ff*NAV_POS_FF*(NAV_POS_TAU-dtF/2);
+    var pcNew=m.pc+(pt-m.pc)*aF;
+    /* ★R223 泡的**每帧位移上限**（NAV_POS_VMAX px/ms → px/帧）：手指快甩时泡追不上、稳着走。
+       只钳 pc 的推进量，不改 pt（pt 仍是"想去的地方"）——被钳住时泡匀速追，等手指停下再由
+       指数平滑自然收敛，全程无过冲（上限只削速度，不制造回弹）。 */
+    var _cap=NAV_POS_VMAX*dtF,_step=pcNew-m.pc;
+    if(_step>_cap)pcNew=m.pc+_cap;else if(_step<-_cap)pcNew=m.pc-_cap;
+    /* ★R223 运动学量（影子拖尾/镜面拉伸/焦散）改用**泡自己的速度**：
+       原来用 m.vf（手指速度）—— 泡被限速后手指速度已经不代表泡在动多快，继续用 vf 就会出现
+       "泡稳着走、影子与镜面满格乱甩"的割裂（正是"轻飘飘、滑"的一部分）。
+       低通 0.4（2~3 帧收敛）→ 起步/停止都有个短过渡，静止时自然归零。 */
+    var vPill=dtF>0?(pcNew-m.pc)/dtF:0;
+    m.pvv+=(vPill-m.pvv)*0.4;
+    m.pc=pcNew;
     var rawL=m.pc-nr.left-w/2;
     var l=Math.max(minL,Math.min(maxL,rawL));
     if(l!==rawL)m.pc=nr.left+l+w/2;   /* 边界反缠绕：钳住时把 pc 同步回可见位置，别攒着弹性出栏再放 */
@@ -13562,7 +13589,7 @@ function _navMorphFrame(){
     pill.style.width=w.toFixed(1)+'px';
     pill.style.transform='translateX('+l.toFixed(1)+'px)';
     _navSheen(pill,nr,nr.left+l+w/2);                         /* 镜面跟着泡流动 */
-    _navMotion(pill,m.vf/NAV_MOTION_VMAX);                    /* ★R184 运动量：影子拖尾 + 镜面拉伸/偏移（★R185 独立速度尺度） */
+    _navMotion(pill,m.pvv/NAV_MOTION_VMAX);                   /* ★R184 运动量：影子拖尾 + 镜面拉伸/偏移（★R223 改用泡自身速度 pvv） */
     /* ★R172② 光照：位置定稿后再按覆盖范围点亮图标。
        `+1` = 底栏自身的 1px 边框：泡的 translateX 坐标系是**padding box**（═ 外框 +1px），
        传给蒙版的必须是**视口坐标**，否则亮区整体偏左 1px（与 _navSettleFrame 的同名口径对齐）。 */
