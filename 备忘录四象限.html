@@ -2758,7 +2758,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    两处共用一个数字才好维护；且 tab 高 48px 时 22px 与胶囊端头的视觉弧线一致）。
    ⚠️三个断点各有一条 .nav-tab 规则（本行 + ≤560 的 8px + ≤480 的 7px），**三处必须同改**，
      否则窄窗口 hover 又变回方角。 */
-.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:var(--nav-r);font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;}
+.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:6px 2px 4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:var(--nav-r);font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;font-weight:500;}   /* ★R225 字重 400→500（酷安参考图的标签是粗体；用户"图标文字都偏小/没质感"—— 同尺寸下字重是最省的视觉重量来源） */
 /* ★R192b 圆角令牌的断点覆盖**必须写在基础规则之后**：同特异性"后者胜"——
    首版把这两条加在文件上半区（2279 行区的 ≤560/≤480 块内），被基础 `.bottom-nav{--nav-r:15px}` 反杀
    （手机实测仍是 15px）；★另外：媒体块绝不能插进规则声明中间（第一次修时插错，导致 `.nav-tab` 整条失效）。 */
@@ -3404,9 +3404,21 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
      压过前面所有 .bottom-nav/.nav-tab 断点 → 窄屏曾固定 内距 8px + gap 2px（左边距 10、图标文字又拉开 2px）。
      现改成与基础规则一致：水平内距 4px、gap 0。 */
   .bottom-nav{--nav-px:4px;--nav-py:6px;padding:var(--nav-py) var(--nav-px);gap:0;overflow-x:clip;overflow-clip-margin:64px;overflow-y:visible;width:calc(100% - 32px + var(--nav-grow));}   /* ★R199d 12→16；★R201 16→20；★R219 20→32（两侧各 16px，用户"两边再往里收一收"）。⚠️本块在文件末尾、级联必胜 —— 2376/2409 两个窄屏块的 width 全被这条反杀成死代码，改手机宽度必须改这里 */
-  .nav-tab{flex:1 1 0%;min-width:0;padding:6px 2px 4px;gap:0;}
-  .nav-tab svg{width:22px;height:22px;flex-shrink:0;}
-  .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:10px;transform:scale(0.88);transform-origin:center top;line-height:1.1;}
+  /* ★★R225 手机端"图标文字偏小"根因修复（用户："感觉我的这个图标文字都偏小"）：
+     实测（_r225_probe.js，412 视口）：图标 **19.4px**、文字 **8.8px**、描边视觉 **0.81px**、
+     内容/栏 = **55.6%**；同口径酷安参考图 = **76%**（图标 21.3 / 文字 11~13）。
+     为什么一直没改到：R195~R212 那一长串放大（24→30、11→14）**全改在基础档**，本块是文件末尾、
+     级联必胜的窄屏口径，始终停在 `22px / 10px / scale(0.88)` —— 于是
+     ① 图标被 22 又被 `.nav-tab span` 的 scale(0.88) 一起缩成 19.4；
+     ② 文字 10×0.88 = 8.8px；
+     ③ `stroke-width:2.35` 只写在 `@media (min-width:561px)` 里 → 手机端只剩基础值 1（视觉 0.81px，
+        桌面是 2.94px）＝"细得像发丝"。
+     口径：图标 26px、文字 12px（**不再参与缩放**）、描边 2.35、tab 上下内距 6/4 → 2/2
+     （让内容顶到栏边，与酷安"上下各留 6px"一致），栏高基本不变（57→58）。 */
+  .nav-tab{flex:1 1 0%;min-width:0;padding:2px;gap:2px;}
+  .nav-tab svg{width:26px;height:26px;flex-shrink:0;}
+  .bottom-nav .nav-tab svg{stroke-width:2.35;}
+  .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:12px;transform:none;transform-origin:center top;line-height:1.15;}
   .nav-batch{height:34px;font-size:12px;padding:0 6px;gap:4px;}
   .nav-batch .b-ico{width:14px;height:14px;}
   .nav-batch .b-ico svg{width:14px;height:14px;}
