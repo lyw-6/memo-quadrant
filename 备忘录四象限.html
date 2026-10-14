@@ -2951,17 +2951,18 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       color-mix(in srgb, var(--color-primary,#6366f1) calc(20% - 20% * var(--lp)), transparent) 0%,
       color-mix(in srgb, var(--color-primary,#6366f1) calc(15% - 15% * var(--lp)), transparent) 56%,
       color-mix(in srgb, var(--color-primary,#6366f1) calc(11% - 11% * var(--lp)), transparent) 100%),
-    /* ④ ★★R230 浮起时的**白磨砂底**：用户"还是 IT之家导航栏好看点，仿照 IT之家的"。
-       ── 酷安 vs IT之家 是两种流派：酷安＝**半透明玻璃**（能透视底栏的描边/圆角）→ R227 定在 58%；
-          IT之家＝**白磨砂**（厚实、几乎不透明，靠一层大而柔的中性投影立起来）→ 现在提到 **88%**。
-          88% 而不是 100%：留 12% 让底栏那 1px 描边与圆角还能"若隐若现"，不至于像贴了一张白纸。
+    /* ④ ★★R230b 浮起泡改回**半透明**：用户二连纠正——"你怎么又做浮起纯白胶囊，人家 IT之家也是一个
+       透明的、有阴影的胶囊啊"（R227 在酷安上犯过一模一样的错：目测"接近实心白"→ 实际是透明的）。
+       这次用 PIL 量化参考图（1791991140041_d.jpg）：泡内采到 p10=127 的暗点 = **背后内容明显穿透泡
+       显示出来**（那颗泡下面透着文字和彩色图）；且那条栏本身也是磨砂透明的。反推白 alpha ≈ 0.4~0.65。
+       定 **62%**（酷安 58% 同区间、略亮一档）：能透视底栏描边/圆角，形体主要靠那层 .28 黑影立起来。
        alpha 仍与 --lp 同乘 → lp=0 完全透明（常态选中胶囊观感一字未改）；
        底色取 `var(--card-bg)` 而不是写死 #fff —— dark/glass 主题下自动跟随卡片底色，
        否则"浮起泡变亮白胶囊"在深色主题里会炸眼。
-       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(88% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
+       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(62% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
     linear-gradient(180deg,
-      color-mix(in srgb, var(--card-bg) calc(88% * var(--lp)), transparent) 0%,
-      color-mix(in srgb, var(--card-bg) calc(88% * var(--lp)), transparent) 100%);
+      color-mix(in srgb, var(--card-bg) calc(62% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, var(--card-bg) calc(62% * var(--lp)), transparent) 100%);
   /* ★★R182② **常态胶囊不再描边**。原规则是 `border:1px solid color-mix(primary 24%,transparent)`（一条淡蓝紫细边），
      而浮起态是 .nav-pill.lift{border:none} —— 两者一描一边不描，收尾摘掉 .lift 的那一帧
      就凭空冒出一条蓝色描边。R181 把归位放慢放大回弹之后，这条"末帧弹出来的蓝边"变得特别扎眼
