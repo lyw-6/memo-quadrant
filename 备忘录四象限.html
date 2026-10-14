@@ -2871,7 +2871,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       —— 否则玻璃主题下底栏图标比其他主题更细（同组件两套形状语言，R182④ 铁律）。
    ⚠️②包在 min-width:561 里 **不落到窄屏**：≤560 的图标只有 19/20px，2.35 在同一 viewBox 下
       视觉描边已 1.9px，小盒子里会糊（手机档本轮明确不动）。 */
-@media (min-width:561px){ .bottom-nav .nav-tab svg{stroke-width:2.35;} }
+@media (min-width:561px){ .bottom-nav .nav-tab svg{stroke-width:2;} }   /* ★R230 同手机档：2.35→2（细线风格） */
 /* ★★R196 定稿口径（用户澄清）：**长按时图标文字不放大**，只是跟随栏的新尺寸重新分布 ——
    所以 `--nav-grow`（栏宽 +6）**不做内距配平**：水平内距保持常态值 → 内容盒随栏一起 +6px
    → 每个 tab 变宽约 +1.2px、图标/文字仍各自居中（位置自然地随栏「张开」，不做强制零位移）。
@@ -2896,18 +2896,16 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 }
 .nav-tab.active{color:var(--color-primary,#6366f1);}
 .nav-tab.active svg{filter:drop-shadow(0 1px 2px rgba(99,102,241,.4));}
-/* ★★R229 选中项"放大 + 加粗"的层级（用户："选中项没有'变大变粗'的层级（最明显）"）。
-   量化依据（酷安参考图 3x 折算）：选中图标高 77px vs 未选中 63px = **+22%**；
-   选中文字高 40px vs 未选中 33px = **+21%**；而两组内容的**中心完全重合**（159.5 / 159.5）
-   → 酷安做的就是"以中心为原点整体放大"，不是改布局。
-   ⚠️必须用 `transform:scale` 而不是改 font-size/width：后者会撑高 tab → 栏高变 → 浮起/归位那一串几何断言全动。
-   ⚠️`.nav-label` 在手机档被显式设成 `transform:none`（R225 修间距 bug 时加的）→ 这里要显式写 scale 才生效。
-   ⚠️图标放大量 1.14/1.2 不会真的压到文字：svg 图形在 viewBox 24 里只占 3~21（75%），
-     22px 图标放大 1.2 后墨迹约 19.8px，仍有留白（实测不会与文字视觉相接）。 */
-.nav-tab.active svg{transform:scale(1.14);}
+/* ★★R230 选中项层级改为**IT之家口径：只变色 + 加粗，不放大**（用户："还是 IT之家导航栏好看点"）。
+   · R229 按酷安做了「图标 scale(1.14) / 文字 scale(1.12) + 600」——酷安的选中项确实比未选中大 22%；
+     IT之家（以及 iOS 原生 tabBar）不是这样：**两套图标线/面 + 主色**就已经把层级说清楚了，
+     再叠一层放大反而让"选中格"比别的格高一截，看着像不同的控件。
+   · 现在 R230 已把未选中改回细线线框（`.ni-out` = VIEW_META 描边版），选中仍是实心填充版 ——
+     「线 ↔ 面」这一维差异本身就比 1.14 倍放大更强，所以放大可以安全撤掉。
+   · ⚠️撤掉 scale 是"减法"，不需要动布局：tab 高度、栏高、浮起/归位的几何断言全部不受影响
+     （这正是当时用 transform 而不是改 width/font-size 的好处）。 */
 .nav-tab.active .nav-label{font-weight:600;}
-.bottom-nav.nav-lift .nav-tab.filling svg{transform:scale(1.2);}
-.bottom-nav.nav-lift .nav-tab.filling .nav-label{transform:scale(1.12);transform-origin:center top;font-weight:600;}
+.bottom-nav.nav-lift .nav-tab.filling .nav-label{font-weight:600;}
 /* 底部导航选中指示：独立滑块胶囊，切换视图时滑动 + 形变过渡（不随 innerHTML 重建而闪跳）
    ★R142 胶囊保持 primary 渐变观感（用户定稿：不一定要透明玻璃）。
    ★R165 原先「拖动期由玻璃泡接管、真 pill 藏起防双泡」的 liq-drag 交接规则已随泡一并删除。 */
@@ -2929,35 +2927,41 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        ★★R229 弱化（用户："气泡的'光'结构不一样"）：酷安参考图是**沿整圈边缘一条等宽内亮边**，
        而我这条 radial 把高光聚成了"顶部中央一坨亮斑"。改法：光源中心上移到泡外（−22% → **−46%**）、
        主 alpha 砍半（.92 → **.46**）、横向收窄（130% → 150% 但竖直半径 96% → 62%）→
-       只留"顶部一层淡淡的光"，不再是一块亮斑；--pill-hx/--mv 的流动性保持不变。 */
+       只留"顶部一层淡淡的光"，不再是一块亮斑；--pill-hx/--mv 的流动性保持不变。
+       ★★R230 再弱化（"仿 IT之家"）：IT之家的浮起泡是**一整块白磨砂**——没有顶部亮斑、没有彩色光晕，
+       立体感全靠投影。把主 alpha 压到 **.16**（白底上的白光 ≈ 不可见，只在 dark/glass 这类深底上留一点厚度暗示），
+       --mv/--pill-hx 的"流动"仍在（拖动时光带还是会跟着走），只是不再抢戏。 */
     radial-gradient(calc(140% + 40% * var(--mva,0)) 62% at calc(var(--pill-hx,50%) + var(--mv,0) * 9%) -46%,
-      rgba(255,255,255,calc(.46 * var(--lp))) 0%,
-      rgba(255,255,255,calc(.12 * var(--lp))) 40%,
+      rgba(255,255,255,calc(.16 * var(--lp))) 0%,
+      rgba(255,255,255,calc(.05 * var(--lp))) 40%,
       transparent 72%),
     /* ② ★R184 底部焦散：光穿过玻璃在底缘汇聚出的那道亮弧 —— 静态就在暗示"泡有厚度"。
-       alpha 与 --lp 同乘 → 常态完全透明（不浮起时的观感一字未改），只有浮起/归位段看得见。 */
+       alpha 与 --lp 同乘 → 常态完全透明（不浮起时的观感一字未改），只有浮起/归位段看得见。
+       ★R230 .40→.14（同上：白磨砂泡不需要底缘亮弧，它只会把泡底"提亮成一圈"）。 */
     radial-gradient(86% 44% at 50% 116%,
-      rgba(255,255,255,calc(.40 * var(--lp))) 0%,
+      rgba(255,255,255,calc(.14 * var(--lp))) 0%,
       rgba(255,255,255,0) 62%),
     /* ③ 皮本身：也走 alpha 版（lp=0 时混 transparent 叠在栏的 card-bg 上与旧的"混 card-bg"**逐像素等价**，
        但浮起时能让栏的描边/圆角透上来 —— 见 R172④）。三段停靠点保证 lp=0 与旧的 2 段 20%→11% 线性完全一致：
-       20%@0 / 15%@56 / 11%@100（在 56% 处 20-9*.56=14.96≈15）。 */
+       20%@0 / 15%@56 / 11%@100（在 56% 处 20-9*.56=14.96≈15）。
+       ★★R230 浮起时把主色**彻底退到 0**（R226 是 −13/−14/−8，lp=1 还剩 7/1/3%；R229 沿用了这套）：
+       IT之家的泡是纯白磨砂 —— 只要还留一点主色，浮起就会"发蓝"，跟白磨砂不是一回事。
+       ⚠️lp=0 那三个停靠点仍是 20/15/11 → **常态选中胶囊逐像素不变**（R182② 的不变量）。 */
     linear-gradient(180deg,
-      color-mix(in srgb, var(--color-primary,#6366f1) calc(20% - 13% * var(--lp)), transparent) 0%,
-      color-mix(in srgb, var(--color-primary,#6366f1) calc(15% - 14% * var(--lp)), transparent) 56%,
-      color-mix(in srgb, var(--color-primary,#6366f1) calc(11% - 8% * var(--lp)), transparent) 100%),
-    /* ④ ★★R226/R227 浮起时的**半透明白底**（用户纠正："酷安那个哪里是纯白气泡啊，这不是有阴影的透明气泡吗，
-       可以透视后面的导航栏的啊"）—— R226 首版用 97% 太实，把底栏的 1px 描边/圆角整个吃掉了；
-       现在降到 **58%**：既保留酷安那种"白得发亮、但能透出后面导航栏轮廓"的观感，
-       又与 R172④/R172⑤ 的老口径（"半透明泡 + 浮起期把栏描边压深一档，好让玻璃透出来"）重新对齐。
+      color-mix(in srgb, var(--color-primary,#6366f1) calc(20% - 20% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, var(--color-primary,#6366f1) calc(15% - 15% * var(--lp)), transparent) 56%,
+      color-mix(in srgb, var(--color-primary,#6366f1) calc(11% - 11% * var(--lp)), transparent) 100%),
+    /* ④ ★★R230 浮起时的**白磨砂底**：用户"还是 IT之家导航栏好看点，仿照 IT之家的"。
+       ── 酷安 vs IT之家 是两种流派：酷安＝**半透明玻璃**（能透视底栏的描边/圆角）→ R227 定在 58%；
+          IT之家＝**白磨砂**（厚实、几乎不透明，靠一层大而柔的中性投影立起来）→ 现在提到 **88%**。
+          88% 而不是 100%：留 12% 让底栏那 1px 描边与圆角还能"若隐若现"，不至于像贴了一张白纸。
        alpha 仍与 --lp 同乘 → lp=0 完全透明（常态选中胶囊观感一字未改）；
-       底色取 `var(--card-bg)` 而不是写死 #fff —— dark/green 主题下自动跟随卡片底色，
+       底色取 `var(--card-bg)` 而不是写死 #fff —— dark/glass 主题下自动跟随卡片底色，
        否则"浮起泡变亮白胶囊"在深色主题里会炸眼。
-       配合 ③ 把主色皮的浮起分量压掉（lp=1 时 23/12/18% → 7/1/3%）：合起来 = 半透白底 + 一层极淡的主色。
-       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(58% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
+       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(88% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
     linear-gradient(180deg,
-      color-mix(in srgb, var(--card-bg) calc(58% * var(--lp)), transparent) 0%,
-      color-mix(in srgb, var(--card-bg) calc(58% * var(--lp)), transparent) 100%);
+      color-mix(in srgb, var(--card-bg) calc(88% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, var(--card-bg) calc(88% * var(--lp)), transparent) 100%);
   /* ★★R182② **常态胶囊不再描边**。原规则是 `border:1px solid color-mix(primary 24%,transparent)`（一条淡蓝紫细边），
      而浮起态是 .nav-pill.lift{border:none} —— 两者一描一边不描，收尾摘掉 .lift 的那一帧
      就凭空冒出一条蓝色描边。R181 把归位放慢放大回弹之后，这条"末帧弹出来的蓝边"变得特别扎眼
@@ -3104,7 +3108,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      ★R176 外扩 11px→8px；★R192d 常态留白 5→3px、外溢 8→6px（超出量仍 3px）：用户"长按后的导航栏放大效果收小一点，同时那个胶囊泡也一起"
      —— 栏的 padding 同步 9px 10px → 8px 9px（高度 +6px → +4px）。 */
   --lp:1;
-  top:calc(3px - 10px * var(--lp));bottom:calc(3px - 10px * var(--lp));   /* ★R200b 外扩 6→9→10px（用户两轮："高度比导航栏再高一点"）：浮起泡高 = 栏高 + 12px、上下各探出栏外 6px（常态留白 3px + border 1px 之外再溢出 6px） */
+  top:calc(3px - 8px * var(--lp));bottom:calc(3px - 8px * var(--lp));   /* ★R200b 外扩 6→9→10px（用户两轮："高度比导航栏再高一点"）；★R230 10→8px：IT之家参考图实测 泡高/栏高 ≈ **1.148**（栏 203px / 泡 233px @3.52x），10px 时是 1.21、14px 会到 1.35（首跑实测）——上下各探出栏外 4px 仍是"比栏高一截" */
   border-radius:calc(var(--nav-r) + 3px * var(--lp));
   /* ★★R182② 不再在这里另写一套 background / border：皮已经全部搬进基础规则、由 --lp 连续驱动
      （弧顶镜面 alpha = .92*--lp、三段 alpha 渐变 = 20+3*lp / 15-3*lp / 11+7*lp，
@@ -3113,9 +3117,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      ⚠️下面 box-shadow 的 5 层结构必须与基础规则那 5 层**逐层对齐**（含 inset 标记），否则整条 box-shadow
        都不插值（实测 getAnimations() 里连过渡都不生成）—— 基础规则里的两条透明占位层就是为这个存在的。 */
   box-shadow:
-    inset 0 0 0 1.5px rgba(255,255,255,.90),         /* ★R229 顶缘硬线 → **整圈等宽内亮边**（酷安参考图的观感：光沿整个轮廓均匀贴着走，而不是"顶亮底暗"）
-                                                        ⚠️仍在同一层内（offset 1.5→0、spread 0→1.5）→ 与基础规则那层 `inset 0 1px 0` 照常插值；层数/inset 标记一字未动 */
-    inset 0 -1.5px 0 rgba(255,255,255,.34),         /* 底缘回光（0.40→0.34：整圈内亮已经给了底缘，这里只补一点点，避免底部偏暗） */
+    /* ★★R230 整圈内亮边 → 回到**顶缘一线淡光**：IT之家的白磨砂泡没有任何"描边/内亮环"，
+       R229 那圈 `inset 0 0 0 1.5px rgba(255,255,255,.90)` 在白底上会勾出一圈比泡更亮的轮廓
+       （R157 定稿口径本来就是"泡缘一律不描边、泡内零环零暗弧"）。
+       改回顶缘一线（offsetY 1.5px、alpha .90→.40）：只给"上缘受光"的一点暗示，不勾轮廓；
+       ⚠️offsetY 1.5px 也是烟测那条 box-shadow 插值探针的量（基础规则那层是 1px）→ 这一改顺带把探针口径复原。 */
+    inset 0 1.5px 0 0 rgba(255,255,255,.40),
+    inset 0 -1.5px 0 rgba(255,255,255,.18),         /* 底缘回光（.34→.18：白磨砂不需要底缘提亮，留一点点防底部发灰） */
     inset 0 0 20px -9px rgba(255,255,255,.85),      /* 内部厚度柔光（负 spread 把内边界收干净 → 不形成环） */
     /* ★R175① 外晕随 --lp 缩放；★★R184 透明度**必须同乘 --lp** ——
        只缩模糊/扩散而 alpha 恒 46% 时，收尾中段会从"柔晕"收紧成一圈饱和蓝环
@@ -3129,9 +3137,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
          颜色里的负百分比不用管（color-mix 的百分比会被钳到 0，实测 `calc(46%*-0.25)` → alpha 0 合法）。 */
     /* ★R226 外晕从 46% 压到 22%（用户要"酷安那种白胶囊"，不是蓝色光晕）：
        酷安的气泡是**纯白 + 中性灰投影**，主色外晕太强就成了"蓝圈"。
-       下面那层中性黑影同时加强（.09→.22、模糊 12→20px、下偏移 4→6px）= 浮起的"厚度感"来源。 */
-    calc(var(--mv,0) * -9px) calc(15px * var(--lp)) max(0px, calc(32px * var(--lp) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp)) color-mix(in srgb, var(--color-primary,#6366f1) calc(4% * var(--lp)), transparent),  /* ★R229 12%→4%：酷安的泡是"半透明白 + 纯中性灰影"，彩色外晕几乎看不见（留 4% 只作形体边缘的一点色温） */
-    calc(var(--mv,0) * -4px) calc(5px * var(--lp)) max(0px, calc(22px * var(--lp))) calc(-3px * var(--lp)) rgba(0,0,0,calc(.18 * var(--lp)));   /* ★R229 .16→.18：外晕压到 4% 后，形体完全靠这层影子定义 */
+       下面那层中性黑影同时加强（.09→.22、模糊 12→20px、下偏移 4→6px）= 浮起的"厚度感"来源。
+       ★R230 4%→2%：IT之家是彻底的白泡 + 中性灰影，连"形体边缘的色温"都不需要。 */
+    calc(var(--mv,0) * -9px) calc(15px * var(--lp)) max(0px, calc(32px * var(--lp) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp)) color-mix(in srgb, var(--color-primary,#6366f1) calc(2% * var(--lp)), transparent),
+    /* ★★R230 中性黑影**大幅加强**：IT之家的泡之所以"有质感"，**全部**来自这一层大而柔的投影
+       （它自己几乎没有高光/描边）。.18→**.28**、模糊 22→**28px**、下偏移 5→**7px**：
+       泡像真正浮在栏上方、离栏有一段距离，而不是贴在栏上的一块亮面。 */
+    calc(var(--mv,0) * -4px) calc(7px * var(--lp)) max(0px, calc(28px * var(--lp))) calc(-4px * var(--lp)) rgba(0,0,0,calc(.28 * var(--lp)));
   /* ★动画放慢：用户"感觉动画太快、死板" → 0.13s 的瞬时感改成 0.2~0.22s 的缓出 */
   transition:transform .2s cubic-bezier(.22,.61,.36,1), width .2s cubic-bezier(.22,.61,.36,1),
     top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;   /* ★R182② 皮肤由 --lp 驱动，这里只留几何/阴影 */
@@ -3155,8 +3167,9 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
     /* ★R226 与主主题同一口径：外晕 52%→26%、30% 那层换成中性黑影（对齐酷安的"白胶囊 + 灰投影"）。
        glass 主题的浮起泡底本来就是白磨砂（[data-theme="glass"] .nav-pill 的 backdrop-filter 那套），
        所以这里只压光晕、加厚度影。 */
-    calc(var(--mv,0) * -9px) calc(16px * var(--lp,1)) max(0px, calc(34px * var(--lp,1) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp,1)) color-mix(in srgb, var(--color-primary) calc(14% * var(--lp,1)), transparent),
-    calc(var(--mv,0) * -5px) calc(5px * var(--lp,1)) max(0px, calc(24px * var(--lp,1))) calc(-2px * var(--lp,1)) rgba(0,0,0,calc(.18 * var(--lp,1)));
+    /* ★R230 与主主题同口径：白磨砂泡 + 中性灰影（外晕 14%→6%、黑影 .18→.28 / 模糊 24→30px） */
+    calc(var(--mv,0) * -9px) calc(16px * var(--lp,1)) max(0px, calc(34px * var(--lp,1) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp,1)) color-mix(in srgb, var(--color-primary) calc(6% * var(--lp,1)), transparent),
+    calc(var(--mv,0) * -5px) calc(7px * var(--lp,1)) max(0px, calc(30px * var(--lp,1))) calc(-4px * var(--lp,1)) rgba(0,0,0,calc(.28 * var(--lp,1)));
 }
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
    ★transition 必须在这里补全 padding —— 基础规则的 transition 只列了 opacity/transform，
@@ -3461,7 +3474,7 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
      margin 在 flex 与 grid 两种布局下都生效且写法相同 → 归位前后零差异。 */
   .nav-tab{flex:1 1 0%;min-width:0;padding:2px;gap:0;}
   .nav-tab svg{width:22px;height:22px;flex-shrink:0;}
-  .bottom-nav .nav-tab svg{stroke-width:2.35;}
+  .bottom-nav .nav-tab svg{stroke-width:2;}   /* ★R230 2.35→2：未选中图标回到**细线**（IT之家口径），2.35 在实心化那轮是为了补足墨迹，线框回来后再粗就"糊成实心"了 */
   .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:11px;transform:none;transform-origin:center top;line-height:1.15;}
   .nav-tab .nav-label{margin-top:2px;}
   .nav-batch{height:34px;font-size:12px;padding:0 6px;gap:4px;}
@@ -13190,13 +13203,16 @@ function renderBottomNav(){
        ★R172② 文字挂 .nav-label 类：浮起期要用 background-clip:text 给文字做**分段着色**
        （亮区内的字变主色、亮区外保持灰），单元素方案，不复制两份文本（避免基线/字距亚像素差）。 */
     var fi=VIEW_ICON_FILL[v]||m.icon;
-    /* ★R226 未选中也走**填充版**（用户选"未选中图标改实心"，对齐酷安）：
-       `.ni-out` 里原来放的是描边版 → 常态四格全是线条图标，在手机上"细得像发丝"。
-       现在两份都放填充版：常态显示 out（实心，色 = --text-secondary）、选中/高亮显示 fill（实心，主色）。
-       浮起期那套"照到哪亮到哪"的互补蒙版**机制完全不动** —— 它本来就是「out 灰 + fill 主色」双层，
-       换掉 out 的图形内容对它零影响（R172② 的分割线仍然互补）。 */
+    /* ★★R230 未选中回到**细线描边版**（用户："还是 IT之家导航栏好看" → IT之家/原生 tabBar 的经典口径：
+       未选中 = 细线线框图标，选中 = 实心 + 主色，两态靠"线/面 + 颜色"区分，而不是靠"都实心 + 选中放大"）。
+       · R226 曾按酷安口径把未选中也改成实心（当时手机端描边只有 0.81px 视觉宽度，"细得像发丝"）；
+         现在描边已由 R225 抬到 2.35（★R230 回调 2.0：IT之家是细线风格），细线在 22px 图标上视觉 1.83px，
+         不会退化成发丝 —— 所以线框可以放心回来。
+       · `.ni-out` = VIEW_META 的描边版，`.ni-fill` = VIEW_ICON_FILL 的填充版（两套图标本来就平行存放，零新增）。
+       · 浮起期"照到哪亮到哪"的互补蒙版**机制完全不动** —— 它本来就是「out 灰 + fill 主色」双层，
+         换掉 out 的图形内容对它零影响（R172② 的分割线仍然互补）。 */
     html+='<button class="nav-tab'+(v===currentView?' active':'')+'" data-view="'+v+'" type="button">'
-      +'<span class="ni ni-out">'+fi+'</span><span class="ni ni-fill">'+fi+'</span><span class="nav-label">'+m.label+'</span></button>';
+      +'<span class="ni ni-out">'+m.icon+'</span><span class="ni ni-fill">'+fi+'</span><span class="nav-label">'+m.label+'</span></button>';
   }
   nav.classList.remove('batch-mode');
   _navSwapChildren(html);
@@ -13226,14 +13242,12 @@ function renderBottomNav(){
    · 与 positionNavPill 的关系：lift 期间胶囊由本模块接管，positionNavPill 必须让位（见其首行守卫），
      否则 ResizeObserver / resize / render 里的任何一次重排都会把浮起态覆盖回常态位置。
    · 长按后浏览器还会补一次 click：用 suppressClick 吃掉，避免连切两次。 */
-var NAV_PILL_EXTRA=26;   /* ★R170.4 浮起泡比常态胶囊宽出的像素（用户："能否和被选中态的胶囊还宽点"）。
+var NAV_PILL_EXTRA=20;   /* ★R170.4 浮起泡比常态胶囊宽出的像素（用户："能否和被选中态的胶囊还宽点"）。
                             ★R190 曾 20→44（当时常态收窄到 71px，不给外扩就没有形态行程）；
                             ★R192 常态宽回到"整格 − 8"（桌面 138）→ 行程足够，退回 20。
-                            ★R229 20→26：**只加宽、不加高**。依据酷安参考图像素分析（_r229_geo.py，
-                            图 1260x328 @3x）：气泡 bbox 宽 341、栏宽 ~1260（横向铺满）→ 泡宽/格宽
-                            = 341/252 ≈ **1.35**；我的实测 94.4/78.4 ≈ 1.20 → 窄了一档。
-                            而**高度已经够了**：酷安 泡高/栏高 ≈ 254/207 ≈ 1.23，我 = 71.8/59.8 ≈ 1.20，
-                            基本持平 ⇒ 不要再动 .nav-pill.lift 的 top/bottom 外扩量。 */
+                            ★R229 曾 20→26（酷安口径 1.35）；★★R230 回 20：**仿 IT之家**（用户："还是 IT之家
+                            导航栏好看点"）。IT之家参考图实测（_r230 测）：泡宽 ≈294px / 格宽 ≈236px @3.52x
+                            ≈ **1.25**；我 EXTRA=26 时实测 101.2/75.2 ≈ 1.35 → 突出过头，回 20 ≈ 1.27。 */
 var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素（用户：微微超过一点点、能看到后面的边框） */
 /* ★★R170.5 弹簧调参 —— **DAMP 越小阻尼越大**（这个方向我第一版搞反了，实测轨迹一路振荡：
    197→157→185→166→179，42 帧都没收敛）。阻尼比近似 ζ = −ln(DAMP) / (2·√K)：
