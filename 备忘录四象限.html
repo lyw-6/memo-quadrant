@@ -2930,15 +2930,18 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       color-mix(in srgb, var(--color-primary,#6366f1) calc(20% - 13% * var(--lp)), transparent) 0%,
       color-mix(in srgb, var(--color-primary,#6366f1) calc(15% - 14% * var(--lp)), transparent) 56%,
       color-mix(in srgb, var(--color-primary,#6366f1) calc(11% - 8% * var(--lp)), transparent) 100%),
-    /* ④ ★★R226 浮起时的**实心白底**（用户勾选"气泡改白底 + 明显投影"，对齐酷安参考图的白厚胶囊）：
-       alpha 与 --lp 同乘 → lp=0 时完全透明（常态选中胶囊的观感一字未改，与 R182② 的连续性口径一致）；
+    /* ④ ★★R226/R227 浮起时的**半透明白底**（用户纠正："酷安那个哪里是纯白气泡啊，这不是有阴影的透明气泡吗，
+       可以透视后面的导航栏的啊"）—— R226 首版用 97% 太实，把底栏的 1px 描边/圆角整个吃掉了；
+       现在降到 **58%**：既保留酷安那种"白得发亮、但能透出后面导航栏轮廓"的观感，
+       又与 R172④/R172⑤ 的老口径（"半透明泡 + 浮起期把栏描边压深一档，好让玻璃透出来"）重新对齐。
+       alpha 仍与 --lp 同乘 → lp=0 完全透明（常态选中胶囊观感一字未改）；
        底色取 `var(--card-bg)` 而不是写死 #fff —— dark/green 主题下自动跟随卡片底色，
        否则"浮起泡变亮白胶囊"在深色主题里会炸眼。
-       配合 ③ 把主色皮的浮起分量压掉（lp=1 时 23/12/18% → 7/1/3%）：合起来 = 白底 + 一层极淡的主色。
-       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(97% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
+       配合 ③ 把主色皮的浮起分量压掉（lp=1 时 23/12/18% → 7/1/3%）：合起来 = 半透白底 + 一层极淡的主色。
+       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(58% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
     linear-gradient(180deg,
-      color-mix(in srgb, var(--card-bg) calc(97% * var(--lp)), transparent) 0%,
-      color-mix(in srgb, var(--card-bg) calc(97% * var(--lp)), transparent) 100%);
+      color-mix(in srgb, var(--card-bg) calc(58% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, var(--card-bg) calc(58% * var(--lp)), transparent) 100%);
   /* ★★R182② **常态胶囊不再描边**。原规则是 `border:1px solid color-mix(primary 24%,transparent)`（一条淡蓝紫细边），
      而浮起态是 .nav-pill.lift{border:none} —— 两者一描一边不描，收尾摘掉 .lift 的那一帧
      就凭空冒出一条蓝色描边。R181 把归位放慢放大回弹之后，这条"末帧弹出来的蓝边"变得特别扎眼
@@ -3111,7 +3114,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        酷安的气泡是**纯白 + 中性灰投影**，主色外晕太强就成了"蓝圈"。
        下面那层中性黑影同时加强（.09→.22、模糊 12→20px、下偏移 4→6px）= 浮起的"厚度感"来源。 */
     calc(var(--mv,0) * -9px) calc(15px * var(--lp)) max(0px, calc(32px * var(--lp) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp)) color-mix(in srgb, var(--color-primary,#6366f1) calc(12% * var(--lp)), transparent),  /* 外柔晕 = 形体的唯一定义者（★R226 46%→22%→12%：白泡上留 22% 会看成"灰蓝环"） */
-    calc(var(--mv,0) * -4px) calc(5px * var(--lp)) max(0px, calc(20px * var(--lp))) calc(-3px * var(--lp)) rgba(0,0,0,calc(.13 * var(--lp)));
+    calc(var(--mv,0) * -4px) calc(5px * var(--lp)) max(0px, calc(22px * var(--lp))) calc(-3px * var(--lp)) rgba(0,0,0,calc(.16 * var(--lp)));   /* ★R227 黑影 .13→.16、模糊 20→22px：用户点名"这不是**有阴影的**透明气泡吗"——半透明泡的边界全靠投影定义（底下是白栏，明度对比极低） */
   /* ★动画放慢：用户"感觉动画太快、死板" → 0.13s 的瞬时感改成 0.2~0.22s 的缓出 */
   transition:transform .2s cubic-bezier(.22,.61,.36,1), width .2s cubic-bezier(.22,.61,.36,1),
     top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;   /* ★R182② 皮肤由 --lp 驱动，这里只留几何/阴影 */
@@ -3428,12 +3431,22 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
      ② 文字 10×0.88 = 8.8px；
      ③ `stroke-width:2.35` 只写在 `@media (min-width:561px)` 里 → 手机端只剩基础值 1（视觉 0.81px，
         桌面是 2.94px）＝"细得像发丝"。
-     口径：图标 26px、文字 12px（**不再参与缩放**）、描边 2.35、tab 上下内距 6/4 → 2/2
-     （让内容顶到栏边，与酷安"上下各留 6px"一致），栏高基本不变（57→58）。 */
-  .nav-tab{flex:1 1 0%;min-width:0;padding:2px;gap:2px;}
-  .nav-tab svg{width:26px;height:26px;flex-shrink:0;}
+     ★★R227 回调（用户："现在导航栏的图标和文字又过大了"）：26/12 → **22/11**。
+     依据是酷安参考图**同栏高下的绝对值**（3x 折算：图标 21.3 逻辑 px、未选中文字 11、选中粗体 13.3），
+     不是比例 —— R225 那轮的 26px 是按"内容/栏 76%"定的，但 R226 把未选中图标改成**实心**后
+     视觉重量翻了约 3 倍（描边墨迹只有实心的 1/3），同尺寸就会显大；实心 + 22px 的观感 ≈ 描边 26px+。 */
+  /* ★★R228 图标↔文字间距必须用 **.nav-label 的 margin**，不能用 tab 的 gap：
+     用户"长按导航栏弹出来的气泡收回去后这个图标文字会重新调整间距" ——
+     根因是 R225 给手机档 tab 加了 `gap:2px`，而浮起期那条 `.bottom-nav.nav-lift .nav-tab`
+     里写死了 `row-gap:0;column-gap:0`（R172⑨ 为了与"常态 gap:0"对齐、防浮起态 tab 长高）→
+     浮起期 0px、常态 2px，**摘掉 nav-lift 那一帧间距从 0 跳到 2px**（现在图标是实心、看得更明显）。
+     改法：gap 回到 0（两边一致），间距交给 `.nav-label{margin-top:2px}` ——
+     margin 在 flex 与 grid 两种布局下都生效且写法相同 → 归位前后零差异。 */
+  .nav-tab{flex:1 1 0%;min-width:0;padding:2px;gap:0;}
+  .nav-tab svg{width:22px;height:22px;flex-shrink:0;}
   .bottom-nav .nav-tab svg{stroke-width:2.35;}
-  .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:12px;transform:none;transform-origin:center top;line-height:1.15;}
+  .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:11px;transform:none;transform-origin:center top;line-height:1.15;}
+  .nav-tab .nav-label{margin-top:2px;}
   .nav-batch{height:34px;font-size:12px;padding:0 6px;gap:4px;}
   .nav-batch .b-ico{width:14px;height:14px;}
   .nav-batch .b-ico svg{width:14px;height:14px;}
