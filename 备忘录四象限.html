@@ -2927,9 +2927,18 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        但浮起时能让栏的描边/圆角透上来 —— 见 R172④）。三段停靠点保证 lp=0 与旧的 2 段 20%→11% 线性完全一致：
        20%@0 / 15%@56 / 11%@100（在 56% 处 20-9*.56=14.96≈15）。 */
     linear-gradient(180deg,
-      color-mix(in srgb, var(--color-primary,#6366f1) calc(20% + 3% * var(--lp)), transparent) 0%,
-      color-mix(in srgb, var(--color-primary,#6366f1) calc(15% - 3% * var(--lp)), transparent) 56%,
-      color-mix(in srgb, var(--color-primary,#6366f1) calc(11% + 7% * var(--lp)), transparent) 100%);
+      color-mix(in srgb, var(--color-primary,#6366f1) calc(20% - 13% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, var(--color-primary,#6366f1) calc(15% - 14% * var(--lp)), transparent) 56%,
+      color-mix(in srgb, var(--color-primary,#6366f1) calc(11% - 8% * var(--lp)), transparent) 100%),
+    /* ④ ★★R226 浮起时的**实心白底**（用户勾选"气泡改白底 + 明显投影"，对齐酷安参考图的白厚胶囊）：
+       alpha 与 --lp 同乘 → lp=0 时完全透明（常态选中胶囊的观感一字未改，与 R182② 的连续性口径一致）；
+       底色取 `var(--card-bg)` 而不是写死 #fff —— dark/green 主题下自动跟随卡片底色，
+       否则"浮起泡变亮白胶囊"在深色主题里会炸眼。
+       配合 ③ 把主色皮的浮起分量压掉（lp=1 时 23/12/18% → 7/1/3%）：合起来 = 白底 + 一层极淡的主色。
+       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(97% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--card-bg) calc(97% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, var(--card-bg) calc(97% * var(--lp)), transparent) 100%);
   /* ★★R182② **常态胶囊不再描边**。原规则是 `border:1px solid color-mix(primary 24%,transparent)`（一条淡蓝紫细边），
      而浮起态是 .nav-pill.lift{border:none} —— 两者一描一边不描，收尾摘掉 .lift 的那一帧
      就凭空冒出一条蓝色描边。R181 把归位放慢放大回弹之后，这条"末帧弹出来的蓝边"变得特别扎眼
@@ -3098,8 +3107,11 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
          此时 `calc(32px * -0.25)` = **负模糊** → 规范判定非法 → **整条 box-shadow 声明被丢弃**
          （实测计算值掉回基础规则那套 = 收尾下冲时"玻璃皮突然变常态皮"闪一下）。
          颜色里的负百分比不用管（color-mix 的百分比会被钳到 0，实测 `calc(46%*-0.25)` → alpha 0 合法）。 */
-    calc(var(--mv,0) * -9px) calc(15px * var(--lp)) max(0px, calc(32px * var(--lp) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp)) color-mix(in srgb, var(--color-primary,#6366f1) calc(46% * var(--lp)), transparent),  /* 外柔晕 = 形体的唯一定义者 */
-    calc(var(--mv,0) * -4px) calc(4px * var(--lp)) max(0px, calc(12px * var(--lp))) rgba(0,0,0,calc(.09 * var(--lp)));
+    /* ★R226 外晕从 46% 压到 22%（用户要"酷安那种白胶囊"，不是蓝色光晕）：
+       酷安的气泡是**纯白 + 中性灰投影**，主色外晕太强就成了"蓝圈"。
+       下面那层中性黑影同时加强（.09→.22、模糊 12→20px、下偏移 4→6px）= 浮起的"厚度感"来源。 */
+    calc(var(--mv,0) * -9px) calc(15px * var(--lp)) max(0px, calc(32px * var(--lp) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp)) color-mix(in srgb, var(--color-primary,#6366f1) calc(12% * var(--lp)), transparent),  /* 外柔晕 = 形体的唯一定义者（★R226 46%→22%→12%：白泡上留 22% 会看成"灰蓝环"） */
+    calc(var(--mv,0) * -4px) calc(5px * var(--lp)) max(0px, calc(20px * var(--lp))) calc(-3px * var(--lp)) rgba(0,0,0,calc(.13 * var(--lp)));
   /* ★动画放慢：用户"感觉动画太快、死板" → 0.13s 的瞬时感改成 0.2~0.22s 的缓出 */
   transition:transform .2s cubic-bezier(.22,.61,.36,1), width .2s cubic-bezier(.22,.61,.36,1),
     top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;   /* ★R182② 皮肤由 --lp 驱动，这里只留几何/阴影 */
@@ -3120,8 +3132,11 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        ★R184 与主主题同三条修正：① alpha 同乘 --lp（否则收尾时同样的"饱和蓝环"）；
          ② 水平偏移取运动反方向（影子拖尾 = 重量）；③ 模糊随速度放大。
          ⚠️模糊同样必须 `max(0px, …)` 兜住负 --lp（否则整条 box-shadow 被丢弃）。 */
-    calc(var(--mv,0) * -9px) calc(16px * var(--lp,1)) max(0px, calc(34px * var(--lp,1) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp,1)) color-mix(in srgb, var(--color-primary) calc(52% * var(--lp,1)), transparent),
-    calc(var(--mv,0) * -5px) 0 max(0px, calc(26px * var(--lp,1))) calc(-4px * var(--lp,1)) color-mix(in srgb, var(--color-primary) calc(30% * var(--lp,1)), transparent);
+    /* ★R226 与主主题同一口径：外晕 52%→26%、30% 那层换成中性黑影（对齐酷安的"白胶囊 + 灰投影"）。
+       glass 主题的浮起泡底本来就是白磨砂（[data-theme="glass"] .nav-pill 的 backdrop-filter 那套），
+       所以这里只压光晕、加厚度影。 */
+    calc(var(--mv,0) * -9px) calc(16px * var(--lp,1)) max(0px, calc(34px * var(--lp,1) * (1 + .5 * var(--mva,0)))) calc(-10px * var(--lp,1)) color-mix(in srgb, var(--color-primary) calc(14% * var(--lp,1)), transparent),
+    calc(var(--mv,0) * -5px) calc(5px * var(--lp,1)) max(0px, calc(24px * var(--lp,1))) calc(-2px * var(--lp,1)) rgba(0,0,0,calc(.18 * var(--lp,1)));
 }
 /* 拖动跟手要独占指针流：底栏本身不需滚动，禁掉默认 touch-action（否则移动端 pointermove 会被滚动抢走）
    ★transition 必须在这里补全 padding —— 基础规则的 transition 只列了 opacity/transform，
@@ -13145,8 +13160,13 @@ function renderBottomNav(){
        ★R172② 文字挂 .nav-label 类：浮起期要用 background-clip:text 给文字做**分段着色**
        （亮区内的字变主色、亮区外保持灰），单元素方案，不复制两份文本（避免基线/字距亚像素差）。 */
     var fi=VIEW_ICON_FILL[v]||m.icon;
+    /* ★R226 未选中也走**填充版**（用户选"未选中图标改实心"，对齐酷安）：
+       `.ni-out` 里原来放的是描边版 → 常态四格全是线条图标，在手机上"细得像发丝"。
+       现在两份都放填充版：常态显示 out（实心，色 = --text-secondary）、选中/高亮显示 fill（实心，主色）。
+       浮起期那套"照到哪亮到哪"的互补蒙版**机制完全不动** —— 它本来就是「out 灰 + fill 主色」双层，
+       换掉 out 的图形内容对它零影响（R172② 的分割线仍然互补）。 */
     html+='<button class="nav-tab'+(v===currentView?' active':'')+'" data-view="'+v+'" type="button">'
-      +'<span class="ni ni-out">'+m.icon+'</span><span class="ni ni-fill">'+fi+'</span><span class="nav-label">'+m.label+'</span></button>';
+      +'<span class="ni ni-out">'+fi+'</span><span class="ni ni-fill">'+fi+'</span><span class="nav-label">'+m.label+'</span></button>';
   }
   nav.classList.remove('batch-mode');
   _navSwapChildren(html);
