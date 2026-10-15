@@ -3001,7 +3001,9 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        `46% * --lp` 自己给的（随形体淡出，收尾直接归零而不是落到 22%），效果不减。 */
     inset 0 0 0 0 transparent,
     0 0 0 0 transparent,
-    0 0 0 0 transparent;
+    0 0 0 0 transparent,
+    0 0 0 0 transparent,   /* ★R233 第 5 层占位：lift 加了「贴边影」（见下），层数 5→6，基础同步补占位 */
+    inset 0 0 0 0 transparent;   /* ★R233b 第 7 层占位：lift 加了「内缘暗线」（inset），层数 6→7 */
   /* ★★R182② 皮肤过渡：声明必须写在**基础规则**上（父状态被撤掉时靠它兜住），写成 `.lift` 里的话
      摘类那一刻规则一起消失 → 又是一次瞬跳（同 R170 的"状态类里别写 transition"）。
      ⚠️不列 background-image：皮是 --lp 驱动的，列了反而会在 --pill-hx 每帧变化时反复重启过渡。 */
@@ -3174,8 +3176,21 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        （它自己几乎没有高光/描边）。.18→**.28**、模糊 22→**28px**、下偏移 5→**7px**：
        泡像真正浮在栏上方、离栏有一段距离，而不是贴在栏上的一块亮面。 */
     /* ★R232 阴影再加重一档（用户："不能稍微灰一点加点阴影吗"）：.28→**.32**、模糊 28→**30px**、
-       下偏移 7→**8px**。泡现在是中性灰（提亮≈0），形体**只能**靠这层影子立起来。 */
-    calc(var(--mv,0) * -4px) calc(8px * var(--lp)) max(0px, calc(30px * var(--lp))) calc(-4px * var(--lp)) rgba(0,0,0,calc(.32 * var(--lp)));
+       下偏移 7→**8px**。泡现在是中性灰（提亮≈0），形体**只能**靠这层影子立起来。
+       ★★R233 加「贴边影」一层（用户："气泡边缘看不清呢，人家 IT之家的能看清"）：
+       上面这层 blur 30 + spread −4 的影子**最暗处离泡边有一段距离**、又被负 spread 往里收
+       → 贴着泡边的那一圈没有暗带，轮廓糊（纯灰泡 vs 同亮度栏，边缘全靠影子勾勒）。
+       IT之家泡边缘清晰 = 影子**贴边**：blur 小（**6px**）、spread 0、offsetY 2px，泡边外一圈立刻变暗。
+       ★R233b 首拍 blur9/alpha.16 太弱（实测泡边外侧只暗到 222，比泡内 225 才暗 3）→ blur **6px**、alpha **.22**：
+       边界处合计暗度超过泡内亮度 ⇒ "泡内 225 | 边外暗带 ~210 | 栏 255" 三段分明，轮廓一下就出来了。
+       ⚠️层数 5→6，基础规则同步补第 5 层透明占位（R182①：层数/inset 对齐才插值）。 */
+    calc(var(--mv,0) * -2px) calc(2px * var(--lp)) max(0px, calc(6px * var(--lp))) 0 rgba(0,0,0,calc(.22 * var(--lp))),
+    calc(var(--mv,0) * -4px) calc(8px * var(--lp)) max(0px, calc(30px * var(--lp))) calc(-4px * var(--lp)) rgba(0,0,0,calc(.32 * var(--lp))),
+    /* ★R233b **内缘暗线**：外影再贴边也是渐变，磨砂玻璃边缘清晰靠的是**内缘那圈 1px 阶跃暗线**
+       （玻璃边缘的物理暗线，不是 R157 禁的亮描边——那条口径禁的是"白/蓝亮边勾轮廓"）。
+       alpha 只有 .05、且随 --lp 淡出：只在浮起时给边界一个"阶跃"，常态零影响。
+       ⚠️放在**最后一层**：m1() 探针取第 1 层 offsetY、glow() 取倒数第二层，都不要被它挤位。 */
+    inset 0 0 0 1px rgba(0,0,0,calc(.05 * var(--lp)));
   /* ★动画放慢：用户"感觉动画太快、死板" → 0.13s 的瞬时感改成 0.2~0.22s 的缓出 */
   transition:transform .2s cubic-bezier(.22,.61,.36,1), width .2s cubic-bezier(.22,.61,.36,1),
     top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;   /* ★R182② 皮肤由 --lp 驱动，这里只留几何/阴影 */
