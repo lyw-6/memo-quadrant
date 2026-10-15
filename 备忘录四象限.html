@@ -13402,10 +13402,19 @@ function _navCurrentIndex(){
        完全没照到 → a=b=1（蒙版判为全灭）。泡横跨两格 → 两格各得一段部分亮区。
    由 rAF 帧循环每帧调用 —— 泡在形变/超界时宽度位置都在变，亮区必须跟着更新。 */
 var NAV_LIT_RATIO=0.28;
+/* ★★R237 亮区缩放因子：归位期跟随 --lp 把亮区**向中心收缩**，收尾摘 .lift 前就已经收缩到 0。
+   根因（用户："气泡收起来的时候，导航栏里的图标和文字会动一下"）：探针逐帧实测显示
+   图标 rect 分毫未变（iconL/iconT/iconH 全程一致），动的是**外观** ——
+   浮起期一个格子的图标是"灰→主色→灰"的区间着色（--la/--lb），而 `_navFinishSettle` 里
+   `_navLitClear()` 与摘 .lift **同帧**把区间硬清成 100%（全灭）→ 整排图标颜色瞬间跳变。
+   修法：settle 期每帧把 factor 设为 lp，区间按 factor 向中心收缩（收缩到 <0.6% 视为全灭），
+   于是摘类那一帧亮区已是 0 → **摘类前后视觉一致**（同 R232 对 --lp 的"摘类前先钉 0"思路）。 */
+var _navLitScale=1;
 function _navLitUpdate(pl,pr){
   var tabs=_navTabs(),n=tabs.length,rec=[];
   /* 先读完所有 rect 再写样式：读写交错会强制多次同步布局（拖动期每帧都发生）。 */
   for(var k=0;k<n;k++)rec.push(tabs[k].getBoundingClientRect());
+  var sc=_navLitScale;
   for(var i=0;i<n;i++){
     var r=rec[i],lit=false,a=1,b=1;
     if(r.width){
@@ -13417,6 +13426,13 @@ function _navLitUpdate(pl,pr){
       a=Math.max(0,Math.min(1,(pl-r.left)/r.width));
       b=Math.max(0,Math.min(1,(pr-r.left)/r.width));
       if(!(b>a)){a=1;b=1;}
+      /* ★R237 归位期：亮区向中心收缩（lp→0 时收缩成"全灭"），摘类帧不再突跳 */
+      if(sc<1&&b>a){
+        var c=(a+b)/2,half=(b-a)/2*sc;
+        a=Math.max(0,c-half);b=Math.min(1,c+half);
+        if(b-a<0.006){a=1;b=1;}   /* 与 a=b=1 的"全灭"同义 */
+      }
+      if(sc<0.35)lit=false;   /* ★R237 filling 也要跟着退场（否则字重 600→500 突跳） */
     }
     var la=(a*100).toFixed(1)+'%',lb=(b*100).toFixed(1)+'%';
     if(tabs[i]._la!==la){tabs[i]._la=la;tabs[i].style.setProperty('--la',la);}
@@ -13808,6 +13824,7 @@ function _navEnterLift(startIdx,pressX){
     nav.style.setProperty('--lp','1');   /* ★R234 栏压暗同源：CSS 变量只向下继承，写在 pill 上 nav 拿不到 → 两处同步写 */
     _navMotion(pill,0);   /* ★R184 顺手把运动量清零：别让上一次手势的拖尾残留到这一帧 */
   }
+  _navLitScale=1;   /* ★R237 浮起期亮区满量（只有归位期才收缩） */
   _navPlacePill(_navLift.idx,true,pressX);
   _navLitClear();
   /* ★R170.3 进 lift 就启动帧循环 —— 帧循环原来只在 _navMorphMove 里按需启动（拖动才有），
@@ -13917,6 +13934,7 @@ function _navSettleFrame(nav,pill){
   nav.style.setProperty('--lp',s.lp.toFixed(3));     /* ★R234 栏压暗同源：与泡的弹簧同一条时间轴，摘类帧零变化 */
   _navSheen(pill,nr,s.x+w/2);                      /* 镜面高光跟着泡流动（液态感） */
   _navMotion(pill,s.vx/12);                        /* ★R184 收尾段也保留拖尾（12px/帧 ≈ 满速），一条连续的运动线索 */
+  _navLitScale=Math.max(0,s.lp);   /* ★R237 归位期亮区随 lp 收缩：摘 .lift 之前就已淡出 */
   _navLitUpdate(nr.left+1+s.x,nr.left+1+s.x+w);    /* +1 = 底栏的 1px 边框 */
   var done=Math.abs(s.tx-s.x)<0.8&&Math.abs(s.vx)<0.12&&Math.abs(s.tw-s.w)<0.8&&Math.abs(s.vw)<0.12
     &&Math.abs(s.tlp-s.lp)<0.01&&Math.abs(s.vlp)<0.01;   /* ★R175① 几何没收完就不许收尾 */
@@ -13948,6 +13966,9 @@ function _navFinishSettle(){
     pill.style.transition='';   /* 恢复过渡：紧接着 positionNavPill 写的常态 width/transform 会平滑收敛 */
     _navMotion(pill,0);         /* ★R184 收尾清零：常态皮不引用 --mv/--mva，但别留脏值给下次浮起的第一帧 */
   }
+  /* ★R237 归位末帧 lp 已到 0 → 亮区早已收缩为 0；这里清零是**幂等**的（摘类帧不再有可见跳变）。
+     先复位 factor 再 clear，保证下次浮起从满量亮区开始。 */
+  _navLitScale=1;
   _navLitClear();
   /* ⚠️故意**不清** inline width/transform：清了会先塌成 width:0 闪一下；
      交给下面的 positionNavPill() 直接覆盖成常态值即可。
