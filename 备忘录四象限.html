@@ -2717,7 +2717,7 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    原来只有 padding 竖直 +2px（栏高 +4px），水平 +5px 只是让**内容内缩**、栏外框宽度写死不变 → 看着「单纯变高」。
    加一个外扩量 `--nav-grow`：常态 0、浮起 8px（左右各 4px），所有 width/max-width 都 `+ var(--nav-grow)`。
    ★关键配平：水平内距增量同时 5px→**4px** → 内容盒净变化（−8px padding ＋ 8px 宽度）= **0** → 栏外框膨胀、tab 与图标位置纹丝不动。 */
-.bottom-nav{--nav-grow:0px;--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-px:3px;--nav-py:6px;--nav-r:999px;/* ★R229 底栏自己的前景色（用户："未选中内容的对比度更弱"，酷安参考图的未选中图标/文字是**近纯黑**、实测亮度 <150）：不直接换成 --text（R172⑫ 的教训：日主题 --text 近黑，会比选中主色还抢眼＝层级倒挂），而是混出"比 --text-secondary 深一档、又不到 --text"的底栏专属色 */--nav-fg:color-mix(in srgb, var(--text) 82%, var(--text-secondary));position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right) + var(--nav-grow));max-width:calc(640px + var(--nav-grow));/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+.bottom-nav{--nav-grow:0px;--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-px:3px;--nav-py:6px;--nav-r:999px;/* ★R229 底栏自己的前景色（用户："未选中内容的对比度更弱"，酷安参考图的未选中图标/文字是**近纯黑**、实测亮度 <150）：不直接换成 --text（R172⑫ 的教训：日主题 --text 近黑，会比选中主色还抢眼＝层级倒挂），而是混出"比 --text-secondary 深一档、又不到 --text"的底栏专属色 */--nav-fg:color-mix(in srgb, var(--text) 82%, var(--text-secondary));position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;/* ★★R234 浮起期栏压暗（磨砂灰）：参考图里**栏是灰的**（磨砂透出背后暗内容）、泡是白的，实心白栏上白泡永远融底 → 压暗交给 --lp：lp=0 时 = card-bg 逐像素等价（常态一字不改），浮起 lp=1 ≈ +9% 黑 → 灰底衬白泡。⚠️--lp 由 JS 同时写在 nav 与 pill 上（CSS 变量只向下继承，写在 pill 上 nav 拿不到）；glass 主题的栏背景是自己的磨砂覆盖、不参与。 */background:color-mix(in srgb, #000 calc(9% * var(--lp,0)), var(--card-bg));border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right) + var(--nav-grow));max-width:calc(640px + var(--nav-grow));/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2957,32 +2957,19 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       color-mix(in srgb, var(--color-primary,#6366f1) calc(20% - 20% * var(--lp)), transparent) 0%,
       color-mix(in srgb, var(--color-primary,#6366f1) calc(15% - 15% * var(--lp)), transparent) 56%,
       color-mix(in srgb, var(--color-primary,#6366f1) calc(11% - 11% * var(--lp)), transparent) 100%),
-    /* ④ ★★R231 浮起泡底：**几乎不提亮**（用户三连："这白得跟电灯泡一样，你就不能参照 IT之家那个样子吗"）。
-       ── 前两轮都只改"透不透明"，没抓到真正的根因。这次用 PIL 做**泡 vs 紧邻栏的对照采样**
-          （同 y 区间，泡 x120..280 / 右邻栏 x330..430）：
-            y 95..120  → 泡 p50 **224** / 邻栏 p50 **224**（差 0）
-            y 230..265 → 泡 p50 **246** / 邻栏 p50 **241**（差 +2%）
-          ⇒ **IT之家那颗泡根本不提亮底栏**，它靠的是「把背后内容糊掉」+「一圈大而柔的中性投影」。
-          之前 58%/62%/88% 全是在错误的方向上调同一个旋钮（而且白底还叠着 6 层白色高光 → 过曝）。
-       定 **10%**、且改用写死的 **#fff** 而不是 var(--card-bg)：
-          ① 10% 已经不可能"炸眼"，写死白才符合 IT之家（泡是**提亮**背后，不是叠一层卡片色）；
-             用 --card-bg 的话深色主题下叠的是深色 → 泡反而变成一块暗斑，方向就反了。
-          ② 10% 白在浅色栏（~250）上只提亮 +0.5 ≈ **不可见**（正是参考图的实测结论）；
-             在 dark/glass 的深底上提亮 ~22 → 泡浮起来，正好补上"看不见泡"的缺口。
-       ★★R232 再改：白 → **中性灰**（用户："浮起气泡不能稍微灰一点加点阴影吗，感觉 IT之家就是这样的"）。
-          10% 白的问题不是亮度（参考图实测提亮≈0），而是**方向**：白只能把泡"提亮"，
-          而 IT之家那颗泡的物理本质是「一层半透明磨砂介质压在栏上」= 把背后往**中灰**推。
-          改用 `var(--text)` 6%：`--text` 在浅色主题是深色（泡区比栏**略暗**＝灰）、
-          在深色主题是浅色（泡区比栏**略亮**＝同样是灰）—— 一份声明两边都朝"中灰"走，
-          这才是"磨砂压上去"的观感，也彻底不会再有"电灯泡"的可能。
-       ★R232b 6%→**13%**：用户"但是感觉还是看不清这个浮起气泡啊"。参考图里泡"看得见"是因为
-          它**糊掉了背后内容**（栏后有文字/彩色图），而我们的栏是一片纯色 —— 没有纹理可糊，
-          对比度就**只能**由这层灰化提供。6% 实测泡区 242 / 栏 255（差 13）在手机上几乎看不出来，
-          13% ≈ 差 29（浅色主题泡比栏暗一档；深色主题反向提亮），配上 .32 的影子足够立起来。
-       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(13% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
+    /* ④ ★★R234 泡底从"中性灰压暗"反转为**白磨砂提亮**（用户给近景参考图："IT之家这样的啊，你再对比一下"）：
+       上轮 13% 灰把方向做反了——近景图里看得很清楚：**泡是亮的白磨砂、明显比栏亮一档**，
+       边缘是一圈**白色高光边**（左缘还有玻璃色散的彩虹），不是暗线。
+       之前第一张远景图量化"泡 p50 224 / 邻栏 224（差 0）"是被**背后内容不同**混淆的：
+       泡区背后是暗文字、栏区背后是亮内容，磨砂各自平均后恰好同值 ⇒ "提亮≈0"是假象。
+       ⚠️但我们的栏是实心 card-bg（浅色主题 ≈ 纯白），泡再白也融进栏里 → **配套改动：浮起期把栏压暗**
+       （.bottom-nav 的 background，9% 黑、--lp 驱动），栏 ≈232 / 泡 ≈247，白泡才"浮"得出来——
+       这也正是参考图的观感（栏灰、泡白）。深色主题：栏 ≈27 / 泡 ≈175，超亮 ✓。
+       glass 主题的栏背景是自己的磨砂覆盖，不参与压暗。
+       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(65% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
     linear-gradient(180deg,
-      color-mix(in srgb, var(--text) calc(13% * var(--lp)), transparent) 0%,
-      color-mix(in srgb, var(--text) calc(13% * var(--lp)), transparent) 100%);
+      color-mix(in srgb, #fff calc(65% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, #fff calc(65% * var(--lp)), transparent) 100%);
   /* ★★R182② **常态胶囊不再描边**。原规则是 `border:1px solid color-mix(primary 24%,transparent)`（一条淡蓝紫细边），
      而浮起态是 .nav-pill.lift{border:none} —— 两者一描一边不描，收尾摘掉 .lift 的那一帧
      就凭空冒出一条蓝色描边。R181 把归位放慢放大回弹之后，这条"末帧弹出来的蓝边"变得特别扎眼
@@ -3186,11 +3173,11 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        ⚠️层数 5→6，基础规则同步补第 5 层透明占位（R182①：层数/inset 对齐才插值）。 */
     calc(var(--mv,0) * -2px) calc(2px * var(--lp)) max(0px, calc(6px * var(--lp))) 0 rgba(0,0,0,calc(.22 * var(--lp))),
     calc(var(--mv,0) * -4px) calc(8px * var(--lp)) max(0px, calc(30px * var(--lp))) calc(-4px * var(--lp)) rgba(0,0,0,calc(.32 * var(--lp))),
-    /* ★R233b **内缘暗线**：外影再贴边也是渐变，磨砂玻璃边缘清晰靠的是**内缘那圈 1px 阶跃暗线**
-       （玻璃边缘的物理暗线，不是 R157 禁的亮描边——那条口径禁的是"白/蓝亮边勾轮廓"）。
-       alpha 只有 .05、且随 --lp 淡出：只在浮起时给边界一个"阶跃"，常态零影响。
+    /* ★★R234b 内缘线：暗线 → **白色高光边**（用户近景图：泡边缘是一圈**亮**的玻璃高光，
+       左缘甚至有色散彩虹——我上轮做成 5% 黑暗线，方向又反了）。alpha .55、随 --lp 淡出：
+       灰栏（浮起期压暗 9%）衬着白边，泡的轮廓一下就出来；常态（lp=0）零影响。
        ⚠️放在**最后一层**：m1() 探针取第 1 层 offsetY、glow() 取倒数第二层，都不要被它挤位。 */
-    inset 0 0 0 1px rgba(0,0,0,calc(.05 * var(--lp)));
+    inset 0 0 0 1px rgba(255,255,255,calc(.55 * var(--lp)));
   /* ★动画放慢：用户"感觉动画太快、死板" → 0.13s 的瞬时感改成 0.2~0.22s 的缓出 */
   transition:transform .2s cubic-bezier(.22,.61,.36,1), width .2s cubic-bezier(.22,.61,.36,1),
     top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;   /* ★R182② 皮肤由 --lp 驱动，这里只留几何/阴影 */
@@ -3224,7 +3211,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .bottom-nav{touch-action:none;transition:padding .28s cubic-bezier(.22,.61,.36,1),opacity .25s ease,transform .25s ease,
   /* ★R182② 栏自己的皮肤也要过渡：摘掉 .nav-lift 时 border-color（浮起期压深一档）与 box-shadow
      （浮起期加重）以前是**一帧跳回**的 —— 与泡的皮肤在同一帧跳，叠加起来就是"收尾时闪一下"。 */
-  box-shadow .28s cubic-bezier(.22,.61,.36,1),border-color .28s cubic-bezier(.22,.61,.36,1);} /* ★R181 与泡同步（0.2s 会比泡先收完）；★R194 缓动与 padding 统一（同步感＝同时长＋同缓动）；★R224 归位方向单开 .44s（见 .nav-lift-out），浮起方向仍留 .28s */
+  box-shadow .28s cubic-bezier(.22,.61,.36,1),border-color .28s cubic-bezier(.22,.61,.36,1),background-color .25s ease;}   /* ★R234 浮起入场 --lp 瞬设 1，栏压暗走过渡渐入 */ /* ★R181 与泡同步（0.2s 会比泡先收完）；★R194 缓动与 padding 统一（同步感＝同时长＋同缓动）；★R224 归位方向单开 .44s（见 .nav-lift-out），浮起方向仍留 .28s */
 /* 桌面端(精确指针 + 支持 hover):为列表项与导航提供鼠标 hover 反馈,移动端不触发 */
 @media (hover:hover) and (pointer:fine){
   .memo-item:hover,
@@ -13819,6 +13806,7 @@ function _navEnterLift(startIdx,pressX){
        `.nav-pill.lift{--lp:1}` —— 不重置的话第二次点按底栏，泡会一直是"常态大小"（浮不起来）。
        放在 transition 之后写：入场时 --lp 0→1 与加类同帧发生，top/bottom 走 .26s 过渡 = 泡"涨"起来。 */
     pill.style.setProperty('--lp','1');
+    nav.style.setProperty('--lp','1');   /* ★R234 栏压暗同源：CSS 变量只向下继承，写在 pill 上 nav 拿不到 → 两处同步写 */
     _navMotion(pill,0);   /* ★R184 顺手把运动量清零：别让上一次手势的拖尾残留到这一帧 */
   }
   _navPlacePill(_navLift.idx,true,pressX);
@@ -13927,6 +13915,7 @@ function _navSettleFrame(nav,pill){
   pill.style.width=w.toFixed(1)+'px';
   pill.style.transform='translateX('+s.x.toFixed(1)+'px)';
   pill.style.setProperty('--lp',s.lp.toFixed(3));   /* ★几何（top/bottom/radius/外晕）跟着一起收 */
+  nav.style.setProperty('--lp',s.lp.toFixed(3));     /* ★R234 栏压暗同源：与泡的弹簧同一条时间轴，摘类帧零变化 */
   _navSheen(pill,nr,s.x+w/2);                      /* 镜面高光跟着泡流动（液态感） */
   _navMotion(pill,s.vx/12);                        /* ★R184 收尾段也保留拖尾（12px/帧 ≈ 满速），一条连续的运动线索 */
   _navLitUpdate(nr.left+1+s.x,nr.left+1+s.x+w);    /* +1 = 底栏的 1px 边框 */
@@ -13953,6 +13942,7 @@ function _navFinishSettle(){
        摘类这一帧零变化。⚠️顺序不能反：先钉值、再摘类，中间必须 reflow 让新值生效。 */
     pill.style.transition='none';
     pill.style.setProperty('--lp','0');
+    if(nav)nav.style.setProperty('--lp','0');   /* ★R234 栏压暗同源钉 0：残值会让栏带灰进常态 */
     void pill.offsetWidth;
     pill.classList.remove('lift');
     void pill.offsetWidth;
