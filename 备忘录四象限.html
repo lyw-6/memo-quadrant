@@ -14273,9 +14273,28 @@ function setView(v){
      原实现是**双 requestAnimationFrame** → 重建后的**第一帧先按 scrollTop=0 绘制**、两帧后才滚回记忆位置，
      视觉上就是"内容整体刷新了一下"（列表重建本身是必要的，能省掉的只有这一跳）。
      现在 render() 结束立刻同步 scrollTo（浏览器还没绘制 → 看不到顶部那一帧），再用一次 rAF 校正
-     （内容高度可能还没最终确定，补一次保证落在正确位置）。 */
-  try{var _y=_viewScrollMem[v]||0;window.scrollTo(0,_y);
-    requestAnimationFrame(function(){window.scrollTo(0,_y);});}catch(_){}
+     （内容高度可能还没最终确定，补一次保证落在正确位置）。
+     ★★R241 恢复滚动时必须**同时复位底栏的滚动隐藏态 + 对齐 _navLastY 基准**（用户：
+     "从其他导航切换到备忘录时能不能不隐藏导航栏"——探针实测：切回 list 恢复滚动到 400，
+     scroll 事件里 dy = 400 − _navLastY(上一个视图的 0) = +400 > 6 → 误判成"用户往下滑"→ 加上
+     `.nav-hidden`，底栏滑走且不再自己回来（opacity 0，实测 ⑥ 稳定在 0）。
+     修法两条一起做：① 切视图 = 用户的显式导航动作 → 先摘掉 `.nav-hidden`（底栏必须可见）；
+     ② `_navLastY` 先钉到目标位置再滚动 → 恢复滚动产生的 scroll 事件 dy=0，不会被方向逻辑误判；
+     rAF 那次校正同理（先钉基准再滚）。⚠️`_navLastY`/`getPageScroll` 与本函数同一脚本作用域
+     （同一 `<script>` 块，靠 `var` 提升可用），不要挪到别的块里。 */
+  try{
+    var _y=_viewScrollMem[v]||0;
+    var _nv=document.getElementById('bottomNav');
+    if(_nv)_nv.classList.remove('nav-hidden');
+    _navLastY=_y;
+    window.scrollTo(0,_y);
+    requestAnimationFrame(function(){
+      var _n2=document.getElementById('bottomNav');
+      if(_n2)_n2.classList.remove('nav-hidden');
+      _navLastY=_y;
+      window.scrollTo(0,_y);
+    });
+  }catch(_){}
 }
   function syncFloatingBars(){
     var nav=document.getElementById('bottomNav');
