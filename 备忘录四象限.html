@@ -39,6 +39,11 @@
   --color-danger:#e74c3c; --color-success:#2ecc71; --color-warning:#f39c12; --color-info:#3498db;
   /* 设计令牌：主色(焦点环/强调) */
   --color-primary:#667eea;
+  /* ★★R240 浮起泡底色**按主题差异化**（用户："深色主题、护眼主题，怎么长按拖拽的气泡也是白色的，
+     不能差异化吗，然后浅色主题的感觉有点太亮了"）。此前 R235/R236 把泡底**写死成 `#fff`** →
+     所有主题一个白泡，深色/护眼主题里白得刺眼，浅色主题上又过亮。
+     这里给一个令牌，各主题各给值；浅色取"比纯白略降一档"（混 5% 文字色 ≈ #f2f2f4）。 */
+  --nav-pill-bg:color-mix(in srgb, var(--text) 5%, var(--card-bg));
   /* ★R74 完成态圆圈：填充色随主题差异化(日间/玻璃走主色,可个性化)+勾线用反色;夜间在下方覆盖为浅填充深勾 */
   --chk-fill:var(--color-primary); --chk-ink:#fff;
   /* 自定义/预设背景之上的可读性染色(背景图的上层,保证文字对比度) */
@@ -50,6 +55,7 @@
 }
 [data-theme="dark"] {
   --bg:#0f0f1a; --card-bg:#1a1a2e; --text:#e8e8f0; --text-secondary:#a0a0b8; --text-tertiary:#8a8aa8; --ov-solid-bg:#1a1a2e;
+  --nav-pill-bg:color-mix(in srgb, #fff 16%, var(--card-bg));   /* ★R240 深色主题泡：≈#3f3f52，比栏亮一档的深蓝灰 */
   --border:#2a2a40; --shadow:0 1px 3px rgba(0,0,0,0.2),0 4px 12px rgba(0,0,0,0.3);
   --shadow-hover:0 4px 6px rgba(0,0,0,0.2),0 10px 24px rgba(0,0,0,0.4);
   --shadow-popup:0 10px 30px rgba(0,0,0,0.5);
@@ -72,6 +78,7 @@
   --glass-alpha:0.42;
   --glass-sat:130%;
   --glass-tint:rgba(255,255,255,var(--glass-alpha));
+  --nav-pill-bg:rgba(255,255,255,0.86);   /* ★R240 玻璃主题泡：保持白亮（玻璃质感），但不再是写死的 #fff */
   --glass-tint-2:rgba(255,255,255,calc(var(--glass-alpha) * 1.45));
   --glass-tint-3:rgba(255,255,255,calc(var(--glass-alpha) * 1.85));
   --glass-edge:rgba(255,255,255,0.35);
@@ -105,6 +112,7 @@
 /* ===== 绿色护眼主题：低饱和、低蓝光、墨绿文字，长时间阅读不刺眼 ===== */
 [data-theme="green"] {
   --bg:#e4f1e4; --card-bg:#f3faf3; --text:#2f4733; --text-secondary:#577258; --text-tertiary:#7c9480; --ov-solid-bg:#f3faf3;
+  --nav-pill-bg:color-mix(in srgb, var(--text) 7%, var(--card-bg));   /* ★R240 护眼主题泡：绿调浅灰白，不刺眼 */
   --border:#cfe3d2; --shadow:0 1px 3px rgba(47,71,51,0.05),0 4px 12px rgba(47,71,51,0.07);
   --shadow-hover:0 4px 6px rgba(47,71,51,0.06),0 10px 24px rgba(47,71,51,0.10);
   --shadow-popup:0 10px 30px rgba(47,71,51,0.16);
@@ -2898,7 +2906,10 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      栏高随内容自动、navRestHeight() 连带；泡外扩/行程/光照均为比例或现量计算，自动适应。 */
 }
 .nav-tab.active{color:var(--color-primary,#6366f1);}
-.nav-tab.active svg{filter:drop-shadow(0 1px 2px rgba(99,102,241,.4));}
+/* ★R239 去掉选中图标的投影（用户："长按拖拽松手后，当前图标文字会重新加上阴影，能否不要阴影"）。
+   原来这条在浮起期被 `.bottom-nav.nav-lift .nav-tab svg{filter:none}` 压掉、摘类后恢复
+   → 视觉上就是"松手后又加了一层阴影"。直接删掉（图标本来就够重，投影只是噪声）。 */
+.nav-tab.active svg{filter:none;}
 /* ★★R230 选中项层级改为**IT之家口径：只变色 + 加粗，不放大**（用户："还是 IT之家导航栏好看点"）。
    · R229 按酷安做了「图标 scale(1.14) / 文字 scale(1.12) + 600」——酷安的选中项确实比未选中大 22%；
      IT之家（以及 iOS 原生 tabBar）不是这样：**两套图标线/面 + 主色**就已经把层级说清楚了，
@@ -2966,8 +2977,8 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        80% 的取法：内容可透、亮度只比栏高一点点（与图一致：泡与栏亮度接近，形体靠边缘 + 柔影）。
        ⚠️负 --lp（归位下冲到 −0.25）时 `calc(80% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
     linear-gradient(180deg,
-      color-mix(in srgb, #fff calc(80% * var(--lp)), transparent) 0%,
-      color-mix(in srgb, #fff calc(80% * var(--lp)), transparent) 100%);
+      color-mix(in srgb, var(--nav-pill-bg) calc(80% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, var(--nav-pill-bg) calc(80% * var(--lp)), transparent) 100%);
   /* ★★R182② **常态胶囊不再描边**。原规则是 `border:1px solid color-mix(primary 24%,transparent)`（一条淡蓝紫细边），
      而浮起态是 .nav-pill.lift{border:none} —— 两者一描一边不描，收尾摘掉 .lift 的那一帧
      就凭空冒出一条蓝色描边。R181 把归位放慢放大回弹之后，这条"末帧弹出来的蓝边"变得特别扎眼
@@ -3038,6 +3049,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 .bottom-nav.nav-lift .nav-tab{display:grid;grid-template-columns:1fr;align-content:center;
   justify-items:stretch;row-gap:0;column-gap:0;padding-left:0;padding-right:0;   /* ★R192e 与常态 tab 的 gap:0 对齐（否则浮起态 tab 比常态高 2px → R172⑨/R175① 两处几何断言红） */
   background:transparent;color:var(--nav-fg);}   /* ★R229 与常态同源（R228 教训：被状态类覆盖的属性必须两边同源，否则摘类那一刻会跳色） */
+/* ★★R239 恢复"两份都显示"（撤销 R238c 的"按状态只显示一份"）—— 用户实测：
+   "现在长按拖拽导航栏移动会导致图标文字消失"。根因：out 只画"区间外"、fill 只画"区间内"，
+   单份显示必然缺另一半（未达 filling 阈值的格被蒙版镂空成空白）⇒ 拖动中图标缺块/消失。
+   互补蒙版机制**本来就要求两份叠加**（R172② 的设计）。
+   ⚠️那"叠加比单份大半像素"怎么办？——不靠减份数，靠**满格时把羽化 `--lz` 归 0**：
+   区间 [0%,100%] 时 out 的羽化残留（左右各 1px）没了 ⇒ out 完全透明 ⇒ 视觉只剩 fill，
+   与摘类后的单份 fill 逐像素一致（见 _navLitUpdate 里 lz 的算法）。 */
 .bottom-nav.nav-lift .nav-tab > .ni{grid-row:1;grid-column:1;display:flex!important;justify-content:center;}
 .bottom-nav.nav-lift .nav-tab > .nav-label{grid-row:2;grid-column:1;width:100%;text-align:center;}
 /* ⚠️特异性：`.bottom-nav.nav-lift .nav-tab .ni`(0,4,0)! 必须压过 `.nav-tab .ni{display:none!important}`(0,2,0)!
@@ -3048,17 +3066,28 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 /* 子层撑满 100%（配合上一条 padding 归零 → 三层与 tab 盒逐像素重合） */
 .bottom-nav.nav-lift .nav-tab > span{width:100%;}
 .bottom-nav.nav-lift .nav-tab .nav-label{text-align:center;}
+/* ★★R238 蒙版**羽化宽度独立成 `--lz`**（原来是写死的 1px）：
+   用户复测"松手后图标和文字还是会动一下，然后正常"——逐帧像素差把突变帧定在摘 .lift 那一帧，
+   根因有二：① 文字蒙版的**区间外颜色是 --text-secondary（浅灰 #6b7280）**，而常态文字色是
+   `--nav-fg`（深 #282a3d）→ 摘类帧整排文字由浅突变成深；② 图标蒙版的 1px 羽化在"全灭"时
+   落在元素**右缘**（`#000 calc(100% - 1px), transparent 100%`）→ 每格图标被镂空 1px，
+   摘类后补回 = 图标"变粗一下"。
+   修法：羽化宽度由 JS 写 `--lz`（= min(1px, 区间半宽)），**区间为空（全灭）时为 0**
+   ⇒ 全灭时渐变退化成整条 #000（out）/整条 transparent（fill）＝与"无蒙版"等价，摘类帧零变化。 */
 .bottom-nav.nav-lift .nav-tab .ni-out{
-  -webkit-mask-image:linear-gradient(90deg,#000 calc(var(--la,100%) - 1px),transparent var(--la,100%),transparent var(--lb,100%),#000 calc(var(--lb,100%) + 1px));
-  mask-image:linear-gradient(90deg,#000 calc(var(--la,100%) - 1px),transparent var(--la,100%),transparent var(--lb,100%),#000 calc(var(--lb,100%) + 1px));
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(var(--la,100%) - var(--lz,0px)),transparent var(--la,100%),transparent var(--lb,100%),#000 calc(var(--lb,100%) + var(--lz,0px)));
+  mask-image:linear-gradient(90deg,#000 calc(var(--la,100%) - var(--lz,0px)),transparent var(--la,100%),transparent var(--lb,100%),#000 calc(var(--lb,100%) + var(--lz,0px)));
 }
 .bottom-nav.nav-lift .nav-tab .ni-fill{
-  -webkit-mask-image:linear-gradient(90deg,transparent calc(var(--la,100%) - 1px),#000 var(--la,100%),#000 var(--lb,100%),transparent calc(var(--lb,100%) + 1px));
-  mask-image:linear-gradient(90deg,transparent calc(var(--la,100%) - 1px),#000 var(--la,100%),#000 var(--lb,100%),transparent calc(var(--lb,100%) + 1px));
+  -webkit-mask-image:linear-gradient(90deg,transparent calc(var(--la,100%) - var(--lz,0px)),#000 var(--la,100%),#000 var(--lb,100%),transparent calc(var(--lb,100%) + var(--lz,0px)));
+  mask-image:linear-gradient(90deg,transparent calc(var(--la,100%) - var(--lz,0px)),#000 var(--la,100%),#000 var(--lb,100%),transparent calc(var(--lb,100%) + var(--lz,0px)));
 }
 /* 文字用同一段渐变着色（单元素方案：复制两份文字会带来基线/字距的亚像素差） */
 .bottom-nav.nav-lift .nav-tab .nav-label{
-  background-image:linear-gradient(90deg,var(--text-secondary) var(--la,100%),var(--color-primary,#6366f1) var(--la,100%),var(--color-primary,#6366f1) var(--lb,100%),var(--text-secondary) var(--lb,100%));
+  /* ★★R238 区间外颜色 `--text-secondary` → **`--nav-fg`**：前者是 #6b7280（浅灰）、后者是
+     常态文字色（#282a3d 深）——两态不同源，摘类帧文字整排由浅变深就是那个"动一下"。
+     R229 修的是图标的 color（`.ni-out{color:var(--nav-fg)}`），文字的**蒙版渐变**漏了。 */
+  background-image:linear-gradient(90deg,var(--nav-fg) var(--la,100%),var(--color-primary,#6366f1) var(--la,100%),var(--color-primary,#6366f1) var(--lb,100%),var(--nav-fg) var(--lb,100%));
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 /* ★R170.3 浮起时允许胶囊微微超出底栏左右边界（用户：微微超过一点点、能看到后面的边框）。
@@ -3076,7 +3105,18 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
    亮不亮、哪一段亮，全部交给下面的蒙版按"泡照到谁"决定（这条把 .nav-tab.active/.filling 的 primary 压掉）。
    左右 padding 归零是**蒙版坐标系对齐**的前提（见下方 R172② 蒙版组）：行内 flex 子项默认"按内容宽居中"，
    只有让 tab 内容盒 == tab 盒，子层的百分比蒙版才与 tab 的几何重合。归零不影响任何位移（子项本来就居中）。 */
-.bottom-nav.nav-lift .nav-tab{background:transparent;color:var(--text-secondary);padding-left:0;padding-right:0;}
+/* ★★R238d 用户第三次复测"松手后图标和文字会动一下，然后正常" —— **最后一层根因就是这个 color**：
+   lift 期这条把 tab 的前景色压成 `--text-secondary`（灰 #6b7280），而常态 `.nav-tab.active` 是
+   `--color-primary`（主色 #667eea）→ 摘 .lift 那一帧颜色从"灰"**补间**到"主色"，
+   逐帧实测 180ms 内 stroke 从 rgb(102,125,226) 渐变到 rgb(102,126,234)（`color` 可过渡）
+   ＝被按的那一格"灰一下再变回主色"。
+   ★这正是 R229 铁律（被状态类覆盖的属性必须两边同源）的漏网之鱼：当时只把 **图标** 的 color
+   改成同源（`.ni-out{color:var(--nav-fg)}` / `.ni-fill{color:var(--color-primary)}`），
+   漏了 `.nav-tab` **自己**的 color（文字继承它）。
+   改法：按 active 分档 —— 未选中 `--nav-fg`（与常态 `.nav-tab{color:var(--nav-fg)}` 同源）、
+   选中 `--color-primary`（与常态 `.nav-tab.active` 同源）⇒ 摘类帧零色差。 */
+.bottom-nav.nav-lift .nav-tab{background:transparent;color:var(--nav-fg);padding-left:0;padding-right:0;}
+.bottom-nav.nav-lift .nav-tab.active{color:var(--color-primary,#6366f1);}
 /* ★R170.5 松手归位时加这个类：让栏的 padding 与泡的弹簧**同时**收回（0.3s 缓出），
    而不是等 settle 结束再靠移除 nav-lift 突然缩回去 —— 那是用户说的
    「松手后先回正、再收起、然后导航栏才变正常大小」的生硬感来源。
@@ -13402,19 +13442,17 @@ function _navCurrentIndex(){
        完全没照到 → a=b=1（蒙版判为全灭）。泡横跨两格 → 两格各得一段部分亮区。
    由 rAF 帧循环每帧调用 —— 泡在形变/超界时宽度位置都在变，亮区必须跟着更新。 */
 var NAV_LIT_RATIO=0.28;
-/* ★★R237 亮区缩放因子：归位期跟随 --lp 把亮区**向中心收缩**，收尾摘 .lift 前就已经收缩到 0。
-   根因（用户："气泡收起来的时候，导航栏里的图标和文字会动一下"）：探针逐帧实测显示
-   图标 rect 分毫未变（iconL/iconT/iconH 全程一致），动的是**外观** ——
-   浮起期一个格子的图标是"灰→主色→灰"的区间着色（--la/--lb），而 `_navFinishSettle` 里
-   `_navLitClear()` 与摘 .lift **同帧**把区间硬清成 100%（全灭）→ 整排图标颜色瞬间跳变。
-   修法：settle 期每帧把 factor 设为 lp，区间按 factor 向中心收缩（收缩到 <0.6% 视为全灭），
-   于是摘类那一帧亮区已是 0 → **摘类前后视觉一致**（同 R232 对 --lp 的"摘类前先钉 0"思路）。 */
-var _navLitScale=1;
+/* ★★R238 撤销 R237 的"亮区随 lp 收缩 + sc<0.35 撤 filling"——**那是错的方向，反而制造了突变**：
+   逐帧像素差把突变帧定在摘 .lift 那一帧，差异**只集中在被按的 tab**（f18 空心描边 → f21 实心主色）：
+   filling 被提前撤掉后，那一格退回 `.ni-out`（描边版），而摘类后它变成 `.active`（`.ni-fill` 实心版）
+   —— 图形从"描边"跳成"实心"。
+   正确的语义是：**filling 必须保留到摘类那一帧**，那时它无缝变成 active（两者都显示 `.ni-fill`、
+   都是主色实心 + 600 字重）⇒ 零变化。用户 R237 报的"动一下"真因是下面两条（--lz 1px 镂空、
+   文字蒙版区间外颜色不同源），与亮区收缩无关。 */
 function _navLitUpdate(pl,pr){
   var tabs=_navTabs(),n=tabs.length,rec=[];
   /* 先读完所有 rect 再写样式：读写交错会强制多次同步布局（拖动期每帧都发生）。 */
   for(var k=0;k<n;k++)rec.push(tabs[k].getBoundingClientRect());
-  var sc=_navLitScale;
   for(var i=0;i<n;i++){
     var r=rec[i],lit=false,a=1,b=1;
     if(r.width){
@@ -13426,17 +13464,19 @@ function _navLitUpdate(pl,pr){
       a=Math.max(0,Math.min(1,(pl-r.left)/r.width));
       b=Math.max(0,Math.min(1,(pr-r.left)/r.width));
       if(!(b>a)){a=1;b=1;}
-      /* ★R237 归位期：亮区向中心收缩（lp→0 时收缩成"全灭"），摘类帧不再突跳 */
-      if(sc<1&&b>a){
-        var c=(a+b)/2,half=(b-a)/2*sc;
-        a=Math.max(0,c-half);b=Math.min(1,c+half);
-        if(b-a<0.006){a=1;b=1;}   /* 与 a=b=1 的"全灭"同义 */
-      }
-      if(sc<0.35)lit=false;   /* ★R237 filling 也要跟着退场（否则字重 600→500 突跳） */
     }
     var la=(a*100).toFixed(1)+'%',lb=(b*100).toFixed(1)+'%';
+    /* ★R238 蒙版羽化宽度：= min(1px, 区间半宽px)；区间为空（全灭 a=b=1）时 0
+       ⇒ 全灭时蒙版退化成"整条显示/整条透明"，与常态（无蒙版）逐像素等价，
+         摘 .lift 那一帧图标不再有"右缘补 1px"的突变。 */
+    /* ★R239 羽化宽度：区间为空（全灭）→ 0；区间**满格贴边**（a≈0 且 b≈1）→ 也 0。
+       后者是为了在"泡完全盖住某格"时把 out 的羽化残留抹掉（否则 out 会在左右各露 1px，
+       与 fill 叠加 → 图形比摘类后的单份大半像素 = 用户最早报的"图标动一下"）。 */
+    var lz=(b>a)?((a<=0.005&&b>=0.995)?0:Math.min(1,(b-a)*r.width/2)):0;
     if(tabs[i]._la!==la){tabs[i]._la=la;tabs[i].style.setProperty('--la',la);}
     if(tabs[i]._lb!==lb){tabs[i]._lb=lb;tabs[i].style.setProperty('--lb',lb);}
+    var lzs=lz.toFixed(2)+'px';
+    if(tabs[i]._lz!==lzs){tabs[i]._lz=lzs;tabs[i].style.setProperty('--lz',lzs);}
     if(tabs[i].classList.contains('filling')!==lit)tabs[i].classList.toggle('filling',lit);
   }
 }
@@ -13444,8 +13484,9 @@ function _navLitClear(){
   var tabs=_navTabs();
   for(var k=0;k<tabs.length;k++){
     tabs[k].classList.remove('filling');
-    tabs[k]._la='100.0%';tabs[k]._lb='100.0%';
+    tabs[k]._la='100.0%';tabs[k]._lb='100.0%';tabs[k]._lz='0.00px';
     tabs[k].style.setProperty('--la','100%');tabs[k].style.setProperty('--lb','100%');
+    tabs[k].style.setProperty('--lz','0px');   /* ★R238 全灭 ⇒ 羽化 0（蒙版退化成无蒙版） */
   }
 }
 function _navPlacePill(idx,lift,centerX){
@@ -13824,7 +13865,6 @@ function _navEnterLift(startIdx,pressX){
     nav.style.setProperty('--lp','1');   /* ★R234 栏压暗同源：CSS 变量只向下继承，写在 pill 上 nav 拿不到 → 两处同步写 */
     _navMotion(pill,0);   /* ★R184 顺手把运动量清零：别让上一次手势的拖尾残留到这一帧 */
   }
-  _navLitScale=1;   /* ★R237 浮起期亮区满量（只有归位期才收缩） */
   _navPlacePill(_navLift.idx,true,pressX);
   _navLitClear();
   /* ★R170.3 进 lift 就启动帧循环 —— 帧循环原来只在 _navMorphMove 里按需启动（拖动才有），
@@ -13934,7 +13974,6 @@ function _navSettleFrame(nav,pill){
   nav.style.setProperty('--lp',s.lp.toFixed(3));     /* ★R234 栏压暗同源：与泡的弹簧同一条时间轴，摘类帧零变化 */
   _navSheen(pill,nr,s.x+w/2);                      /* 镜面高光跟着泡流动（液态感） */
   _navMotion(pill,s.vx/12);                        /* ★R184 收尾段也保留拖尾（12px/帧 ≈ 满速），一条连续的运动线索 */
-  _navLitScale=Math.max(0,s.lp);   /* ★R237 归位期亮区随 lp 收缩：摘 .lift 之前就已淡出 */
   _navLitUpdate(nr.left+1+s.x,nr.left+1+s.x+w);    /* +1 = 底栏的 1px 边框 */
   var done=Math.abs(s.tx-s.x)<0.8&&Math.abs(s.vx)<0.12&&Math.abs(s.tw-s.w)<0.8&&Math.abs(s.vw)<0.12
     &&Math.abs(s.tlp-s.lp)<0.01&&Math.abs(s.vlp)<0.01;   /* ★R175① 几何没收完就不许收尾 */
@@ -13966,9 +14005,9 @@ function _navFinishSettle(){
     pill.style.transition='';   /* 恢复过渡：紧接着 positionNavPill 写的常态 width/transform 会平滑收敛 */
     _navMotion(pill,0);         /* ★R184 收尾清零：常态皮不引用 --mv/--mva，但别留脏值给下次浮起的第一帧 */
   }
-  /* ★R237 归位末帧 lp 已到 0 → 亮区早已收缩为 0；这里清零是**幂等**的（摘类帧不再有可见跳变）。
-     先复位 factor 再 clear，保证下次浮起从满量亮区开始。 */
-  _navLitScale=1;
+  /* ★R238 `_navLitClear()` 保持原样（摘类帧清零）：因为"全灭 + 羽化 0"的蒙版
+     与"无蒙版"逐像素等价（见 --lz 处注释），清零本身不再造成任何可见跳变。
+     ⚠️但**不能**提前撤 filling（R237 试过，反而让图标从描边突变到实心）。 */
   _navLitClear();
   /* ⚠️故意**不清** inline width/transform：清了会先塌成 width:0 闪一下；
      交给下面的 positionNavPill() 直接覆盖成常态值即可。
@@ -14230,7 +14269,13 @@ function setView(v){
   saveLastView(VIEW_META[v]?v:'list');
   clearSelection();
   render();
-  try{var _y=_viewScrollMem[v]||0;requestAnimationFrame(function(){requestAnimationFrame(function(){window.scrollTo(0,_y);});});}catch(_){}
+  /* ★R239 滚动恢复改为**同步 + 单帧校正**（用户："松手后到某个导航只做切换不用刷新页面"）：
+     原实现是**双 requestAnimationFrame** → 重建后的**第一帧先按 scrollTop=0 绘制**、两帧后才滚回记忆位置，
+     视觉上就是"内容整体刷新了一下"（列表重建本身是必要的，能省掉的只有这一跳）。
+     现在 render() 结束立刻同步 scrollTo（浏览器还没绘制 → 看不到顶部那一帧），再用一次 rAF 校正
+     （内容高度可能还没最终确定，补一次保证落在正确位置）。 */
+  try{var _y=_viewScrollMem[v]||0;window.scrollTo(0,_y);
+    requestAnimationFrame(function(){window.scrollTo(0,_y);});}catch(_){}
 }
   function syncFloatingBars(){
     var nav=document.getElementById('bottomNav');
