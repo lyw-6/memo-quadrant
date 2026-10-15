@@ -2934,14 +2934,13 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        ★★R230 再弱化（"仿 IT之家"）：IT之家的浮起泡是**一整块白磨砂**——没有顶部亮斑、没有彩色光晕，
        立体感全靠投影。把主 alpha 压到 **.16**（白底上的白光 ≈ 不可见，只在 dark/glass 这类深底上留一点厚度暗示），
        --mv/--pill-hx 的"流动"仍在（拖动时光带还是会跟着走），只是不再抢戏。
-       ★★R231 再砍到 **.05/.015**（用户："这白得跟电灯泡一样"）：PIL 量化参考图发现真相——
-       **泡内 p50=224 / 紧邻栏 p50=224，提亮量 ≈ 0**（泡下半 246 vs 相邻 241，也只 +2%）。
-       IT之家那颗泡是"把背后内容糊掉 + 一圈柔影"，**根本不靠提亮**；而我在白底上还叠了
-       镜面 .16 + 焦散 .14 + 内柔光 .85 + 顶缘 .40 + 底缘 .18 共 6 层白色 → 全成了过曝。
-       现在这六层一起压到"几乎只留暗示"，形体交给那层 .28 中性黑影。 */
+       ★★R236 恢复一点点（用户："不是发白的电灯泡啊，你再看下"——新参考图里泡是**半透 + 左上受光**的）：
+       主 alpha .05 → **.12**、停靠 .015 → **.04**。R235 把泡做成 96% 实心白 + 这层几乎为 0
+       → 泡内一片死平的白＝"电灯泡"。图里的泡左上有一层柔光、右下略暗，是最明显的特征。
+       仍远低于 R229 的 .46，避免再回到"顶部一坨亮斑"。 */
     radial-gradient(calc(140% + 40% * var(--mva,0)) 62% at calc(var(--pill-hx,50%) + var(--mv,0) * 9%) -46%,
-      rgba(255,255,255,calc(.05 * var(--lp))) 0%,
-      rgba(255,255,255,calc(.015 * var(--lp))) 40%,
+      rgba(255,255,255,calc(.12 * var(--lp))) 0%,
+      rgba(255,255,255,calc(.04 * var(--lp))) 40%,
       transparent 72%),
     /* ② ★R184 底部焦散：光穿过玻璃在底缘汇聚出的那道亮弧 —— 静态就在暗示"泡有厚度"。
        alpha 与 --lp 同乘 → 常态完全透明（不浮起时的观感一字未改），只有浮起/归位段看得见。
@@ -2961,17 +2960,14 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       color-mix(in srgb, var(--color-primary,#6366f1) calc(20% - 20% * var(--lp)), transparent) 0%,
       color-mix(in srgb, var(--color-primary,#6366f1) calc(15% - 15% * var(--lp)), transparent) 56%,
       color-mix(in srgb, var(--color-primary,#6366f1) calc(11% - 11% * var(--lp)), transparent) 100%),
-    /* ④ ★★R235 泡底 = **96% 实心白**（用户："图片上不是没有模糊效果毛玻璃的气泡吗"）：
-       参考图里泡**不透**——泡区内看不到背后任何内容（栏的其它部分却能透出文字/彩色图），
-       所以它不是 backdrop-blur 那种半透明毛玻璃，就是一块干净的白。R234 的 65% 仍偏"毛玻璃"，
-       提到 96%（不写 100% 是给摘类时 --lp 淡出留一点介质感）。
-       ★方向复盘（四连纠错）：88% 白（R230 目测）→ 62%（R230b 量化"透明"）→ 13% 中性灰（R231/R232）→
-       65% 白磨砂（R234）→ **96% 实心白（R235）**。前几轮都错在把"磨砂介质"当本体；
-       参考图的本体就是：**不透明白 + 一圈白高光边 + 影子**（浮起时栏不动）。
-       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(96% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
+    /* ④ ★★R236 泡底 96% → **80% 半透白**（用户新参考图："不是发白的电灯泡啊，你再看下"）：
+       图里泡**半透**——泡区内能隐约看到栏后内容（"我"图标下方那团光晕、泡左上区的内容影），
+       而且不是死平的一块白。R235 的 96% 实心白把内容全遮死、加上镜面/焦散清零 → "发白的电灯泡"。
+       80% 的取法：内容可透、亮度只比栏高一点点（与图一致：泡与栏亮度接近，形体靠边缘 + 柔影）。
+       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(80% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
     linear-gradient(180deg,
-      color-mix(in srgb, #fff calc(96% * var(--lp)), transparent) 0%,
-      color-mix(in srgb, #fff calc(96% * var(--lp)), transparent) 100%);
+      color-mix(in srgb, #fff calc(80% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, #fff calc(80% * var(--lp)), transparent) 100%);
   /* ★★R182② **常态胶囊不再描边**。原规则是 `border:1px solid color-mix(primary 24%,transparent)`（一条淡蓝紫细边），
      而浮起态是 .nav-pill.lift{border:none} —— 两者一描一边不描，收尾摘掉 .lift 的那一帧
      就凭空冒出一条蓝色描边。R181 把归位放慢放大回弹之后，这条"末帧弹出来的蓝边"变得特别扎眼
@@ -3175,11 +3171,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        ⚠️层数 5→6，基础规则同步补第 5 层透明占位（R182①：层数/inset 对齐才插值）。 */
     calc(var(--mv,0) * -2px) calc(2px * var(--lp)) max(0px, calc(6px * var(--lp))) 0 rgba(0,0,0,calc(.22 * var(--lp))),
     calc(var(--mv,0) * -4px) calc(8px * var(--lp)) max(0px, calc(30px * var(--lp))) calc(-4px * var(--lp)) rgba(0,0,0,calc(.32 * var(--lp))),
-    /* ★★R234b 内缘线：暗线 → **白色高光边**（用户近景图：泡边缘是一圈**亮**的玻璃高光，
-       左缘甚至有色散彩虹——我上轮做成 5% 黑暗线，方向又反了）。alpha .55、随 --lp 淡出：
-       灰栏（浮起期压暗 9%）衬着白边，泡的轮廓一下就出来；常态（lp=0）零影响。
-       ⚠️放在**最后一层**：m1() 探针取第 1 层 offsetY、glow() 取倒数第二层，都不要被它挤位。 */
-    inset 0 0 0 1px rgba(255,255,255,calc(.55 * var(--lp)));
+    /* ★★R236b 内缘高光：1px 细线 → **宽柔内白晕** `inset 0 0 7px -1px`（新参考图里泡的边缘是
+       一圈**宽而柔**的白亮带，约 7px 向内衰减、左上最亮——R234 的 1px 细线太锐、太"描边"）。
+       alpha .55、随 --lp 淡出；spread −1px 把最亮处压到紧贴边缘，避免整泡内都发白。
+       ⚠️放在**最后一层**：m1() 探针取第 1 层 offsetY、glow() 取倒数第二层，都不要被它挤位。
+       ⚠️lp=0 时 alpha=0，与基础规则那层 `inset 0 0 0 0 transparent` 视觉等价 ⇒ 摘类帧零变化（R232）。 */
+    inset 0 0 7px -1px rgba(255,255,255,calc(.55 * var(--lp)));
   /* ★动画放慢：用户"感觉动画太快、死板" → 0.13s 的瞬时感改成 0.2~0.22s 的缓出 */
   transition:transform .2s cubic-bezier(.22,.61,.36,1), width .2s cubic-bezier(.22,.61,.36,1),
     top .22s cubic-bezier(.22,.61,.36,1), bottom .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease;   /* ★R182② 皮肤由 --lp 驱动，这里只留几何/阴影 */
