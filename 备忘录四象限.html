@@ -2717,7 +2717,10 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    原来只有 padding 竖直 +2px（栏高 +4px），水平 +5px 只是让**内容内缩**、栏外框宽度写死不变 → 看着「单纯变高」。
    加一个外扩量 `--nav-grow`：常态 0、浮起 8px（左右各 4px），所有 width/max-width 都 `+ var(--nav-grow)`。
    ★关键配平：水平内距增量同时 5px→**4px** → 内容盒净变化（−8px padding ＋ 8px 宽度）= **0** → 栏外框膨胀、tab 与图标位置纹丝不动。 */
-.bottom-nav{--nav-grow:0px;--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-px:3px;--nav-py:6px;--nav-r:999px;/* ★R229 底栏自己的前景色（用户："未选中内容的对比度更弱"，酷安参考图的未选中图标/文字是**近纯黑**、实测亮度 <150）：不直接换成 --text（R172⑫ 的教训：日主题 --text 近黑，会比选中主色还抢眼＝层级倒挂），而是混出"比 --text-secondary 深一档、又不到 --text"的底栏专属色 */--nav-fg:color-mix(in srgb, var(--text) 82%, var(--text-secondary));position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;/* ★★R234 浮起期栏压暗（磨砂灰）：参考图里**栏是灰的**（磨砂透出背后暗内容）、泡是白的，实心白栏上白泡永远融底 → 压暗交给 --lp：lp=0 时 = card-bg 逐像素等价（常态一字不改），浮起 lp=1 ≈ +9% 黑 → 灰底衬白泡。⚠️--lp 由 JS 同时写在 nav 与 pill 上（CSS 变量只向下继承，写在 pill 上 nav 拿不到）；glass 主题的栏背景是自己的磨砂覆盖、不参与。 */background:color-mix(in srgb, #000 calc(9% * var(--lp,0)), var(--card-bg));border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right) + var(--nav-grow));max-width:calc(640px + var(--nav-grow));/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
+.bottom-nav{--nav-grow:0px;--nav-sh-rest:0 -2px 14px rgba(0,0,0,.10);--nav-px:3px;--nav-py:6px;--nav-r:999px;/* ★R229 底栏自己的前景色（用户："未选中内容的对比度更弱"，酷安参考图的未选中图标/文字是**近纯黑**、实测亮度 <150）：不直接换成 --text（R172⑫ 的教训：日主题 --text 近黑，会比选中主色还抢眼＝层级倒挂），而是混出"比 --text-secondary 深一档、又不到 --text"的底栏专属色 */--nav-fg:color-mix(in srgb, var(--text) 82%, var(--text-secondary));position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nab,0px) + 22px + env(safe-area-inset-bottom));z-index:130;display:flex;gap:2px;/* ★★R235 撤销 R234 的"浮起期栏压暗"（用户："it之家那个长按浮起气泡出来，不会让导航栏整体变暗的啊"）：
+   参考图里栏的灰是**常态**磨砂透出背后内容造成的，浮起时栏一动不动。改回 card-bg。
+   ⚠️JS 仍在入场/settle/收尾三处同步给 nav 写 --lp（CSS 变量只向下继承），当前 CSS 不引用它 ——
+   留着是为了栏若将来要跟随 --lp 变化时无需动 JS；要启用就改这条 background 的 color-mix。 */background:var(--card-bg);border:1px solid var(--border);border-radius:999px;padding:var(--nav-py) var(--nav-px);box-shadow:var(--nav-sh-rest),0 0 0 rgba(0,0,0,0);width:calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right) + var(--nav-grow));max-width:calc(640px + var(--nav-grow));/* ★R60: 横向滚动条（nav-pill 滑动动画的 transform 外框会撑出瞬时闪条）由下面的 overflow-x:clip 一并解决 */
   /* ★R151③ 底栏离屏距 10px → **22px**（★R165 该间距当初是为「长按玻璃泡」向上溢出腾地方，
      泡已删除，间距保留 —— 视觉定稿即 22px，不要再动）。
      ★同步点：`syncFloatingBars()` 里硬编码的 gap 必须一起改（batchBar 的 bottom 与 body 的 padding-bottom 都用它算）。 */
@@ -2942,10 +2945,11 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       transparent 72%),
     /* ② ★R184 底部焦散：光穿过玻璃在底缘汇聚出的那道亮弧 —— 静态就在暗示"泡有厚度"。
        alpha 与 --lp 同乘 → 常态完全透明（不浮起时的观感一字未改），只有浮起/归位段看得见。
-       ★R230 .40→.14（同上：白磨砂泡不需要底缘亮弧，它只会把泡底"提亮成一圈"）；
-       ★R231 .14→.04（"电灯泡"：泡底那道亮弧在浅色栏上最扎眼，直接砍到只剩一点点）。 */
+       ★R230 .40→.14；★R231 .14→.04；★★R235 → **0**（用户："不是没有模糊效果毛玻璃的气泡吗"：
+       实心白泡不需要"厚度暗示"，这道亮弧只会把泡底搅花）。层保留、alpha 归零
+       （删层会动 R184① 的 needle 与层数结构，没必要）。 */
     radial-gradient(86% 44% at 50% 116%,
-      rgba(255,255,255,calc(.04 * var(--lp))) 0%,
+      rgba(255,255,255,0) 0%,
       rgba(255,255,255,0) 62%),
     /* ③ 皮本身：也走 alpha 版（lp=0 时混 transparent 叠在栏的 card-bg 上与旧的"混 card-bg"**逐像素等价**，
        但浮起时能让栏的描边/圆角透上来 —— 见 R172④）。三段停靠点保证 lp=0 与旧的 2 段 20%→11% 线性完全一致：
@@ -2957,19 +2961,17 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       color-mix(in srgb, var(--color-primary,#6366f1) calc(20% - 20% * var(--lp)), transparent) 0%,
       color-mix(in srgb, var(--color-primary,#6366f1) calc(15% - 15% * var(--lp)), transparent) 56%,
       color-mix(in srgb, var(--color-primary,#6366f1) calc(11% - 11% * var(--lp)), transparent) 100%),
-    /* ④ ★★R234 泡底从"中性灰压暗"反转为**白磨砂提亮**（用户给近景参考图："IT之家这样的啊，你再对比一下"）：
-       上轮 13% 灰把方向做反了——近景图里看得很清楚：**泡是亮的白磨砂、明显比栏亮一档**，
-       边缘是一圈**白色高光边**（左缘还有玻璃色散的彩虹），不是暗线。
-       之前第一张远景图量化"泡 p50 224 / 邻栏 224（差 0）"是被**背后内容不同**混淆的：
-       泡区背后是暗文字、栏区背后是亮内容，磨砂各自平均后恰好同值 ⇒ "提亮≈0"是假象。
-       ⚠️但我们的栏是实心 card-bg（浅色主题 ≈ 纯白），泡再白也融进栏里 → **配套改动：浮起期把栏压暗**
-       （.bottom-nav 的 background，9% 黑、--lp 驱动），栏 ≈232 / 泡 ≈247，白泡才"浮"得出来——
-       这也正是参考图的观感（栏灰、泡白）。深色主题：栏 ≈27 / 泡 ≈175，超亮 ✓。
-       glass 主题的栏背景是自己的磨砂覆盖，不参与压暗。
-       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(65% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
+    /* ④ ★★R235 泡底 = **96% 实心白**（用户："图片上不是没有模糊效果毛玻璃的气泡吗"）：
+       参考图里泡**不透**——泡区内看不到背后任何内容（栏的其它部分却能透出文字/彩色图），
+       所以它不是 backdrop-blur 那种半透明毛玻璃，就是一块干净的白。R234 的 65% 仍偏"毛玻璃"，
+       提到 96%（不写 100% 是给摘类时 --lp 淡出留一点介质感）。
+       ★方向复盘（四连纠错）：88% 白（R230 目测）→ 62%（R230b 量化"透明"）→ 13% 中性灰（R231/R232）→
+       65% 白磨砂（R234）→ **96% 实心白（R235）**。前几轮都错在把"磨砂介质"当本体；
+       参考图的本体就是：**不透明白 + 一圈白高光边 + 影子**（浮起时栏不动）。
+       ⚠️负 --lp（归位下冲到 −0.25）时 `calc(96% * -0.25)` 为负 → color-mix 的百分比会被钳到 0，合法。*/
     linear-gradient(180deg,
-      color-mix(in srgb, #fff calc(65% * var(--lp)), transparent) 0%,
-      color-mix(in srgb, #fff calc(65% * var(--lp)), transparent) 100%);
+      color-mix(in srgb, #fff calc(96% * var(--lp)), transparent) 0%,
+      color-mix(in srgb, #fff calc(96% * var(--lp)), transparent) 100%);
   /* ★★R182② **常态胶囊不再描边**。原规则是 `border:1px solid color-mix(primary 24%,transparent)`（一条淡蓝紫细边），
      而浮起态是 .nav-pill.lift{border:none} —— 两者一描一边不描，收尾摘掉 .lift 的那一帧
      就凭空冒出一条蓝色描边。R181 把归位放慢放大回弹之后，这条"末帧弹出来的蓝边"变得特别扎眼
@@ -3143,7 +3145,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        改成插值后 lp=0 与常态逐层同值 → 摘类那一帧**零变化**（外晕/黑影两层本来就是 *--lp，同理）。 */
     inset 0 calc(1px + .5px * var(--lp)) 0 0 rgba(255,255,255,calc(.55 - .35 * var(--lp))),
     inset 0 calc(-1px - .5px * var(--lp)) 0 color-mix(in srgb, var(--color-primary,#6366f1) calc(10% - 10% * var(--lp)), transparent),   /* 底缘：常态主色 10% → 浮起退到 0（IT之家泡没有底缘回光） */
-    inset 0 0 20px -9px rgba(255,255,255,calc(.22 * var(--lp))),      /* 内部厚度柔光（负 spread 把内边界收干净 → 不形成环） */
+    inset 0 0 20px -9px rgba(255,255,255,0),      /* 内部厚度柔光：★★R235 → 0（实心白泡不需要厚度光；几何保留只为层结构/插值不变） */
     /* ★R175① 外晕随 --lp 缩放；★★R184 透明度**必须同乘 --lp** ——
        只缩模糊/扩散而 alpha 恒 46% 时，收尾中段会从"柔晕"收紧成一圈饱和蓝环
        （lp=0.12 实测 blur 3.84px / spread -1.2px / alpha 46%）→ 用户看到的"收起来时有蓝色边框出现"。
