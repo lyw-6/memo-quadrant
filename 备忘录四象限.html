@@ -2769,7 +2769,9 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    两处共用一个数字才好维护；且 tab 高 48px 时 22px 与胶囊端头的视觉弧线一致）。
    ⚠️三个断点各有一条 .nav-tab 规则（本行 + ≤560 的 8px + ≤480 的 7px），**三处必须同改**，
      否则窄窗口 hover 又变回方角。 */
-.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:6px 2px 4px;border:none;background:transparent;color:var(--nav-fg);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:var(--nav-r);font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;font-weight:500;}   /* ★R225 字重 400→500（酷安参考图的标签是粗体；用户"图标文字都偏小/没质感"—— 同尺寸下字重是最省的视觉重量来源） */
+.nav-tab{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:6px 2px 4px;border:none;background:transparent;color:var(--nav-fg);cursor:pointer;transition:color .2s,border-radius .2s,background .2s,transform .16s ease;border-radius:var(--nav-r);font-size:10px;line-height:1.15;font-family:inherit;position:relative;z-index:1;overflow:hidden;max-width:100%;-webkit-user-select:none;user-select:none;font-weight:400;}   /* ★R225 字重 400→500（酷安参考图的标签是粗体；用户"图标文字都偏小/没质感"—— 同尺寸下字重是最省的视觉重量来源）
+   ★★R243 500→**400**（用户"导航栏里的图标和文字都太粗了，能不能细点"）：R225 那轮要的是"看起来有分量"，
+   当时靠「图标 22px + 字重 500」两个一起给；现在图标已定稿 22px，再叠 500/600 双档字重＝墨迹偏糊。 */
 /* ★R192b 圆角令牌的断点覆盖**必须写在基础规则之后**：同特异性"后者胜"——
    首版把这两条加在文件上半区（2279 行区的 ≤560/≤480 块内），被基础 `.bottom-nav{--nav-r:15px}` 反杀
    （手机实测仍是 15px）；★另外：媒体块绝不能插进规则声明中间（第一次修时插错，导致 `.nav-tab` 整条失效）。 */
@@ -2882,7 +2884,7 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
       —— 否则玻璃主题下底栏图标比其他主题更细（同组件两套形状语言，R182④ 铁律）。
    ⚠️②包在 min-width:561 里 **不落到窄屏**：≤560 的图标只有 19/20px，2.35 在同一 viewBox 下
       视觉描边已 1.9px，小盒子里会糊（手机档本轮明确不动）。 */
-@media (min-width:561px){ .bottom-nav .nav-tab svg{stroke-width:2;} }   /* ★R230 同手机档：2.35→2（细线风格） */
+@media (min-width:561px){ .bottom-nav .nav-tab svg{stroke-width:1.6;} }   /* ★R230 2.35→2（细线风格）；★R243 2→**1.6**（与手机档必须同值）：22px 图标视觉描边 1.83→1.47px */
 /* ★★R196 定稿口径（用户澄清）：**长按时图标文字不放大**，只是跟随栏的新尺寸重新分布 ——
    所以 `--nav-grow`（栏宽 +6）**不做内距配平**：水平内距保持常态值 → 内容盒随栏一起 +6px
    → 每个 tab 变宽约 +1.2px、图标/文字仍各自居中（位置自然地随栏「张开」，不做强制零位移）。
@@ -2918,8 +2920,8 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
      「线 ↔ 面」这一维差异本身就比 1.14 倍放大更强，所以放大可以安全撤掉。
    · ⚠️撤掉 scale 是"减法"，不需要动布局：tab 高度、栏高、浮起/归位的几何断言全部不受影响
      （这正是当时用 transform 而不是改 width/font-size 的好处）。 */
-.nav-tab.active .nav-label{font-weight:600;}
-.bottom-nav.nav-lift .nav-tab.filling .nav-label{font-weight:600;}
+.nav-tab.active .nav-label{font-weight:500;}   /* ★R243 600→500：与常态 400 形成「细 vs 中」一档差即可（原 500/600 在 11px 下两档都糊） */
+.bottom-nav.nav-lift .nav-tab.filling .nav-label{font-weight:500;}
 /* 底部导航选中指示：独立滑块胶囊，切换视图时滑动 + 形变过渡（不随 innerHTML 重建而闪跳）
    ★R142 胶囊保持 primary 渐变观感（用户定稿：不一定要透明玻璃）。
    ★R165 原先「拖动期由玻璃泡接管、真 pill 藏起防双泡」的 liq-drag 交接规则已随泡一并删除。 */
@@ -3547,7 +3549,9 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
      margin 在 flex 与 grid 两种布局下都生效且写法相同 → 归位前后零差异。 */
   .nav-tab{flex:1 1 0%;min-width:0;padding:2px;gap:0;}
   .nav-tab svg{width:22px;height:22px;flex-shrink:0;}
-  .bottom-nav .nav-tab svg{stroke-width:2;}   /* ★R230 2.35→2：未选中图标回到**细线**（IT之家口径），2.35 在实心化那轮是为了补足墨迹，线框回来后再粗就"糊成实心"了 */
+  .bottom-nav .nav-tab svg{stroke-width:1.6;}   /* ★R230 2.35→2：未选中图标回到**细线**（IT之家口径），2.35 在实心化那轮是为了补足墨迹，线框回来后再粗就"糊成实心"了；
+                                                  ★★R243 2→**1.6**（用户"图标和文字都太粗了，能不能细点"）：22px 图标的**视觉描边** = sw × 22/24 = 1.83px → **1.47px**（−20%）。
+                                                  ⚠️本行（≤560 手机档）与上面 ≥561 那行必须**同值** —— R182④「同组件不许两套形状语言」。 */
   .nav-tab span,.nav-tab .nav-label{display:block!important;font-size:11px;transform:none;transform-origin:center top;line-height:1.15;}
   .nav-tab .nav-label{margin-top:2px;}
   .nav-batch{height:34px;font-size:12px;padding:0 6px;gap:4px;}
@@ -13342,7 +13346,7 @@ var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素
    · 几何(—lp) 同参 0.20/0.73（必须与宽度完全同参，否则又出现“几何落后一截”）
    · 位置 0.28/0.52 → **0.24/0.58**（ζ≈0.58，~270ms）→ 与宽度时长接近、不再“一快一慢”
    · 栏的 padding 收回 0.2s → **0.28s**，与泡同步收完。 */
-var NAV_SETTLE_K=0.038, NAV_SETTLE_DAMP=0.717;  /* 松手归位·位置弹簧。★R201 DAMP 0.58→0.46（ζ 0.56→0.80）：
+var NAV_SETTLE_K=0.030, NAV_SETTLE_DAMP=0.745;  /* 松手归位·位置弹簧。★R201 DAMP 0.58→0.46（ζ 0.56→0.80）：
                                                    用户"从右边导航图标切到左边会有很强的弹性 / 不要 Q 弹" —— 实测点最左 tab 时泡
                                                    位置冲到最左越过目标 7.4px 再回摆（行程 288px 内可见回弹）。只提位置阻尼：
                                                    宽度/几何（下面两组，ζ≈0.35）保持，因为那是"收起来"的果冻手感、用户没抱怨；
@@ -13352,10 +13356,14 @@ var NAV_SETTLE_K=0.038, NAV_SETTLE_DAMP=0.717;  /* 松手归位·位置弹簧。
                                                    松手时离目标可能 180px+，而位置弹簧 K 不变 → 首帧位移 = K×距离 ≈ 44px/帧，
                                                    等于"一帧冲到跟前"= 生硬。**只降 K 会变得更弹**（老铁律），
                                                    必须按 ζ=−ln(D)/(2√K) 同步抬阻尼。实测收起时长 ~170ms → ~400ms。
-                                                   ★★R242 复核结论：用户"松手后回去的动画效果有点夸张"**与位置弹簧无关**——
-                                                   它本来就只过冲 0.6%。试过抬到 0.70（ζ 0.92）反而让"归位飞行中"的位置落后更多
-                                                   （R165④ 恰好在 560ms 采样、量到 −3px），已回滚。这轮只动宽度/几何两组。 */
-var NAV_SETTLE_WK=0.06, NAV_SETTLE_WDAMP=0.73;   /* 松手归位·宽度弹簧（慢 + 回弹）。★R224 0.30/0.681 → 0.19/0.735 → **0.06/0.84**：
+                                    ★★R242 复核结论：用户"松手后回去的动画效果有点夸张"**与位置弹簧无关**——
+                                    它本来就只过冲 0.6%。试过抬到 0.70（ζ 0.92）反而让"归位飞行中"的位置落后更多
+                                    （R165④ 恰好在 560ms 采样、量到 −3px），已回滚。
+                                    ★★R243 位置弹簧也要**放慢**（用户："松手后收起来的过渡动画太快了" + "从日历点备忘录过渡太猛了"），
+                                    但必须 **ζ 0.85 保值**（R224 铁律：只降 K＝更弹不是更慢）：K 0.038→**0.030**、DAMP 0.717→**0.745**。
+                                    模拟器（源码同款积分器）预测：跨 299px 全宽行程 首次位移 8.1→**6.7px**、
+                                    峰值 20.7→**18.7px/帧**、到位 618→**651ms**。 */
+var NAV_SETTLE_WK=0.028, NAV_SETTLE_WDAMP=0.807;   /* 松手归位·宽度弹簧（慢 + 回弹）。★R224 0.30/0.681 → 0.19/0.735 → **0.06/0.84**：
                                                    ζ 保持 ≈0.35（回弹量不变=用户要的"慢慢回弹"），时长 ~350→~600ms。
                                                    ⚠️为什么最后又降一档：位置弹簧放大到 400ms 后，宽度实测 176ms 就收完
                                                    —— 视觉上就是"先啪一下缩回常态，位置还在慢慢滑"（用户说的"生硬"残留）。
@@ -13364,7 +13372,12 @@ var NAV_SETTLE_WK=0.06, NAV_SETTLE_WDAMP=0.73;   /* 松手归位·宽度弹簧�
                                                    **ζ≈0.356 → 缩过头 28.5%**：泡收过 74px 常态胶囊到 **68.3px**（比常态还窄 5.7px）再弹回来，
                                                    `--lp` 同时探到 **−0.250**（栏内距/圆角/上下外扩都跟着缩过头）＝ 那个"夸张"的果冻回弹。
                                                    DAMP 0.84 → **0.73**（ζ≈0.64，过冲 ~7%）—— 留一点点收尾的活气，但不再"缩过头再弹回"。
-                                                   时长基本不变（~580ms），不会退回 R224 之前"突然收掉"的生硬感。 */
+                                                   时长基本不变（~580ms），不会退回 R224 之前"突然收掉"的生硬感。
+                                    ★★R243 抬阻尼那一步其实把时长从 580ms 压到了 **416ms**（_r243_probe.js 实测）——
+                                    用户这轮说的"松手后收起来的过渡动画太快了"正是它。
+                                    修＝**降 K 保值 ζ**（同 R224 那条铁律：只降 K＝更弹而不是更慢）：
+                                    K 0.06→**0.028**、DAMP 0.73→**0.807**（ζ 逐位不变 ⇒ 过冲仍 ≈5%，不会退回"夸张"），
+                                    到位 **416ms → ~610ms**。 */
 /* ★★R175① 松手归位·「浮起度」弹簧（--lp：1=完全浮起 → 0=常态）。
    ★为什么必须补这一条：R174① 只把「位置 / 宽度」分了参数，但浮起的**几何量**（上下外扩 top/bottom、
    圆角、外晕）还挂在 `.nav-pill.lift` 类上 —— 归位期间帧循环每帧写 `transition:none`，类上的几何
@@ -13373,11 +13386,14 @@ var NAV_SETTLE_WK=0.06, NAV_SETTLE_WDAMP=0.73;   /* 松手归位·宽度弹簧�
    「能明显看到先回正等一会然后再收起来」。现在几何也进弹簧，三者同起同止。
    ★参数必须与**宽度弹簧一致**（0.34/0.50）：试过 0.30/0.55，几何比宽度晚 ~115ms 收完（4 tab 布局实测），
      于是又冒出一条新的"分段尾巴"（宽度先停、几何还在收）。同参数 = 同起点同速度 = 同时收完。 */
-var NAV_SETTLE_LK=0.06, NAV_SETTLE_LDAMP=0.73;    /* ★R181 与宽度同参（0.34/0.50 → 0.20/0.73）；★R224 随宽度一起放慢到 0.06/0.84；★R242 随宽度一起抬阻尼到 0.06/0.73（ζ 0.356→0.64 去过冲；见上条注释） */
+var NAV_SETTLE_LK=0.028, NAV_SETTLE_LDAMP=0.807;    /* ★R181 与宽度同参（0.34/0.50 → 0.20/0.73）；★R224 随宽度一起放慢到 0.06/0.84；★R242 随宽度一起抬阻尼到 0.06/0.73（ζ 0.356→0.64 去过冲）；★R243 随宽度一起放慢到 0.028/0.807（ζ 0.64 保值） */
 var NAV_SETTLE_MS=1800;                         /* settle 兜底时长（★R224 1200→1800：归位放慢后别再被兜底掐断） */
 /* ★R172① 入场滑行时长（ms）：这段由 CSS 过渡驱动，帧循环超时后交回跟手。
    取 260ms = 与过渡曲线同长；再长会让"点一下就切"显得拖沓。 */
-var NAV_ENTER_MS=180;   /* ★R202 260→180：手机上松手延迟更长，滑行段太长会让"滑到一半才交给弹簧"被看成停顿 */
+var NAV_ENTER_MS=300;   /* ★R202 260→180：手机上松手延迟更长，滑行段太长会让"滑到一半才交给弹簧"被看成停顿。
+                           ★★R243 180→**300** —— 必须与 `_navEnterLift` 里滑行过渡的 .30s **完全对齐**：
+                           用户"从日历点备忘录这个过渡动画太猛了"的根因之一，就是滑行段还没跑完就被提前
+                           交给弹簧（旧 180ms），而 R202 的速度继承又把滑行期的高速整段灌了进去。 */
 var _navLift={lifting:false,settling:false,entering:false,enterT0:0,idx:-1,startIdx:-1,suppressClick:false,pressX:0,moved:false,entPx:null,entT0:0,entV:0};
 var _navSettle={x:0,tx:0,w:0,tw:0,vx:0,vw:0,t0:0,lp:1,tlp:0,vlp:0};   /* ★R175① lp/tlp/vlp = 浮起度弹簧 */
 function _navNow(){return (window.performance&&performance.now)?performance.now():Date.now();}
@@ -13863,9 +13879,15 @@ function _navEnterLift(startIdx,pressX){
        是"先看到泡滑过去，一按住拖动就立刻粘手"，两者不冲突。 */
     /* ★R182② 皮肤不再列入（background-image）：皮已由 --lp 驱动，列了反而会在 --pill-hx（镜面位置）
        每帧变化时把这条过渡反复重启；几何/阴影/描边仍需要过渡（top/bottom/radius/box-shadow/border-*）。 */
-    pill.style.transition='transform .18s cubic-bezier(.22,.61,.36,1),width .18s cubic-bezier(.22,.61,.36,1),'
-      +'top .18s cubic-bezier(.22,.61,.36,1),bottom .18s cubic-bezier(.22,.61,.36,1),box-shadow .18s ease,'
-      +'border-color .18s ease,border-width .18s ease';
+    /* ★★R243 曲线与时长改写（用户："从日历点备忘录这个过渡动画太猛了"）：
+       `cubic-bezier(.22,.61,.36,1)` 是**缓出**——起始斜率 = 0.61/0.22 = **2.77**，即"第一帧就跑到均速的 2.8 倍"；
+       299px/180ms 的平均速度本就 27.7px/帧 ⇒ 探针实测**首帧位移 30.2px ≈ 1815px/s**，泡像被打出去一样
+       （_r243_probe.js 场景 B）。更糟的是 R202 的速度继承把这 30px/帧 原封交给位置弹簧 ⇒ 全程"起步即峰值"。
+       改：① 曲线 → **cubic-bezier(.4,0,.2,1)**（起止斜率都是 0 = 标准缓入缓出）；
+           ② 时长 .18s → **.30s**（行程长时把平均速度压下来；NAV_ENTER_MS 同步 ▶ 300，见变量处注释）。 */
+    pill.style.transition='transform .30s cubic-bezier(.4,0,.2,1),width .30s cubic-bezier(.4,0,.2,1),'
+      +'top .30s cubic-bezier(.4,0,.2,1),bottom .30s cubic-bezier(.4,0,.2,1),box-shadow .30s ease,'
+      +'border-color .30s ease,border-width .30s ease';
     /* ★R175① 浮起度必须**重置回 1**：上次归位把它收敛到 0 并留在 inline 上，而 inline 优先级高于
        `.nav-pill.lift{--lp:1}` —— 不重置的话第二次点按底栏，泡会一直是"常态大小"（浮不起来）。
        放在 transition 之后写：入场时 --lp 0→1 与加类同帧发生，top/bottom 走 .26s 过渡 = 泡"涨"起来。 */
