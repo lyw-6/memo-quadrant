@@ -975,7 +975,10 @@ html.glass-text-dark [data-theme="glass"] body.fs-kb .fs-action-bar{background:r
 .inline-edit-ok svg{width:20px;height:20px;}
 /* ★R61：就地编辑（内联 textarea）底部工具条 —— 与全屏编辑器同一套按钮。
    左侧区域右边界固定留出 66px，给右下角圆形勾按钮，永不被遮挡也永不遮挡它。 */
-/* ★R62 就地编辑工具条：占满整行（左右 8px），+ 新建融在左端、✓ 完成融在右端，悬浮 + 与悬浮圆勾都不再需要 */
+/* ★R62 就地编辑工具条：占满整行（左右 8px），+ 新建融在左端、✓ 完成融在右端，悬浮 + 与悬浮圆勾都不再需要
+   ★R244 手机端改成**真正通栏**：原来的 left/right:6px + 16px 圆角只是一条"浮岛"，用户看的正是这个
+   （"输入法上方吸附的那条，两端都没占到边缘"）⇒ ≤560px 破边到 0、圆角归 0、去掉左右描边，
+   变成标准输入法附件栏（圆角归 0 的好处：键盘起落的 bottom/圆角切换不再有"圆角先跳一下"的中间态）。 */
 .inline-edit-bar{position:fixed;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom));width:auto;max-width:none;z-index:9940;display:flex;align-items:center;gap:4px;flex-wrap:wrap;row-gap:4px;padding:6px 8px;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.12);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);-webkit-tap-highlight-color:transparent;}
 /* ★R69 键盘弹起时工具条贴住输入法顶边（body.kb-bar-up 由 _kbSyncBar 按 visualViewport 收缩判定）
    ★R83d：bottom:0 只锚布局视口，与输入法顶边(可视视口底)在 resizes-visual/键盘平移模式下有差值
@@ -1009,7 +1012,7 @@ body.kb-bar-up .inline-edit-bar{bottom:0!important;border-bottom-left-radius:0;b
 @media (min-width:769px){
   .inline-edit-bar{max-width:720px;}
 }
-@media (max-width:560px){.inline-edit-bar{left:6px;right:6px;gap:3px;padding:5px 6px;}.inline-edit-bar .fs-meta-btn{height:28px;font-size:11px;padding:0 6px;}.inline-edit-bar .ib-new{width:28px;height:28px;}.inline-edit-bar .ib-new svg{width:14px;height:14px;}.inline-edit-bar .ib-done{height:28px;min-width:40px;padding:0 10px;}}
+@media (max-width:560px){.inline-edit-bar{left:0;right:0;border-radius:0;border-left:none;border-right:none;gap:3px;padding:5px 10px;}.inline-edit-bar .fs-meta-btn{height:28px;font-size:11px;padding:0 6px;}.inline-edit-bar .ib-new{width:28px;height:28px;}.inline-edit-bar .ib-new svg{width:14px;height:14px;}.inline-edit-bar .ib-done{height:28px;min-width:40px;padding:0 10px;}}
 /* ★R61 待办项：内容里的 `[ ]` / `[x]` 在列表显示态渲染成可点勾选框（inline SVG，跟随主题色） */
 /* ★R68 列表悬挂缩进容器（见 renderContentHtml）：首行 0 起、续行挂 1.5em */
 .li-line{display:inline-block;box-sizing:border-box;max-width:100%;padding-left:1.5em;text-indent:-1.5em;vertical-align:baseline;word-break:break-all;} /* ★R76 box-sizing:border-box——原 content-box 下实际宽=100%+1.5em,长文本/勾选框被顶出卡片框 */
