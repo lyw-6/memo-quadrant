@@ -1021,6 +1021,13 @@ body.kb-bar-up .inline-edit-bar{bottom:0!important;border-bottom-left-radius:0;b
    前缀装进 .li-pfx（min-width:1.5em，3 位数序号自动加宽）→ 正文与续行都从 1.5em 起严格对齐。
    ★text-indent 是继承属性，li-pfx 内必须重置回 0，否则前缀自身再左移 1.5em。 */
 .li-pfx{display:inline-block;min-width:1.5em;text-indent:0;} /* ★R217 编辑态是 contenteditable=false 原子 span（保正文不被并进前缀）；勿加 user-select:none——前缀文本要可选中可复制 */
+/* ★R245 「全选→复制」要带列表编号：`.li-pfx` 从 `.memo-item{user-select:none}` **继承**了 none，
+   Chrome 序列化选区给剪贴板时会把 user-select:none 的 contenteditable=false 原子 span **整块跳过**
+   → 复制出来只剩正文（实测剪贴板 = "第一项\r\n第二项…"，"1." 全丢）。
+   ★为什么不直接把 `.li-pfx` 常态改成 text（更简单）：那样点一下编号，光标会落到**偏移 0（编号之前）**，
+     接着打字就插到编号前面 → "Z1. 第一项"，整行不再是列表行（实测）。所以只在"复制"那一刻放开。
+   ★做法见 JS 的同名注释：copy 事件挂 `html.__pfxCopy`，默认动作序列化完立刻收回，平时手势/光标行为零变化。 */
+html.__pfxCopy [contenteditable="true"] .li-pfx{-webkit-user-select:text;user-select:text;}
 /* ★R209 内联语法样式：**粗体** / ==高亮== / 链接（预览态渲染，编辑态显示原文） */
 .md-b{font-weight:700;}
 .md-hl{background:rgba(250,204,21,.38);color:inherit;border-radius:3px;padding:0 2px;}
@@ -18133,6 +18140,17 @@ function _edNormalize(ed){
   return true;
 }
 function _edIsChk(c){return c.nodeType===1&&c.getAttribute&&c.getAttribute('data-pfx')!=null;}
+/* ★R245 复制前"临时放开"列表编号的可选性（配合 CSS `html.__pfxCopy`）：
+   编号是 .li-pfx（contenteditable=false 原子 span），继承了 .memo-item 的 user-select:none，
+   Chrome 序列化选区时会**跳过 user-select:none 的节点** → 长按「全选→复制」出来只剩正文。
+   ★这里用 capture，先于默认动作跑；默认动作同步完成，setTimeout(0) 里收回，用户感知不到。
+   ★不做 preventDefault（原生 html/纯文本两种格式都保留，只补回被跳过的编号）。 */
+document.addEventListener('copy',function(){
+  var d=document.documentElement;
+  if(!d)return;
+  d.classList.add('__pfxCopy');
+  setTimeout(function(){d.classList.remove('__pfxCopy');},0);
+},true);
 function _edText(ed){
   /* ★R83f：只有 ed 直属的 br 是行分隔(计 '\n')；行内 span 里的 br 是 Chromium 对空行内元素
      的占位(如 todo-txt 被删空后自动填 <br>)，不计——否则值凭空多出换行。占位 br 保留在 DOM
