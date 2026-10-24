@@ -428,7 +428,7 @@ html.glass-text-dark [data-theme="glass"] .bloom-item:not([data-act="new"]){back
 /* 仅做 transform/opacity 合成器动画,不动 height/padding/margin,避免 Android WebView 布局重排卡顿 */
 @keyframes memoOut{to{opacity:0;transform:translateX(28px);}}
 @media (prefers-reduced-motion:reduce){
-  .view-fade,.memo-item.entering,.memo-item.leaving,.checkbox svg,.memo-item.just-toggled-done,.memo-item.just-toggled-undone,.sec-body{animation:none!important;transition:none!important;}
+  .view-fade,.memo-item.entering,.memo-item.leaving,.checkbox svg,.memo-item.just-toggled-done,.memo-item.just-toggled-undone,.memo-item.just-edited,.sec-body{animation:none!important;transition:none!important;}
   .memo-item.leaving{opacity:0;}
 }
 .memo-item.done{opacity:.5;}
@@ -449,6 +449,17 @@ html.glass-text-dark [data-theme="glass"] .bloom-item:not([data-act="new"]){back
   0%  {opacity:.5;}
   100%{opacity:1;}
 }
+/* ★R246 「刚才编辑的是哪一条」：点外面收起编辑框后，给这条卡片一次呼吸高亮（约 1.6s 淡出）。
+   用户原话："一不小心点到外面了，编辑框就收起来了，就有点懵找不到刚刚的编辑是哪个了"。
+   ★只动 outline-color + background（都是可插值的独立属性），**不碰 box-shadow**——R182①：
+     box-shadow 只有在层数/inset 标记逐层对齐时才插值，这里另起一条会打断卡片皮肤；outline 不占布局、不影响任何几何断言。
+   ★outline 跟随 border-radius（Chrome 94+），所以圆角处不会出现方角描边。 */
+@keyframes justEditedPulse{
+  0%  {outline-color:var(--color-primary);background:color-mix(in srgb,var(--color-primary) 14%,var(--card-bg));}
+  55% {outline-color:color-mix(in srgb,var(--color-primary) 70%,transparent);}
+  100%{outline-color:transparent;background:var(--card-bg);}
+}
+.memo-item.just-edited{outline:2px solid transparent;outline-offset:1px;animation:justEditedPulse 1.6s ease-out both;}
 /* ===== 省略视图（一行两个）===== */
 /* ★ 2026-09-03 R39 修复：minmax(0,1fr) —— 1fr 等价 minmax(auto,1fr)，auto 最小值＝min-content，
    紧急程度标签文字变长("紧急&重要"→"不紧急&不重要")时 min-content 撑大轨道 → 卡片超出容器 → 整页可左右拖动。
@@ -15714,6 +15725,28 @@ function enterMemoEdit(mc,memo,item,isNew){
   // ★R62：「确定」圆勾与「+」都融入底部工具条（.ib-done / .ib-new），不再各自悬浮
   showInlineEditBar(ta,memo.id); // ★R61 底部工具条（与左滑菜单编辑一致）
 }
+/* ★R246 收起编辑后"刚才编辑的是哪条"：把这条卡片滚进可视区 + 一次呼吸高亮。
+   ★为什么需要：点外面收起编辑时，键盘收起会让页面重排、长备忘还会从"展开"收回截断态，
+     位置一跳就认不出是哪条（用户原话"找不到刚刚的编辑是哪个了"）。
+   ★只在**真的退出编辑**（keepBar=false）时调用：焦点直接切到另一条备忘时（R86c keepBar）不闪，
+     否则会把用户正要去编辑的那条抢了注意力。 */
+function flashJustEdited(item){
+  try{
+    if(!item||!item.isConnected)return;
+    var nav=document.getElementById('bottomNav');
+    var navTop=(nav&&nav.offsetParent!==null)?nav.getBoundingClientRect().top:window.innerHeight;
+    var r=item.getBoundingClientRect();
+    var bandTop=8, bandBottom=Math.min(window.innerHeight,navTop)-8;
+    if(r.top<bandTop||r.bottom>bandBottom){
+      try{item.scrollIntoView({behavior:'smooth',block:'center'});}catch(_){try{item.scrollIntoView();}catch(__){}}
+    }
+    item.classList.remove('just-edited');
+    void item.offsetWidth;              /* 强制重排 → 连点时能重启动画（否则第二次不加动画） */
+    item.classList.add('just-edited');
+    clearTimeout(item._jeTimer);
+    item._jeTimer=setTimeout(function(){item.classList.remove('just-edited');},1700);
+  }catch(_){}
+}
 function exitMemoEdit(ta,item,keepBar){ /* ★R86c keepBar:焦点切到另一条备忘的编辑态,工具条/kb-edit 归新目标,只还原自身 */
   if(!ta||!ta.parentNode)return; /* 已脱离 DOM(重复 blur/已还原)→ 无可还原,防二次退出崩溃 */
   if(!keepBar){hideInlineOkBtn();hideInlineEditBar();}
@@ -15806,6 +15839,7 @@ function exitMemoEdit(ta,item,keepBar){ /* ★R86c keepBar:焦点切到另一条
   if(expandedMemos[id])item.classList.add('long'); else _syncLong(item);
   // 校准虚拟滚动高度
   setTimeout(function(){vUpdateHeight(id);},0);
+  if(!keepBar)flashJustEdited(item);   /* ★R246 收起后指出"刚才是这条"，点外面误触时不再找不到 */
 }
 var _vScheduled=false;
 function vOnScroll(){if(_vScheduled||!vList.active)return;_vScheduled=true;requestAnimationFrame(function(){_vScheduled=false;vRebuildWindow();});}
