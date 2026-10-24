@@ -3231,8 +3231,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
        IT之家泡边缘清晰 = 影子**贴边**：blur 小（**6px**）、spread 0、offsetY 2px，泡边外一圈立刻变暗。
        ★R233b 首拍 blur9/alpha.16 太弱（实测泡边外侧只暗到 222，比泡内 225 才暗 3）→ blur **6px**、alpha **.22**：
        边界处合计暗度超过泡内亮度 ⇒ "泡内 225 | 边外暗带 ~210 | 栏 255" 三段分明，轮廓一下就出来了。
-       ⚠️层数 5→6，基础规则同步补第 5 层透明占位（R182①：层数/inset 对齐才插值）。 */
-    calc(var(--mv,0) * -2px) calc(2px * var(--lp)) max(0px, calc(6px * var(--lp))) 0 rgba(0,0,0,calc(.22 * var(--lp))),
+       ⚠️层数 5→6，基础规则同步补第 5 层透明占位（R182①：层数/inset 对齐才插值）。
+       ★★R247 再减一档（用户："长按时怎么会有黑色的边框，有点突兀"）：alpha **.22→.12**、blur **6→9px**、
+       下偏移 2→3px。原口径是"贴边一圈立刻变暗"，在浅色栏上读起来是一条**深灰描边**而不是影子；
+       减半 + 放宽模糊后仍保留"泡边比栏暗一档"的轮廓（实测边外暗带仍比栏低 ~8 灰阶），但不再像画了个黑框。
+       ⚠️只改数值、层数与 inset 标记不动（R182①），否则整条 box-shadow 都不插值。 */
+    calc(var(--mv,0) * -2px) calc(3px * var(--lp)) max(0px, calc(9px * var(--lp))) 0 rgba(0,0,0,calc(.12 * var(--lp))),
     calc(var(--mv,0) * -4px) calc(8px * var(--lp)) max(0px, calc(30px * var(--lp))) calc(-4px * var(--lp)) rgba(0,0,0,calc(.32 * var(--lp))),
     /* ★★R236b 内缘高光：1px 细线 → **宽柔内白晕** `inset 0 0 7px -1px`（新参考图里泡的边缘是
        一圈**宽而柔**的白亮带，约 7px 向内衰减、左上最亮——R234 的 1px 细线太锐、太"描边"）。
@@ -12913,7 +12917,7 @@ function loadData(){
   }catch(e){memos=[];deleted=[];archived=[];stats={totalCreated:0,totalCompleted:0};categories=getDefaultCategories();}
 }
 function getDefaultCategories(){var r={};for(var k in DEFAULT_CATEGORIES)r[k]={label:DEFAULT_CATEGORIES[k].label,color:DEFAULT_CATEGORIES[k].color};return r;}
-function saveData(){var data={memos:memos,deleted:deleted,archived:archived,categories:categories,stats:stats,daySummaries:daySummaries,weekStart:weekStart,viewPrefs:viewPrefs,batchEnabled:batchEnabled,memo_groups:memo_groups,collapsedGroups:collapsedGroups,lockHash:lockHash,adminHash:adminHash,lockHint:lockHint,version:7};localStorage.setItem(STORAGE_KEY,JSON.stringify(data));updateStats();showSaveHint();scheduleCommit();}
+function saveData(){var data={memos:memos,deleted:deleted,archived:archived,categories:categories,stats:stats,daySummaries:daySummaries,weekStart:weekStart,viewPrefs:viewPrefs,batchEnabled:batchEnabled,memo_groups:memo_groups,collapsedGroups:collapsedGroups,lockHash:lockHash,adminHash:adminHash,lockHint:lockHint,version:7};localStorage.setItem(STORAGE_KEY,JSON.stringify(data));_calRev=(typeof _calRev==='number'?_calRev:0)+1;updateStats();showSaveHint();scheduleCommit();}
 function showSaveHint(){}
 function generateId(){return 'm'+Date.now().toString(36)+Math.random().toString(36).substr(2,6);}
 function generateCatKey(){return 'c'+Date.now().toString(36)+Math.random().toString(36).substr(2,4);}
@@ -13340,12 +13344,15 @@ function renderBottomNav(){
    · 与 positionNavPill 的关系：lift 期间胶囊由本模块接管，positionNavPill 必须让位（见其首行守卫），
      否则 ResizeObserver / resize / render 里的任何一次重排都会把浮起态覆盖回常态位置。
    · 长按后浏览器还会补一次 click：用 suppressClick 吃掉，避免连切两次。 */
-var NAV_PILL_EXTRA=20;   /* ★R170.4 浮起泡比常态胶囊宽出的像素（用户："能否和被选中态的胶囊还宽点"）。
+var NAV_PILL_EXTRA=26;   /* ★R170.4 浮起泡比常态胶囊宽出的像素（用户："能否和被选中态的胶囊还宽点"）。
                             ★R190 曾 20→44（当时常态收窄到 71px，不给外扩就没有形态行程）；
                             ★R192 常态宽回到"整格 − 8"（桌面 138）→ 行程足够，退回 20。
                             ★R229 曾 20→26（酷安口径 1.35）；★★R230 回 20：**仿 IT之家**（用户："还是 IT之家
                             导航栏好看点"）。IT之家参考图实测（_r230 测）：泡宽 ≈294px / 格宽 ≈236px @3.52x
-                            ≈ **1.25**；我 EXTRA=26 时实测 101.2/75.2 ≈ 1.35 → 突出过头，回 20 ≈ 1.27。 */
+                            ≈ **1.25**；我 EXTRA=26 时实测 101.2/75.2 ≈ 1.35 → 突出过头，回 20 ≈ 1.27。
+                            ★★R247 再回 **26**（用户："长按的时候这个变宽的幅度小了，稍微再宽一点"）：
+                            本轮手机档实测常态格宽 75.2 → 20 时泡 95.2（1.266）；26 → 101.2（1.346）。
+                            口径已从"对齐参考图比例"改回"按用户手感"，所以不再拿 1.25 去反推。 */
 var NAV_OVER=13;         /* ★R170.3 泡允许超出底栏左右边缘的像素（用户：微微超过一点点、能看到后面的边框） */
 /* ★★R170.5 弹簧调参 —— **DAMP 越小阻尼越大**（这个方向我第一版搞反了，实测轨迹一路振荡：
    197→157→185→166→179，42 帧都没收敛）。阻尼比近似 ζ = −ln(DAMP) / (2·√K)：
@@ -20296,11 +20303,25 @@ function calGhostHtml(y,m,off,rows){
   h+='</div>';
   return h;
 }
+/* ★R247 日历 DOM 复用：_calSig = 上次构建时的签名；_calRev = 数据版本（saveData 每次自增） */
+var _calSig='',_calRev=0;
 function renderCalendar(dir){
-  closeYmPicker(); /* ★R138: 重画会重建浮层 DOM，先把 document 上的关闭监听摘掉，避免残留 */
+  /* ★★R247 切换视图时**复用已建好的日历 DOM**（用户："从备忘录点到日历时，切换的动画过渡有点卡顿"）。
+     根因（探针 _r247b/e 实测）：点一下导航 = **一次 43~68ms 的同步任务**，其中 LayoutDuration 30.5ms、
+     共 6 次布局 —— 因为 renderCalendar 每次都 `innerHTML` 重建 3 份月历（当月 + 两侧邻月 ghost ≈126 格），
+     新节点必然触发整棵子树的首次布局，而这一步就卡住了刚要起步的胶囊弹簧（动画前先冻 3 帧）。
+     实测：首次进日历 43.1ms / 二次 13.5ms ⇒ **二次几乎免费**，说明"省掉重建"就能把这段从关键路径上拿掉。
+     做法：month/weekStart/数据版本/今天/选中日 都没变 → 直接复用 DOM，只补 syncCalTodayBtn + fitCalGrid。
+     ⚠️数据版本 `_calRev` 在 saveData() 里自增（所有写库路径都经过它）；memos.length 一并入签名做兜底。
+     ⚠️带 dir（左右切月/上滑）时一律重建，避免"切月没动画"或跨月复用错月份的 DOM。 */
   calendarViewEl.style.display='block';
-  syncCalTodayBtn(); /* ★R55:已在今天则不显示「今」按钮 */
   var year=currentCalDate.getFullYear(), month=currentCalDate.getMonth();
+  var _sig=year+'|'+month+'|'+weekStart+'|'+(typeof _calRev==='number'?_calRev:0)+'|'+memos.length+'|'+new Date().toDateString()+'|'+(selectedCalDate?selectedCalDate.getTime():'');
+  if(!dir&&_sig===_calSig&&calendarViewEl.querySelector('.cal-month-grid')){
+    syncCalTodayBtn();fitCalGrid();return;
+  }
+  closeYmPicker(); /* ★R138: 重画会重建浮层 DOM，先把 document 上的关闭监听摘掉，避免残留 */
+  syncCalTodayBtn(); /* ★R55:已在今天则不显示「今」按钮 */
   var html='';
   /* ★R138 浮层的包含块必须是 .cal-head(标题所在行)：浮层是绝对定位元素，
      而绝对定位元素在 flex 容器里不参与 flex 布局，放进去零副作用。
@@ -20354,6 +20375,7 @@ function renderCalendar(dir){
     +'<div class="cdp-actions"><button class="picker-btn primary" id="cdpSummarySave" type="button">💾 保存小结</button><button class="picker-btn secondary" id="cdpCopy" type="button">📋 复制小结</button></div>'
     +'</div>';
   calendarViewEl.innerHTML=html;
+  _calSig=_sig;   /* ★R247 记下签名：下一次切回日历只要数据/月份没变就直接复用这份 DOM */
   /* ★R54: 上下滑/滚轮切月的滑动方向动画 */
   if(dir){var _g=calendarViewEl.querySelector('.cal-month-grid');if(_g)_g.classList.add(dir==='up'?'cal-anim-next':'cal-anim-prev');}
   /* ★R54: 「今」按钮——回到今天所在月份并选中今天 */
@@ -22432,6 +22454,22 @@ function init(){
   renderBottomNav();
   watchNavResize(); /* ★R143 底栏尺寸变化（滚动条出现/消失）时重排选中胶囊 */
   render();
+  /* ★★R247 空闲预热日历：把"第一次进日历"那次 40ms+ 的重建 + 布局挪到启动后的空闲时段。
+     预热后 _calSig 已就位 → 用户第一次点「日历」命中签名、不再重建（实测 43ms → 13ms），
+     胶囊弹簧不会再被这段同步任务挡住。预热时 calendarViewEl 临时可见才能量尺寸，
+     同一任务里建完立刻藏回 → 不产生任何可见闪烁（中途不 yield，浏览器不会绘制）。 */
+  (function(){
+    var run=function(){
+      try{
+        if(currentView==='calendar'||_calSig)return;
+        var prev=calendarViewEl.style.display;
+        renderCalendar();
+        if(currentView!=='calendar')calendarViewEl.style.display=prev||'none';
+      }catch(_){}
+    };
+    var later=function(){ if(window.requestIdleCallback)requestIdleCallback(run,{timeout:2500});else setTimeout(run,0); };
+    setTimeout(later,700);
+  })();
   setInterval(function(){
     syncTimeProgressBars();
     var items=document.querySelectorAll('.memo-item .countdown');
