@@ -372,7 +372,11 @@ html.glass-text-dark [data-theme="glass"] .bloom-item:not([data-act="new"]){back
 .filter-chip .count{font-weight:400;opacity:.7;font-size:11px;margin-left:1px;}
 .filter-divider{width:1px;height:18px;background:var(--border);margin:0 2px;flex-shrink:0;}
 .custom-select{position:relative;display:inline-block;overflow:visible!important;flex-shrink:0;}
-.select-trigger{padding:2px 8px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);font-size:var(--text-xs);cursor:pointer;display:flex;align-items:center;gap:3px;transition:all .2s;white-space:nowrap;height:26px;user-select:none;}
+.select-trigger{padding:2px 8px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);font-size:var(--text-xs);cursor:pointer;display:flex;align-items:center;gap:3px;transition:all .2s;white-space:nowrap;height:30px;position:relative;user-select:none;}
+/* ★R248 触控热区：26px 高偏小，视觉高度提到 30，再用 ::before 向上下各补 6px（≈42 高可点）。
+   ⚠️只往**上下**扩，不往左右扩：横向多出来的 4px 会被算进 .filter-bar 的 scrollWidth，
+      在 412 宽度下直接把 R112/R117「不溢出」的判据顶红（实测 over=2）。 */
+.select-trigger::before{content:'';position:absolute;inset:-6px 0;border-radius:calc(var(--radius-xs) + 4px);}
 .select-trigger:hover{background:var(--hover-bg);}
 .select-trigger.open{border-color:var(--text-tertiary);}
 .select-trigger svg{width:10px;height:10px;transition:transform .2s;color:var(--text-tertiary);flex-shrink:0;pointer-events:none;}
@@ -432,6 +436,9 @@ html.glass-text-dark [data-theme="glass"] .bloom-item:not([data-act="new"]){back
   .memo-item.leaving{opacity:0;}
 }
 .memo-item.done{opacity:.5;}
+/* ★R248 深色主题下 .5 太淡（深底 + 50% 白字 ≈ 看不清）：单独提一档 */
+[data-theme="dark"] .memo-item.done{opacity:.68;}
+[data-theme="glass"] .memo-item.done{opacity:.66;}
 /* ★ 2026-09-02 R38：勾选动画改为「渐隐 / 渐显」，去掉 R34~R37 的 scale 抖动（用户要求）。
    done：opacity 1 → .5（终点 = 持久化后 .memo-item.done 的 opacity，render 替换 DOM 时无缝衔接，不闪回）；
    undone：opacity .5 → 1（起点 = 当前 .done 的 opacity，同理无缝）。
@@ -1319,6 +1326,12 @@ body:not(.batch-off) .memo-item.expanded .memo-content{box-shadow:none;backgroun
 .memo-after .memo-meta{margin-top:0;display:flex;align-items:center;gap:3px;}
 .memo-meta{display:flex;align-items:center;gap:3px;margin-top:3px;flex-wrap:nowrap;overflow:visible;}
 .memo-meta>*{display:inline-flex;align-items:center;gap:2px;padding:0 6px;height:22px;line-height:22px;font-size:var(--text-xs);border-radius:var(--radius-xs);white-space:nowrap;flex-shrink:0;}
+/* ★R248 卡片底部标签收敛成四级，别再"四个 chip 四种长相"（用户看到的是一排花里胡哨的小色块）：
+   ① 分类＝可点，唯一实底（保留 ⌄ 暗示可点）；② 分组＝半透明底；③ 紧急程度＝无底 + 色点；
+   ④ 剩余时间＝纯文字。 */
+.memo-meta .quadrant-tag{background:transparent!important;padding:0 4px!important;}
+.memo-meta .quadrant-tag::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;flex:none;margin-right:4px;display:block;}
+.memo-meta .group-chip{background:color-mix(in srgb,currentColor 12%,transparent)!important;}
 .cat-select-wrap{position:relative;display:inline-block;overflow:visible!important;flex-shrink:0;padding:0;}
 /* 分类下拉已从 .memo-item 移出挂到 body(避免被 content-visibility 裁切),故改用独立类选择器 */
 /* ★R198 展开/收起按钮与分类标签行往右与【正文文字】对齐（用户："和文字对齐不要和边框对齐"）：
@@ -2148,7 +2161,12 @@ body.glass-bg-dusk{--glass-bg-image:radial-gradient(1000px 640px at 4% -10%,rgba
 .quadrant-cell .cell-item.drop-ref{box-shadow:inset 0 2px 0 var(--text-tertiary);}
 .quadrant-cell.drag-over{background:var(--hover-bg);outline:2px dashed var(--text-tertiary);outline-offset:-4px;}
 /* 象限右上角全屏按钮:点击该象限放大覆盖整页,再点缩小 */
-.quadrant-cell .cell-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.quadrant-cell .cell-actions{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+/* ★R248 触控热区：三个 20px 小圆按钮实测只有 20×20（远低于 44），且三连排易误触。
+   视觉尺寸不动（再大就抢了象限标签的位置），改用 ::after 把可点区域向外扩 5px（≈30×30），
+   同时把 gap 4→7px，保证相邻热区不重叠。 */
+.quadrant-cell .cell-fs,.quadrant-cell .cell-add,.quadrant-cell .cell-clear{position:relative;}
+.quadrant-cell .cell-fs::after,.quadrant-cell .cell-add::after,.quadrant-cell .cell-clear::after{content:'';position:absolute;inset:-5px;border-radius:50%;}
 .quadrant-cell .cell-fs{width:24px;height:24px;border-radius:50%;border:1.5px dashed var(--border);background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:all .2s;-webkit-tap-highlight-color:transparent;}
 .quadrant-cell .cell-fs:hover{border-color:var(--text-secondary);color:var(--text-secondary);background:var(--hover-bg);}
 .quadrant-cell .cell-fs svg{width:13px;height:13px;pointer-events:none;}
@@ -2513,7 +2531,7 @@ body.bloom-on .toast{opacity:0;transform:translateX(-50%) translateY(80px);point
   /* ★ 2026-09-01 修复：filter-bar 在 <480 手机上一行显示完全部/待办/已完成/自定义/紧凑/搜索 */
   .filter-bar{padding:2px 4px;gap:2px;}
   .filter-chip{padding:1px 5px;font-size:10px;height:24px;box-sizing:border-box;}
-  .filter-bar .select-trigger{min-width:26px;height:24px;padding:0 5px;font-size:10px;gap:2px;}
+  .filter-bar .select-trigger{min-width:26px;height:30px;padding:0 6px;font-size:11px;gap:2px;}   /* ★R248 24→30：手机端点按目标太小（配合 ::before 外扩≈38 高） */
   .filter-bar .select-trigger .trigger-ico{display:none;} /* 自定义下拉只留文字 */
   .filter-bar .btn-icon.compact-toggle,.filter-bar .btn-icon.search-toggle{width:24px;min-width:24px;height:24px;padding:0;border-radius:6px;}
   .filter-bar .btn-icon.compact-toggle svg,.filter-bar .btn-icon.search-toggle svg{width:13px;height:13px;}
@@ -2590,6 +2608,17 @@ body.bloom-on .toast{opacity:0;transform:translateX(-50%) translateY(80px);point
 .cal-cell .d-memo::before{content:'';position:absolute;left:1px;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:var(--mc,#6b7280);} /* ★R170.5 用 top:50%+translateY 精确压中线（原 top:.45em 依赖字号与行高，换字号就会偏） */
 .cal-cell .d-memo.done{opacity:.5;text-decoration:line-through;}
 .cal-cell .d-more{font-size:9px;line-height:1.2;color:var(--text-tertiary);text-align:left;padding-left:8px;}
+/* ★R248 手机端日历格内**只显示圆点、不显示摘要文字**：
+   7 列锁死 → 单格只有 52px 宽，文字实际只能露出 3~4 个字（"这是…"），信息量≈0 却制造噪音。
+   改成最多 3 个分类色圆点（+N 提示），具体内容点开当天面板看（calDayPanel 已有）。
+   ⚠️只在 ≤560 生效，桌面格子够宽仍显示文字。 */
+@media (max-width:560px){
+  #calendarView > .cal-head{margin-top:var(--cal-pt,0px);}
+  .cal-cell .d-memos{flex-direction:row;justify-content:center;align-items:center;gap:3px;margin-top:2px;}
+  .cal-cell .d-memo{width:5px;height:5px;min-height:5px;border-radius:50%;background:var(--mc,#6b7280);padding:0;font-size:0;line-height:0;flex:none;}
+  .cal-cell .d-memo::before{display:none;}
+  .cal-cell .d-more{padding-left:0;font-size:9px;}
+}
 .cal-cell.selected{background:var(--color-primary,#6366f1);border-color:var(--color-primary,#6366f1);}
 .cal-cell.selected .d-num{color:#fff;}
 /* 进度统计 */
@@ -3389,8 +3418,12 @@ html.glass-text-dark [data-theme="glass"] .bottom-nav{--nb-surface:rgba(15,23,42
 #undo-toast .ut-undo:hover{background:rgba(255,255,255,.3);}
 
 /* ===== R205 到期提醒横幅（顶部，可堆叠多条） ===== */
+/* ★★R248 横幅会盖住顶栏：它是 fixed top:10/h:44/z:215，而 .header 正好在 top 8–38 ——
+   实测被遮的是 搜索/紧凑视图/更多/设置 四个按钮（全部点不到）。修法＝横幅显示时给 .header 让出等高空间
+   （--rb-h 由 JS 量出来写，横幅多行时会自动变高）。 */
 #remind-banner{position:fixed;left:50%;transform:translateX(-50%);top:10px;z-index:215;width:min(560px,calc(100vw - 24px));display:none;flex-direction:column;gap:6px;}
 #remind-banner.show{display:flex;}
+body.rb-on .header{margin-top:var(--rb-h,50px);}
 .rb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:var(--text);color:var(--card-bg);box-shadow:0 10px 28px rgba(0,0,0,.3);font-size:13px;animation:rbIn .22s ease-out;}
 @keyframes rbIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
 .rb-item .rb-ico{flex:none;width:16px;height:16px;color:#f59e0b;}
@@ -3614,7 +3647,7 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
   .filter-bar #sort-filter-dropdown{left:auto;right:0;}
   .filter-chip .count{display:inline!important;font-size:10px;margin-left:0;}
   #cat-filter-label,#sort-filter-label{display:inline!important;}
-  .filter-bar .select-trigger{min-width:0;height:26px;padding:0 3px;font-size:11px;gap:2px;white-space:nowrap;}
+  .filter-bar .select-trigger{min-width:0;height:30px;padding:0 3px;font-size:11px;gap:2px;white-space:nowrap;}   /* ★R248 26→30（本块在文件末尾、级联必胜，改高度只改这里）；⚠️字号别改小：筛选栏有自适应缩放，10px 反而让 scrollWidth 溢出 2px */
   .filter-bar .select-trigger svg{width:10px;height:10px;}
   /* ★R117 试过把排序名在窄屏缩成两字「创建」，实测踩雷：触发器中点会落到标签与方向箭头之间的空隙
      (标签 22px + guard 7px + 箭头 14px，中点距箭头只剩 2px) → 触摸吸附把「点按钮中间」吸到箭头上，
@@ -12739,8 +12772,10 @@ function progressColor(p){
   var h=hue.toFixed(0);
   var th=document.documentElement.getAttribute('data-theme');
   // 深色底(深色主题 / 深色玻璃变体 glass-text-dark)：淡彩会被深色卡片吞掉 → 提亮并整体加浓
+  /* ★R248 深色下 0.22/0.34/0.46 太浓：整卡左侧变成一块饱和色，深色文字压在上面很躁。
+     降到 0.13/0.20/0.28 —— 仍是"液体注入"的层次，但让位给文字。 */
   if(th==='dark'||(th==='glass'&&document.documentElement.classList.contains('glass-text-dark'))){
-    return 'linear-gradient(90deg, hsla('+h+',70%,58%,0.22) 0%, hsla('+h+',75%,55%,0.34) 50%, hsla('+h+',80%,52%,0.46) 100%)';
+    return 'linear-gradient(90deg, hsla('+h+',70%,58%,0.13) 0%, hsla('+h+',75%,55%,0.20) 50%, hsla('+h+',80%,52%,0.28) 100%)';
   }
   if(th==='glass'){
     // 毛玻璃：白玻璃会稀释淡色,故整体加浓,右端最浓才看得见
@@ -12965,9 +13000,11 @@ function getNextDeadline(memo){
 function fmtDur(abs){
   abs=Math.max(0,Math.abs(abs));
   var days=Math.floor(abs/86400000),hours=Math.floor((abs%86400000)/3600000),mins=Math.floor((abs%3600000)/60000);
-  if(days>0)return days+'天'+hours+'时';
-  if(hours>0)return hours+'时'+mins+'分';
-  return mins+'分';
+  /* ★R248 中文量词补齐 + 去掉无意义的 0 段（用户看到的是"剩余 2时59分""超时 2时0分"，读着别扭）：
+     2时59分 → 2小时59分；2天0时 → 2天；0分 → 不到1分。 */
+  if(days>0)return days+'天'+(hours?hours+'小时':'');
+  if(hours>0)return hours+'小时'+(mins?mins+'分':'');
+  return mins>0?(mins+'分'):'不到1分';
 }
 /* ★R133「全天」截止语义：全天任务的到期时刻 = **当天 23:59:59.999**，不是当天 00:00。
    原实现一律用 `deadline < now` 直判，而全天任务的 deadline 全都被写成「当天 00:00」
@@ -13023,8 +13060,9 @@ function formatCountdown(memo){
   var text,cls='';var repeatLabel='';
   if(memo.repeat==='daily')repeatLabel='每天';else if(memo.repeat==='weekdays')repeatLabel='工作日';else if(memo.repeat==='weekly')repeatLabel='每周';else if(memo.repeat==='monthly')repeatLabel='每月';else if(memo.repeat==='yearly')repeatLabel='每年';
   var prefix=isOverdue?'超时':'剩余';
-  if(isOverdue){if(days>0)text=prefix+' '+days+'天'+hours+'时';else if(hours>0)text=prefix+' '+hours+'时'+mins+'分';else text=prefix+' '+mins+'分';cls='overdue';}
-  else{if(days>0)text=prefix+' '+days+'天'+hours+'时';else if(hours>0)text=prefix+' '+hours+'时'+mins+'分';else text=prefix+' '+mins+'分';if(diff<3600000)cls='urgent';}
+  /* ★R248 统一走 fmtDur（原来这里自己拼 "2时59分"/"2天0时"，与一次性任务那条的口径不一致） */
+  text=prefix+' '+fmtDur(absDiff);
+  if(isOverdue)cls='overdue';else if(diff<3600000)cls='urgent';
   return {text:text,cls:cls,icon:''};
 }
 function updateMemo(id,updates){for(var i=0;i<memos.length;i++){if(memos[i].id===id){for(var k in updates)memos[i][k]=updates[k];memos[i].updatedAt=Date.now();if(updates&&updates.text!==undefined){memos[i]._esc=undefined;syncMemoText(id);}saveData();return true;}}return false;}
@@ -13090,6 +13128,7 @@ function remindScan(){
       _notifySystem(m2);
     }
     wrap.classList.add('show');
+    _rbSyncOffset();   /* ★R248 顶栏让位（否则横幅把标题与右上四个按钮全盖住） */
   }catch(_){}
 }
 function _notifySystem(m){
@@ -13100,10 +13139,25 @@ function _notifySystem(m){
     n.onclick=function(){try{window.focus();}catch(_){}};
   }catch(_){}
 }
+/* ★★R248 横幅显隐时同步顶栏让位：把横幅实际高度写进 --rb-h，body.rb-on 时 .header 让出这块（含 6px 间隙） */
+function _rbSyncOffset(){
+  try{
+    var wrap=document.getElementById('remind-banner');
+    var on=!!(wrap&&wrap.classList.contains('show')&&wrap.firstChild);
+    document.body.classList.toggle('rb-on',on);
+    if(on){
+      var h=Math.round(wrap.getBoundingClientRect().height);
+      document.body.style.setProperty('--rb-h',(h+6)+'px');
+    }else{
+      document.body.style.removeProperty('--rb-h');
+    }
+  }catch(_){}
+}
 function _rbCloseItem(item){
   var wrap=document.getElementById('remind-banner');
   if(item&&item.parentNode)item.parentNode.removeChild(item);
   if(wrap&&!wrap.firstChild)wrap.classList.remove('show');
+  _rbSyncOffset();
 }
 function focusMemoInList(id){
   try{
@@ -20261,7 +20315,10 @@ function fitCalGrid(){
   var wrapPad=parseFloat(getComputedStyle(calendarViewEl).paddingLeft||0)+parseFloat(getComputedStyle(calendarViewEl).paddingRight||0);
   var wrapW=(calendarViewEl.clientWidth||0)-wrapPad;
   var maxCellW=Math.floor((wrapW-GAP*6)/7);
-  if(maxCellW>0)cellH=Math.min(cellH,maxCellW);
+  /* ★R248 手机端允许格子比宽度稍高（1.3×）——7 列锁死了宽度，只按正方形算的话一个月只占屏高一半，
+     实测网格底到导航顶空出 441px。拉高后由下面的 --cal-pt 把整块（标题+网格）垂直居中，空白上下均分。 */
+  var _fill=(window.innerWidth<=560)?1.45:1;
+  if(maxCellW>0)cellH=Math.min(cellH,Math.round(maxCellW*_fill));
   cellH=Math.max(30,Math.min(cellH,104));
   /* ★变量挂在 calendarViewEl 上（不是 grid 上）：两侧的邻月 ghost 不是 grid 的子孙，
      挂 grid 它们取不到 --dcell / --cal-grid-w → 邻月格子尺寸与当月不一致就对不齐了。 */
@@ -20273,6 +20330,11 @@ function fitCalGrid(){
      算式与 grid 的实际排布一致：标签行 + rows×格高 + rows×gap。 */
   var gridH=labH+rows*cellH+rows*GAP;
   calendarViewEl.style.setProperty('--cal-grid-h',Math.round(gridH)+'px');
+  /* ★R248 把「标题+网格」整块在可用高度里垂直居中：原来全部贴顶，底部空出近半屏，
+     看着像"没画完"。--cal-pt 只加在 .cal-head 的上边距上，不影响日历自身的几何计算（avail 以容器顶为准）。
+     ⚠️上留白**必须封顶**（36px）：完全居中会在工具栏与月份标题之间挖出一个 130px+ 的空洞，
+     反而像渲染出错；真正吃掉空间的是把格子从正方形放宽到 1.3 倍高（见上面的 _fill）。 */
+  calendarViewEl.style.setProperty('--cal-pt',Math.max(0,Math.min(36,Math.round((avail-gridH-labH)/2)))+'px');
   /* ⚠️这里**不能**用「量 document.scrollHeight 超了就缩」的收敛校正：那会让 cellH 依赖
      页面上其它元素（6 行月 / 小结面板 / 浮层）→ 同一个月在不同时刻算出不同尺寸，
      R138「打开年月浮层零布局推挤」的保证会被打破（实测 grid 高 470.6 → 481）。
