@@ -458,13 +458,16 @@ html.glass-text-dark [data-theme="glass"] .bloom-item:not([data-act="new"]){back
 }
 /* ★R246 「刚才编辑的是哪一条」：点外面收起编辑框后，给这条卡片一次呼吸高亮（约 1.6s 淡出）。
    用户原话："一不小心点到外面了，编辑框就收起来了，就有点懵找不到刚刚的编辑是哪个了"。
-   ★只动 outline-color + background（都是可插值的独立属性），**不碰 box-shadow**——R182①：
-     box-shadow 只有在层数/inset 标记逐层对齐时才插值，这里另起一条会打断卡片皮肤；outline 不占布局、不影响任何几何断言。
-   ★outline 跟随 border-radius（Chrome 94+），所以圆角处不会出现方角描边。 */
+   ★★R249 只动 outline-color，**绝不碰 background**：置顶卡自带一层暖黄底
+     （`.memo-item.pinned{background:color-mix(card-bg 86%,#f59e0b)}`），而 keyframe 里的 background
+     会整条覆盖元素自身背景 → 收尾前 1.6s 变白/变蓝紫，摘类那一刻又跳回暖黄 = 用户说的
+     "突然一闪有背景色，有点突兀"（置顶时才明显，普通白卡看不出来）。
+   ★不碰 box-shadow（R182①：层数/inset 标记不对齐就不插值，另起一条会打断卡片皮肤）；
+     outline 不占布局、跟随 border-radius（Chrome 94+），也不影响任何几何断言。 */
 @keyframes justEditedPulse{
-  0%  {outline-color:var(--color-primary);background:color-mix(in srgb,var(--color-primary) 14%,var(--card-bg));}
+  0%  {outline-color:var(--color-primary);}
   55% {outline-color:color-mix(in srgb,var(--color-primary) 70%,transparent);}
-  100%{outline-color:transparent;background:var(--card-bg);}
+  100%{outline-color:transparent;}
 }
 .memo-item.just-edited{outline:2px solid transparent;outline-offset:1px;animation:justEditedPulse 1.6s ease-out both;}
 /* ===== 省略视图（一行两个）===== */
