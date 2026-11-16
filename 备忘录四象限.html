@@ -2867,21 +2867,26 @@ html.glass-text-dark [data-theme="glass"] .cal-cell.selected .d-more{color:rgba(
    "已选 0" 半边压在弧内）。多行容器必须退回常规圆角，维持「外圆角 > 内圆角」分档
    （容器 18px > 按钮 11px）；--nav-r 同步收紧（批量下泡隐藏，但令牌保持一致防两态切换跳变）。 */
 .bottom-nav.batch-mode{border-radius:18px;--nav-r:14px;}
-/* ★R214 两行栅格对齐：原来首行是「取消/全选 = flex:1 两等分 + 已选N 靠右(auto)」，
-   次行是 4 等分 → 桌面宽屏下首行按钮 349px、次行 187px，两行格子完全对不齐（"怪异"的一半来源）。
-   把「已选 N」也变成 flex:1 的等宽格（文字居中）→ 两行同为 4 列，列宽一致。 */
-/* ★R214 行内栅格对齐：原来首行是「取消/全选 = flex:1 两等分 + 已选N(auto, 靠右)」，
-   次行是 4 等分 → 宽屏下首行按钮 349px、次行 187px，两行格子完全对不上（"怪异"的一半来源）。
-   把「已选 N」也变成等宽格、文字居中（★注意 2832 行 `#bottomNav .batch-count`(1,1,0) 特异性命中它，
-   所以这里必须写 `#bottomNav.batch-mode .batch-count`(1,2,0) 才压得住）；
-   同时撤掉主色胶囊底（整格大的淡蓝色块会被误读成"可点按钮"）→ 中性灰字居中。 */
-#bottomNav.batch-mode .batch-count{flex:1 1 0;margin-left:0;justify-content:center;background:transparent;color:var(--text-tertiary);}
-/* ★R40：批量操作按钮从 5 个增至 7 个（新增 置顶 / 合并），单行在 360px 屏每格不足 38px，
-   图标 + 两字会被挤成省略号 → 改成两行。行断用 flex-basis:100% 的空 div(.batch-row-break)强制换行。 */
-.bottom-nav.batch-mode{flex-wrap:wrap;row-gap:6px;}
-.bottom-nav.batch-mode .nav-batch{flex:1 1 0;min-width:0;}
-/* ★R59：行断点改为一条主题自适应发丝线，让「选择组(取消/全选/已选) / 操作组」分层更清楚 */
-.batch-row-break{flex-basis:100%;height:0;margin:1px 0;padding:0;border:none;border-top:1px solid var(--nb-line);}
+/* ★★R251 多选底栏改成**单行 6 格、图标在上文字在下**（用户："长按进入多选时，底下的按钮感觉有点凌乱"）。
+   旧版"乱"的四个来源：① 两行（首行 取消/全选/已选N、次行 置顶/入组/复制/删除）；
+   ② 两行形状语言不一致（首行大圆角胶囊、次行小圆角方块）；③ 中间夹着一个"已选 N"纯文字格，
+   看起来像禁用按钮；④ 栏高 97px，是导航栏(55)的近两倍，切换时整条栏"长出来"一截。
+   现在：① 6 个动作等宽一行；② 无边框无底色（与 .nav-tab 同构，靠颜色区分危险项）；
+   ③ 「已选 N」搬到顶栏副标题 #app-sub，栏里不再有非按钮元素；④ 栏高 60px ≈ 导航栏。
+   ⚠️本块特异性 (0,3,0) 压过下面那些 `.nav-batch{height:30px}` 的媒体档，改尺寸只需改这里。 */
+.bottom-nav.batch-mode{flex-wrap:nowrap;row-gap:0;gap:2px;padding:6px 6px;border-radius:18px;--nav-r:14px;}
+.bottom-nav.batch-mode .nav-batch{flex:1 1 0;min-width:0;height:48px;padding:0 2px;gap:3px;
+  flex-direction:column;justify-content:center;border:none;background:transparent;
+  color:var(--text-secondary);border-radius:12px;font-size:10px;font-weight:500;}
+.bottom-nav.batch-mode .nav-batch .b-ico{width:20px;height:20px;opacity:1;}
+.bottom-nav.batch-mode .nav-batch .b-ico svg{width:20px;height:20px;}
+.bottom-nav.batch-mode .nav-batch .b-lbl{font-size:10px;line-height:1;}
+.bottom-nav.batch-mode .nav-batch:active{background:var(--hover-bg);transform:none;}
+.bottom-nav.batch-mode .nav-batch.danger{color:var(--color-danger,#ef4444);}
+.bottom-nav.batch-mode .nav-batch.primary{color:var(--color-primary,#6366f1);}
+[data-theme="glass"] .bottom-nav.batch-mode .nav-batch{border:none;background:transparent;box-shadow:none;}
+/* 兜底：行断元素已不再渲染，老缓存 DOM 里若还留着也不要占位 */
+.batch-row-break{display:none;}
 /* ★R59：合并模式提示改主色淡底胶囊，避免与正文色混淆 */
 /* ★R59：玻璃主题——按钮降不透明度，避免实心面把底栏的毛玻璃糊掉 */
 [data-theme="glass"] .bottom-nav{--nb-surface:rgba(255,255,255,0.24);--nb-surface-hi:rgba(255,255,255,0.38);--nb-line:var(--glass-edge);}
@@ -3625,6 +3630,8 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
   .nav-batch .b-lbl{font-size:12px;}
   /* header 副标题隐藏 + 右侧按钮等比缩小 */
   #app-sub{display:none;}
+  /* ★R251 多选态例外：副标题在这里承担「已选 N 条」（计数已从底栏按钮行搬走） */
+  body.batch-on #app-sub{display:inline;margin-left:6px;font-size:11px;font-weight:600;color:var(--color-primary,#6366f1);}
   .header-actions{gap:3px;}
   .header-actions .btn-icon{width:28px;height:28px;}
   .header-actions .btn-icon svg{width:13px;height:13px;}
@@ -13380,8 +13387,7 @@ function renderBottomNav(){
     // ★R69 合并模式已移除：「合并」直接弹分组选择弹层一步完成（openGroupPicker）。
     html+='<button class="nav-batch ghost" id="batch-cancel" type="button">'+nbIco(ICON_X)+'<span class="b-lbl">取消</span></button>';
     html+='<button class="nav-batch" id="batch-select-all" type="button">'+nbIco(allSel?ICON_BOX_CHECK:ICON_BOX)+'<span class="b-lbl">'+(allSel?'全不选':'全选')+'</span></button>';
-    html+='<span class="batch-count" id="batch-count">已选 '+selectedIds.size+'</span>';
-    html+='<div class="batch-row-break"></div>';
+    /* ★R251 「已选 N」不再塞在按钮行里（那一格纯文字长得像禁用按钮）→ 搬到顶栏副标题 #app-sub */
     if(isTrash){
       html+='<button class="nav-batch" id="batch-restore" type="button">'+nbIco(ICON_RESTORE)+'<span class="b-lbl">恢复</span></button>';
       html+='<button class="nav-batch danger" id="batch-del" type="button">'+nbIco(ICON_TRASH)+'<span class="b-lbl">彻底</span></button>';
@@ -13394,6 +13400,9 @@ function renderBottomNav(){
     _navSwapChildren(html);
     nav.style.display='';
     nav.classList.add('batch-mode');
+    /* ★R251 计数进顶栏副标题（原来那格"已选 N"夹在按钮里，长得像禁用按钮） */
+    var _bsub=document.getElementById('app-sub');
+    if(_bsub)_bsub.textContent='已选 '+selectedIds.size+' 条';
     bindBatchNav();
     return;
   }
@@ -13420,6 +13429,8 @@ function renderBottomNav(){
   }
   nav.classList.remove('batch-mode');
   _navSwapChildren(html);
+  /* ★R251 退出批量：副标题要还给视图文案（否则会一直停在"已选 N 条"） */
+  try{ if(typeof updateTitle==='function')updateTitle(); }catch(_){}
   var _vis=0;for(var _i=0;_i<viewPrefs.order.length;_i++){if(viewPrefs.visible[viewPrefs.order[_i]])_vis++;}
   nav.style.display=(_vis<=1)?'none':'';
   var tabs=nav.querySelectorAll('.nav-tab');
