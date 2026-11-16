@@ -1267,6 +1267,10 @@ body.no-done-circle .swipe-fore > .checkbox{display:none;}
 .memo-content::placeholder{color:var(--text-tertiary);}
 /* 非聚焦 div 模式:空内容显示占位提示 */
 .memo-content:empty::before{content:attr(data-ph);color:var(--text-tertiary);pointer-events:none;}
+/* ★R250 展开/收起过渡：只在动画期间挂这个类（JS 加了就收尾摘掉）。
+   注意不能把 max-height 的 transition 写进 .memo-content 基础规则——那会让
+   编辑态聚焦/compact 切换时的 max-height 变化也带缓动，出现"慢慢长出来"的怪相。 */
+.memo-item.anim-expand .memo-content{transition:max-height .28s cubic-bezier(.4,0,.2,1);}
 /* 长备忘:列表非聚焦态最多显示约 5 行(7.5em),底部渐隐 + 「展开」;点击进入编辑即完整显示(见 :focus 规则)。
    折叠线(.memo-item:not(.expanded) .memo-content)对列表所有备忘生效,
    但只有"实测溢出"的备忘(.long,由 _syncLong 依据 scrollHeight>clientHeight 判定)才显示渐隐与展开按钮,
@@ -12477,6 +12481,47 @@ function pad2(n){var s=String(n);return s.length<2?'0'+s:s;}
 function escapeHtml(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 function showToast(msg){var el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show');},1600);}
 var expandedMemos={}; // 记录用户手动展开的(长备忘)id,跨 render 保持,避免重渲染后回缩
+/* ★R250 「展开/收起」不再瞬间跳变（用户："备忘录点击展开感觉有点生硬"）。
+   原来只是切 .expanded 类：max-height 7.5em ↔ none，而 none 不可插值 ⇒ 一帧到位、周边内容整体弹一下。
+   做法：先量当前像素高写成 inline max-height 当起点 → 强制一次布局让浏览器记住起点 →
+   改类并写目标高度（展开＝scrollHeight，收起＝7.5em）→ transitionend 收尾清掉 inline。
+   ★收尾必须清 inline：留着像素高会把后续编辑/换字号/窗口缩放全部锁死。 */
+function _animMemoExpand(item,on,after){
+  var mc=item?item.querySelector('.memo-content'):null;
+  var finish=function(){
+    try{if(after)after();}catch(_){}
+  };
+  if(!mc){ if(item)item.classList.toggle('expanded',!!on); finish(); return; }
+  var reduce=false;
+  try{reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(_){}
+  if(reduce){ item.classList.toggle('expanded',!!on); finish(); return; }
+  var h0=0;
+  try{h0=mc.getBoundingClientRect().height;}catch(_){}
+  var token=(item._expandToken||0)+1; item._expandToken=token;   /* 连点保护：旧的兜底定时器不许掐掉新一轮动画 */
+  var done=false;
+  var end=function(){
+    if(done)return; done=true;
+    if(item._expandToken!==token){ mc.removeEventListener('transitionend',onEnd); return; }
+    item.classList.remove('anim-expand');
+    mc.style.maxHeight='';mc.style.overflow='';
+    mc.removeEventListener('transitionend',onEnd);
+    finish();
+  };
+  var onEnd=function(e){ if(e.target===mc&&e.propertyName==='max-height')end(); };
+  mc.style.maxHeight=h0+'px';       /* 起点锁成像素：collapsed 的 7.5em / expanded 的实际高都先归一到 px */
+  mc.style.overflow='hidden';
+  void mc.offsetHeight;             /* 读一次布局，让"起点"成为已提交的样式 */
+  item.classList.add('anim-expand');
+  mc.addEventListener('transitionend',onEnd);
+  if(on){
+    item.classList.add('expanded');            /* 去遮罩、放开 CSS 限高（inline 仍然赢） */
+    mc.style.maxHeight=mc.scrollHeight+'px';   /* scrollHeight = 完整内容高（不受 max-height 影响） */
+  }else{
+    item.classList.remove('expanded');
+    mc.style.maxHeight='7.5em';                /* 与 CSS 折叠线同一个值 */
+  }
+  setTimeout(end,460);                         /* 兜底：transitionend 被打断/被裁掉也要收尾 */
+}
 function autoResize(ta){ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';}
 
 // ===== 常量 =====
@@ -15261,7 +15306,17 @@ function createMemoElement(memo,index,groupId){
   if(expBtn){expBtn.addEventListener('click',function(e){e.stopPropagation();
     // ★R57: 批量/合并模式下点「展开」=仅选中该条(不展开,防误触)
     if(typeof tapSelectEnabled==='function'&&tapSelectEnabled()){toggleSelect(memo.id);return;}
-    var on=div.classList.toggle('expanded');expBtn.textContent=on?'收起':'展开';var eid=expBtn.getAttribute('data-id');if(on){expandedMemos[eid]=1;}else{delete expandedMemos[eid];}setTimeout(function(){var _ta=div.querySelector('.memo-content');if(_ta&&on&&_ta.tagName==='TEXTAREA')autoResize(_ta);vUpdateHeight(memo.id);},0);});}
+    var on=!div.classList.contains('expanded');
+    var eid=expBtn.getAttribute('data-id');
+    expBtn.textContent=on?'收起':'展开';
+    if(on){expandedMemos[eid]=1;}else{delete expandedMemos[eid];}
+    /* ★R250 高度过渡（原来直接 toggle 类＝一帧跳到位，用户说"生硬"） */
+    _animMemoExpand(div,on,function(){
+      var _ta=div.querySelector('.memo-content');
+      if(_ta&&on&&_ta.tagName==='TEXTAREA')autoResize(_ta);
+      vUpdateHeight(memo.id);
+    });
+  });}
   var cb=div.querySelector('.checkbox');
   cb.addEventListener('click',function(e){e.stopPropagation();if(dragSuppress)return;toggleDone(memo.id);});
 
