@@ -144,9 +144,11 @@
 /* ★R68 四象限分类筛选 chips + 已完成显隐（横滑、紧凑胶囊，四主题走公共变量） */
 .q-cat-row{display:flex;gap:6px;overflow-x:auto;flex:1 1 auto;min-width:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 .q-cat-row::-webkit-scrollbar{display:none;}
-.q-cat-chip{flex:none;display:flex;align-items:center;gap:5px;padding:4px 11px;border-radius:14px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-secondary);font-size:12px;line-height:1.4;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+/* ★R252 与列表页 .filter-chip 统一成一套：透明底无边框、hover 浅底、选中主色胶囊（原来是带框的卡片底） */
+.q-cat-chip{flex:none;display:flex;align-items:center;gap:5px;padding:4px 11px;border-radius:14px;border:1px solid transparent;background:transparent;color:var(--text-secondary);font-size:12px;line-height:1.4;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
 .q-cat-chip .dot{width:8px;height:8px;border-radius:50%;flex:none;}
 .q-cat-chip.on{background:var(--color-primary,#6366f1);border-color:transparent;color:#fff;}
+.q-cat-chip:hover:not(.on){background:var(--hover-bg);}
 .q-done-chip{flex:none;display:flex;align-items:center;gap:4px;padding:4px 11px;border-radius:14px;border:1px solid color-mix(in srgb,var(--text-secondary) 45%,transparent);background:var(--hover-bg);color:var(--text);font-size:12px;line-height:1.4;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent;}
 .q-done-chip svg{width:12px;height:12px;flex:none;}
 .q-done-chip.on{background:var(--color-primary,#6366f1);border-color:transparent;color:#fff;}
@@ -174,7 +176,7 @@
 .search-bar .search-clear{background:transparent;border:none;color:var(--text-tertiary);cursor:pointer;font-size:16px;padding:0 2px;display:none;line-height:1;flex-shrink:0;}
 .search-bar.has-text .search-clear{display:block;}
 /* ===== 象限计数徽标 + 清空 ===== */
-.quadrant-cell .cell-clear{width:24px;height:24px;border-radius:50%;border:1.5px dashed var(--border);background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all .2s;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+.quadrant-cell .cell-clear{width:24px;height:24px;border-radius:50%;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all .2s;flex-shrink:0;-webkit-tap-highlight-color:transparent;} /* ★R252 去虚线圆框 → 无框线性图标（与全站图标按钮同语言） */
 .quadrant-cell .cell-clear:hover{border-color:#e74c3c;color:#e74c3c;background:color-mix(in srgb,#e74c3c 10%,transparent);}
 .quadrant-cell .cell-clear svg{width:13px;height:13px;pointer-events:none;}
 /* ===== 时间临近进度条（距离设定时间越近填充越多） ===== */
@@ -618,6 +620,8 @@ body>.memo-item.drag-clone-compact .more-wrap{position:absolute;right:5px;top:50
 .compact-toggle.active .ci-loose{display:none;}
 .compact-toggle.active .ci-tight{display:block;}
 .memo-item.done .memo-content{text-decoration:line-through;color:var(--text-tertiary);}
+/* ★R252 已完成条目去彩色：左侧象限/分组色条与时间进度块只剩灰阶（"弱化不足"——灰掉的卡还挂着彩色） */
+.memo-item.done.qb::before{background:var(--border);}
 /* ★R88 左侧色条：卡片内贴左缘的圆角胶囊（4px 宽 / 上下内缩 6px / 2px 圆角）。
    ★R87 曾把它画到卡片外侧的 gutter（列表 padding-left 腾 10px）：卡片整体右移 10px、与标题栏
    和筛选栏左缘错位，右侧却没有对应留白；色条与卡片之间隔着 6px 页面底色，视觉上像一根悬空细棍
@@ -1294,7 +1298,7 @@ body.no-done-circle .swipe-fore > .checkbox{display:none;}
      环会向左压住圆形复选框 2px（用户反馈"外框和复选框重叠"）。
      padding 0 6px 与普通态/下方分类标签(0 6px)一致——编辑态文字字符与"其他"字符严格同一像素；
      若按用户字面"取消左 padding(0px)"文字会反而偏左 6px，故取 6px 对齐值。 */
-  background:var(--bg);border-radius:6px;box-shadow:inset 0 0 0 2px var(--color-primary,#6366f1);min-height:56px;padding:0 6px;
+  background:var(--bg);border-radius:6px;box-shadow:inset 0 0 0 2px var(--color-primary,#6366f1);min-height:32px;padding:0 6px; /* ★R252 56→32：单行文本时框底不再空一半（内容高自动撑高） */
   max-height:none;overflow:visible;
   -webkit-mask-image:none;mask-image:none;
 }
@@ -1578,7 +1582,7 @@ body.view-quadrant #add-btn,body.view-quadrant #bottomBar{display:none!important
 .quadrant-cell[data-q="1"]{background:var(--q1-bg);}
 .quadrant-cell[data-q="2"]{background:var(--q2-bg);}
 .quadrant-cell[data-q="3"]{background:var(--q3-bg);}
-.quadrant-cell .cell-add{width:24px;height:24px;border-radius:50%;border:1.5px dashed var(--border);background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s;flex-shrink:0;}
+.quadrant-cell .cell-add{width:24px;height:24px;border-radius:50%;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s;flex-shrink:0;} /* ★R252 去虚线圆框 */
 .quadrant-cell .cell-add:hover{border-color:var(--text-secondary);color:var(--text-secondary);background:var(--hover-bg);}
 /* 象限级主题色变量(供滚动条 etc. 继承) */
 .quadrant-cell[data-q="0"]{--qc:var(--q0);--qc-bg:var(--q0-bg);}
@@ -2174,7 +2178,7 @@ body.glass-bg-dusk{--glass-bg-image:radial-gradient(1000px 640px at 4% -10%,rgba
    同时把 gap 4→7px，保证相邻热区不重叠。 */
 .quadrant-cell .cell-fs,.quadrant-cell .cell-add,.quadrant-cell .cell-clear{position:relative;}
 .quadrant-cell .cell-fs::after,.quadrant-cell .cell-add::after,.quadrant-cell .cell-clear::after{content:'';position:absolute;inset:-5px;border-radius:50%;}
-.quadrant-cell .cell-fs{width:24px;height:24px;border-radius:50%;border:1.5px dashed var(--border);background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:all .2s;-webkit-tap-highlight-color:transparent;}
+.quadrant-cell .cell-fs{width:24px;height:24px;border-radius:50%;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:all .2s;-webkit-tap-highlight-color:transparent;} /* ★R252 去虚线圆框 */
 .quadrant-cell .cell-fs:hover{border-color:var(--text-secondary);color:var(--text-secondary);background:var(--hover-bg);}
 .quadrant-cell .cell-fs svg{width:13px;height:13px;pointer-events:none;}
 /* 全屏激活态:虚线转实线 + 强调色,清晰指示当前已放大 */
@@ -2652,9 +2656,15 @@ body.bloom-on .toast{opacity:0;transform:translateX(-50%) translateY(80px);point
 .cdp-list{display:flex;flex-direction:column;gap:4px;max-height:22vh;overflow-y:auto; /* ★R170.4 42vh→22vh：小结面板太高会把日历顶出视口（"一页显示完"靠 fitCalGrid 反算格子高度，面板一高就白算）→ 限高 + 面板内部自己滚 */}
 .cdp-summary{margin-top:8px;}
 .cdp-actions{margin-top:8px;display:flex;gap:8px;}
-.day-detail-item{display:flex;align-items:flex-start;gap:6px;font-size:13px;color:var(--text);padding:6px 8px;background:var(--bg);border-radius:6px;}
+.day-detail-item{display:flex;align-items:flex-start;gap:6px;font-size:13px;color:var(--text);padding:6px 8px;background:var(--bg);border-radius:6px;cursor:pointer;}
 .day-detail-item .di-done{color:var(--text-tertiary);text-decoration:line-through;}
 .day-detail-item .di-cat{font-size:10px;padding:1px 6px;border-radius:8px;flex-shrink:0;}
+/* ★R252 多行内容保留换行：原来整段 escapeHtml 后塞一行，4 行待办被拍平成一行乱码
+   → white-space:pre-wrap 保换行 + 3 行截断，点条目展开/收起全文 */
+.day-detail-item .di-text{white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-width:0;}
+.day-detail-item.open .di-text{-webkit-line-clamp:unset;display:block;overflow:visible;}
+.cdp-actions .picker-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;}
+.cdp-actions .picker-btn svg{width:14px;height:14px;flex:none;}
 .day-detail-empty{text-align:center;color:var(--text-tertiary);font-size:13px;padding:20px 0;}
 /* 日历：农历 / 假期 */
 .cal-title-btn{background:transparent;border:none;color:var(--text);font-size:15px;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:8px;}
@@ -3549,6 +3559,10 @@ body.batch-on .memo-list .memo-index{display:none;}
 .countdown.overdue{font-weight:600;}
 .setting-row.snap-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 #snap-info{margin-left:auto;font-size:12px;color:var(--text-tertiary);white-space:nowrap;}
+/* ★R252 备份过期提醒（建议 A）：数据在 localStorage，清浏览器数据就没了 */
+.backup-hint{margin:8px 0 2px;font-size:12px;line-height:1.5;color:var(--text-tertiary);}
+.backup-hint.warn{color:#d97706;font-weight:500;}
+[data-theme="dark"] .backup-hint.warn{color:#fbbf24;}
 .memo-item.overdue .checkbox{border-color:rgba(239,68,68,.55);}
 mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparent);color:inherit;border-radius:3px;padding:0 1px;box-decoration-break:clone;-webkit-box-decoration-break:clone;}
 [data-theme="dark"] mark.hl{background:color-mix(in srgb,var(--color-primary,#818cf8) 45%,transparent);}
@@ -3807,6 +3821,7 @@ mark.hl{background:color-mix(in srgb,var(--color-primary,#6366f1) 28%,transparen
         <button class="setting-action-btn" id="import-overwrite-btn" data-page-node-id="tVZoRjKMVD8z1M1CAdlq91">导入（覆盖）</button>
         <input type="file" id="fileInput" accept=".json" style="display:none;" data-page-node-id="DGm9yPmbqf3MrD6qDYExGS">
         <button class="setting-action-btn danger" id="reset-stats-btn" data-page-node-id="RedOGQuhX0AlIBI3x3j49Z">重置统计数据</button>
+        <div id="backupHint" class="backup-hint" hidden></div><!-- ★R252 备份过期提醒（建议 A） -->
         <div class="setting-row snap-row">
           <span class="row-label">数据快照</span>
           <span id="snap-info">暂无快照</span>
@@ -12822,22 +12837,18 @@ function computeTimeProgress(memo){
   return (now-created)/span;
 }
 function progressColor(p){
-  // 远(0)=蓝210 → 近(1)=红0，淡色背景填充不刺眼
-  var hue=210-210*Math.max(0,Math.min(1,p));
-  var h=hue.toFixed(0);
+  /* ★R252 紧急程度只留 chip 一处表达：这里原来 hue 210→0（蓝→红），与「紧急&重要」红 chip、
+     时间 chip 的红/橙构成三处红色一起跳。改成**固定中性色相 215 + 只让 alpha 随进度爬升**——
+     宽度仍然表达"走了多少"，但不再表达"多紧急"（紧急感全交给时间 chip）。 */
+  var h='215';
   var th=document.documentElement.getAttribute('data-theme');
-  // 深色底(深色主题 / 深色玻璃变体 glass-text-dark)：淡彩会被深色卡片吞掉 → 提亮并整体加浓
-  /* ★R248 深色下 0.22/0.34/0.46 太浓：整卡左侧变成一块饱和色，深色文字压在上面很躁。
-     降到 0.13/0.20/0.28 —— 仍是"液体注入"的层次，但让位给文字。 */
   if(th==='dark'||(th==='glass'&&document.documentElement.classList.contains('glass-text-dark'))){
-    return 'linear-gradient(90deg, hsla('+h+',70%,58%,0.13) 0%, hsla('+h+',75%,55%,0.20) 50%, hsla('+h+',80%,52%,0.28) 100%)';
+    return 'linear-gradient(90deg, hsla('+h+',22%,58%,0.10) 0%, hsla('+h+',22%,55%,0.14) 50%, hsla('+h+',22%,52%,0.20) 100%)';
   }
   if(th==='glass'){
-    // 毛玻璃：白玻璃会稀释淡色,故整体加浓,右端最浓才看得见
-    return 'linear-gradient(90deg, hsla('+h+',78%,56%,0.16) 0%, hsla('+h+',82%,52%,0.26) 50%, hsla('+h+',85%,48%,0.38) 100%)';
+    return 'linear-gradient(90deg, hsla('+h+',30%,56%,0.12) 0%, hsla('+h+',30%,52%,0.18) 50%, hsla('+h+',30%,48%,0.26) 100%)';
   }
-  // 浅色主题(light/green)：卡片不透明、淡彩不会被稀释 → 浓度略低即可呈现同样的「液体注入」层次
-  return 'linear-gradient(90deg, hsla('+h+',76%,54%,0.14) 0%, hsla('+h+',78%,52%,0.20) 50%, hsla('+h+',80%,50%,0.30) 100%)';
+  return 'linear-gradient(90deg, hsla('+h+',26%,54%,0.10) 0%, hsla('+h+',26%,52%,0.14) 50%, hsla('+h+',26%,50%,0.20) 100%)';
 }
 /* 统一写入进度条的宽度/背景/高光(创建时与刷新时共用,避免首次渲染漏掉)
    ★R169 右缘渐隐：填充条宽度＝进度比例，旧样式右端正好落在渐变**最浓**处却是一条垂直直边，
@@ -12888,6 +12899,7 @@ var ICON_PIN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 var ICON_TAG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5V5a2 2 0 0 1 2-2h6.5a2 2 0 0 1 1.41.59l7 7a2 2 0 0 1 0 2.82l-6.5 6.5a2 2 0 0 1-2.82 0l-7-7a2 2 0 0 1-.59-1.41z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>';
 var ICON_LOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
 var ICON_COPY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+var ICON_SAVE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'; /* ★R252 小结「保存」用（替代 💾） */
 var ICON_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 var ICON_EDIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>';
 /* ★R59：批量操作按钮专用图标（内联 SVG、currentColor，禁止 emoji）
@@ -13115,8 +13127,10 @@ function formatCountdown(memo){
   var text,cls='';var repeatLabel='';
   if(memo.repeat==='daily')repeatLabel='每天';else if(memo.repeat==='weekdays')repeatLabel='工作日';else if(memo.repeat==='weekly')repeatLabel='每周';else if(memo.repeat==='monthly')repeatLabel='每月';else if(memo.repeat==='yearly')repeatLabel='每年';
   var prefix=isOverdue?'超时':'剩余';
-  /* ★R248 统一走 fmtDur（原来这里自己拼 "2时59分"/"2天0时"，与一次性任务那条的口径不一致） */
-  text=prefix+' '+fmtDur(absDiff);
+  /* ★R248 统一走 fmtDur（原来这里自己拼 "2时59分"/"2天0时"，与一次性任务那条的口径不一致）
+     ★R252 重复任务加「下次 M/D」（用户建议 B）：≥1 天时把冗长的 "6天19时" 压成 "6天"，腾出宽度放绝对日期 */
+  text=prefix+' '+(days>0?days+'天':fmtDur(absDiff));
+  if(days>0)text+=' · 下次 '+(next.getMonth()+1)+'/'+next.getDate();
   if(isOverdue)cls='overdue';else if(diff<3600000)cls='urgent';
   return {text:text,cls:cls,icon:''};
 }
@@ -13344,7 +13358,12 @@ function updateTitle(){
     var sub=document.getElementById('app-sub');
     if(sub){
       var s='';var d=new Date();var wd=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
-      if(currentView==='today')s='今日 · '+(d.getMonth()+1)+'/'+d.getDate()+' '+wd;
+      if(currentView==='today'){
+        s='今日 · '+(d.getMonth()+1)+'/'+d.getDate()+' '+wd;
+        /* ★R252 今日完成进度（建议 C）：副标题追加 "已完成/总数" */
+        try{var tl=getDateMemos(new Date(),'day'),td=0;for(var ti=0;ti<tl.length;ti++){if(tl[ti]&&tl[ti].done)td++;}
+          if(tl.length)s+=' · '+td+'/'+tl.length;}catch(_e){}
+      }
       else if(currentView==='month')s=d.getFullYear()+'年'+(d.getMonth()+1)+'月';
       else if(currentView==='quadrant')s='四象限视图';
       else if(currentView==='calendar')s='日历';
@@ -17161,6 +17180,10 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     var f=document.querySelector('.quadrant-cell.fs-active');
     if(f){f.classList.remove('fs-active');document.body.classList.remove('q-fs');fsQuadrant=-1;var b=f.querySelector('.cell-fs');if(b)b.innerHTML=FS_ICON;}
+    /* ★R252 Esc 退出就地编辑（blur 即走 _deferExit→exitMemoEdit；全屏编辑器的 onKey 自己处理 Esc，
+       且它的 textarea 不在 .memo-item 内 → 这里不会误伤） */
+    var ae=document.activeElement;
+    if(ae&&ae.closest&&ae.closest('.memo-item')&&(ae.isContentEditable||ae.tagName==='TEXTAREA')){e.preventDefault();ae.blur();}
   }
   // 正在输入框/文本框中编辑时交给浏览器原生撤销，不拦截
   var t=e.target;
@@ -17211,9 +17234,10 @@ function openShortcutHelp(){
     _kbHelpEl.innerHTML='<h3>键盘快捷键</h3>'
       +'<div class="kb-row"><span>新建备忘</span><kbd>Ctrl + N</kbd></div>'
       +'<div class="kb-row"><span>搜索</span><kbd>Ctrl + F</kbd></div>'
-      +'<div class="kb-row"><span>切换视图</span><kbd>Alt + 1 ~ 6</kbd></div>'
+      +'<div class="kb-row"><span>切换视图</span><kbd>1 ~ 9</kbd></div>'
       +'<div class="kb-row"><span>上下选择</span><kbd>↑ / ↓</kbd></div>'
       +'<div class="kb-row"><span>编辑选中项</span><kbd>Enter</kbd></div>'
+      +'<div class="kb-row"><span>退出编辑 / 关闭浮层</span><kbd>Esc</kbd></div>'
       +'<div class="kb-row"><span>勾选 / 取消完成</span><kbd>Space</kbd></div>'
       +'<div class="kb-row"><span>删除选中项（入回收站）</span><kbd>Delete</kbd></div>'
       +'<div class="kb-row"><span>重命名所在分组</span><kbd>F2</kbd></div>'
@@ -17241,7 +17265,8 @@ document.addEventListener('keydown',function(e){
   /* ★R132 同上：今日/月 tab 里 Ctrl+N 不再跳回「备忘录」—— 新条目会被 createDeadline()
      钉在当天/当月，留在当前 tab 即可见可编辑。只有真正装不下它的视图（四象限/日历/统计/回收站）才切回列表。 */
   if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&k==='n'){e.preventDefault();if(!(currentView==='list'||currentView==='today'||currentView==='month'))setView('list');addMemo();return;}
-  if(e.altKey&&!e.ctrlKey&&!e.metaKey&&/^[1-9]$/.test(e.key)){
+  if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&/^[1-9]$/.test(e.key)){
+    /* ★R252 裸数字 1~9 也可切视图（原只认 Alt+1~9；用户建议 D）。输入态已被上面的 target 检查排除 */
     var vis=[];
     for(var vi=0;vi<viewPrefs.order.length;vi++){var vv=viewPrefs.order[vi];if(viewPrefs.visible[vv])vis.push(vv);}
     var target=vis[parseInt(e.key,10)-1];
@@ -18781,6 +18806,8 @@ function exportData(){
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');a.href=url;a.download='备忘录备份_'+new Date().toISOString().slice(0,10)+'.json';
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  try{localStorage.setItem('memo_last_export',String(Date.now()));}catch(_e){} /* ★R252 备份提醒口径 */
+  if(typeof refreshBackupHint==='function')refreshBackupHint();
   showToast('导出成功（含归档/分组/背景）');
 }
 function importData(file,mode){
@@ -18938,6 +18965,19 @@ function snapInfo(){
   return list.length+' 份 · 最近 '+list[list.length-1].day;
 }
 function snapRefreshInfo(){var el=document.getElementById('snap-info');if(el)el.textContent=snapInfo();}
+/* ★R252 备份过期提醒（建议 A）：数据只在 localStorage，清浏览器数据即丢。
+   ★口径只认**导出到文件的备份**（memo_last_export）——本地快照（SNAP_KEY）也在 localStorage 里，
+   清数据时同样会丢，拿它当"已备份"是自欺。≥7 天在设置「数据管理」里变琥珀色提醒。 */
+function refreshBackupHint(){
+  var el=document.getElementById('backupHint');if(!el)return;
+  var t=0;
+  try{var le=localStorage.getItem('memo_last_export');if(le&&!isNaN(+le))t=Math.max(t,+le);}catch(_e){}
+  if(!t){el.hidden=false;el.className='backup-hint warn';el.textContent='还没有导出过备份文件 —— 数据只存在这台设备的浏览器里，清除浏览器数据即丢失。建议点「导出数据」存一份。';return;}
+  var days=Math.floor((Date.now()-t)/86400000);
+  var txt=days<=0?'今天已导出备份。':'上次导出备份是 '+days+' 天前。';
+  if(days>=7)txt+='建议再导出一份。';
+  el.hidden=false;el.className='backup-hint'+(days>=7?' warn':'');el.textContent=txt;
+}
 function snapRestore(t){
   var list=snapList(),target=null;
   for(var i=0;i<list.length;i++){if(list[i].t===t){target=list[i];break;}}
@@ -20503,7 +20543,7 @@ function renderCalendar(dir){
     +'<div class="cdp-head"><span class="cdp-title" id="cdpTitle"></span><button class="cdp-close" id="cdpClose" type="button">✕</button></div>'
     +'<div class="cdp-list" id="cdpList"></div>'
     +'<div class="cdp-summary"><textarea id="cdpSummary" class="day-summary-input" placeholder="写一下今天的小结..."></textarea></div>'
-    +'<div class="cdp-actions"><button class="picker-btn primary" id="cdpSummarySave" type="button">💾 保存小结</button><button class="picker-btn secondary" id="cdpCopy" type="button">📋 复制小结</button></div>'
+    +'<div class="cdp-actions"><button class="picker-btn primary" id="cdpSummarySave" type="button">'+ICON_SAVE+'保存小结</button><button class="picker-btn secondary" id="cdpCopy" type="button">'+ICON_COPY+'复制小结</button></div>' /* ★R252 emoji→inline SVG（💾/📋 违反全站纯 SVG 规则） */
     +'</div>';
   calendarViewEl.innerHTML=html;
   _calSig=_sig;   /* ★R247 记下签名：下一次切回日历只要数据/月份没变就直接复用这份 DOM */
@@ -20716,9 +20756,10 @@ function openDayDetail(date){
     for(var i=0;i<list.length;i++){
       var m=list[i];
       var cat=categories[m.category]||categories.other||{label:'其他',color:'#6b7280'};
-      html+='<div class="day-detail-item"><span>'+(m.done?'✓ ':'• ')+'</span><span class="di-cat" style="background:'+cat.color+'22;color:'+cat.color+'">'+cat.label+'</span><span class="'+(m.done?'di-done':'')+'">'+escapeHtml(m.text||'(空)')+'</span></div>';
+      html+='<div class="day-detail-item"><span>'+(m.done?'✓ ':'• ')+'</span><span class="di-cat" style="background:'+cat.color+'22;color:'+cat.color+'">'+cat.label+'</span><span class="'+(m.done?'di-text di-done':'di-text')+'">'+escapeHtml(m.text||'(空)')+'</span></div>'; /* ★R252 di-text=保留换行+3 行截断 */
     }
     listEl.innerHTML=html;
+    listEl.onclick=function(e){var it=e.target&&e.target.closest?e.target.closest('.day-detail-item'):null;if(it)it.classList.toggle('open');}; /* ★R252 点条目展开/收起全文 */
   }
   panel.hidden=false;
   var closeEl=document.getElementById('cdpClose');if(closeEl)closeEl.onclick=closeDayDetail;
@@ -22230,7 +22271,8 @@ function bindEvents(){
   var exportMdBtn=document.getElementById('export-md-btn');if(exportMdBtn)exportMdBtn.addEventListener('click',exportMarkdown);
   /* ★R91 快照按钮：立即备份（覆盖今日份）/ 回滚（从列表里挑一份） */
   var snapBackupBtn=document.getElementById('snap-backup');
-  if(snapBackupBtn)snapBackupBtn.addEventListener('click',function(){if(snapSave(true)){snapRefreshInfo();showToast('已创建今日快照');}else showToast('快照保存失败：存储空间不足');});
+  if(snapBackupBtn)snapBackupBtn.addEventListener('click',function(){if(snapSave(true)){snapRefreshInfo();refreshBackupHint();showToast('已创建今日快照');}else showToast('快照保存失败：存储空间不足');});
+  refreshBackupHint(); /* ★R252 备份过期提醒 */
   /* ★R210 模板删除委托 */
   var tplBox=document.getElementById('tpl-manage');
   if(tplBox)tplBox.addEventListener('click',function(e){
